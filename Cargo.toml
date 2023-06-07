@@ -1,0 +1,14 @@
+[package]
+name = "wagon"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4.0"
+logos = "0.13.0"
+logos-derive = "0.13.0"
+petgraph = "0.6.3"
+regex = "1.8.4"
+wagon-macros = { path = "./wagon-macros"}
