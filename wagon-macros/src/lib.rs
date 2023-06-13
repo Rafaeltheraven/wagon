@@ -1,7 +1,7 @@
 use extendable_enums::extendable_enum;
 
 #[extendable_enum(inherit_from_base)]
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 enum Base {
     #[regex("(\\$|!)?([a-zA-Z][a-zA-Z0-9]*)", |lex| detect_ident_type(lex.slice()))]
@@ -16,4 +16,10 @@ enum Base {
 
     #[token("]")]
     RBr,
+
+    #[token("{")]
+    LCur,
+
+    #[token("}")]
+    RCur,
 }

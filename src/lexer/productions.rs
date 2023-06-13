@@ -1,10 +1,10 @@
 use logos::Logos;
 use wagon_macros::inherit_from_base;
 use crate::helpers::rem_first_and_last_char;
-use crate::lexer::ident::{Ident, detect_ident_type};
+use super::ident::{Ident, detect_ident_type};
 
 #[inherit_from_base]
-enum Productions {
+pub(crate) enum Productions {
 
 	#[token("->")]
 	Produce,
@@ -20,12 +20,6 @@ enum Productions {
 
 	#[token("<<")]
 	ImportRecursive,
-
-	#[token("{")]
-	LCur,
-
-	#[token("}")]
-	RCur,
 
 	#[token("|")]
 	Alternative,

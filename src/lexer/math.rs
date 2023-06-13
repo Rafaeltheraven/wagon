@@ -1,10 +1,10 @@
 use logos::Logos;
 use wagon_macros::inherit_from_base;
-use crate::lexer::ident::{Ident, detect_ident_type};
+use super::ident::{Ident, detect_ident_type};
 use crate::helpers::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]
-enum Math {
+pub(crate) enum Math {
 	#[token("not")]
 	Not,
 

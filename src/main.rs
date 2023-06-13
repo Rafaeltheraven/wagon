@@ -1,8 +1,4 @@
-mod lexer {
-    pub mod productions;
-    pub mod math;
-    mod ident;
-}
+mod lexer;
 
 pub mod helpers;
 

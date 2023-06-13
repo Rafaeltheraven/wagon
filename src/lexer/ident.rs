@@ -1,6 +1,6 @@
 pub use crate::helpers::rem_first_char;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Ident {
     Inherit(String),
     Synth(String),

@@ -10,8 +10,8 @@ syn = "2.0.18"
 quote = "1.0.28"
 proc-macro2 = "1.0.59"
 logos = "0.13.0"
-extendable-enums = { path = "../../extendable-enums"}
-extendable-enums-helpers = { path = "../../extendable-enums/extendable-enums-helpers"}
+extendable-enums = "0.1.1"
+extendable-enums-helpers = "0.1.1"
 
 [lib]
 proc-macro = true
