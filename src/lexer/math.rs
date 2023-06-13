@@ -1,6 +1,7 @@
 use logos::Logos;
 use wagon_macros::inherit_from_base;
-use crate::helpers::rem_first_and_last_char;
+use crate::lexer::ident::{Ident, detect_ident_type};
+use crate::helpers::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]
 enum Math {
@@ -18,12 +19,6 @@ enum Math {
 
 	#[token(")")]
 	RPar,
-
-	#[token("[")]
-	LBr,
-
-	#[token("]")]
-	RBr,
 
 	#[token("**")]
 	Pow,
@@ -67,11 +62,29 @@ enum Math {
 	#[token("in")]
 	In,
 
+	#[token("if")]
+	If,
+
+	#[token("then")]
+	Then,
+
+	#[token("else")]
+	Else,
+
+	#[token("=")]
+	Assigns,
+
+	#[token(";")]
+	Semi,
+
+	#[regex(r#"\$\(([^\)\\]|\\.)*\)"#, |lex| rem_first_and_last_char(&rem_first_char(lex.slice())))]
+	Bash(String),
+
 	#[token("false", |_| false)]
     #[token("true", |_| true)]
     LitBool(bool),
 
-    #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i64>().unwrap(), priority = 2)]
+    #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i64>().unwrap())]
 	LitInt(i64),
 
 	#[regex("(-?[0-9]+\\.[0-9]+)", |lex| lex.slice().parse::<f64>().unwrap())]
@@ -82,6 +95,7 @@ enum Math {
 mod tests {
 
 	
+	use crate::lexer::ident::Ident;
 	use crate::helpers::assert_lex;
 	use super::Math::{*};
 
@@ -114,7 +128,7 @@ mod tests {
 			Ok(And),
 			Ok(LitBool(false)),
 			Ok(Or),
-			Ok(Ident("x".to_string())),
+			Ok(Identifier(Ident::Unknown("x".to_string()))),
 			Ok(RPar),
 		];
 		assert_lex(s, expect);
@@ -134,18 +148,18 @@ mod tests {
 			Ok(Lt),
 			Ok(LitInt(4)),
 			Ok(Add),
-			Ok(Ident("x".to_string())),
+			Ok(Identifier(Ident::Unknown("x".to_string()))),
 			Ok(RPar),
 			Ok(And),
 			Ok(LPar),
-			Ok(Ident("x".to_string())),
+			Ok(Identifier(Ident::Unknown("x".to_string()))),
 			Ok(Neq),
 			Ok(LitInt(2)),
 			Ok(RPar),
 			Ok(Or),
 			Ok(LitString("4".to_string())),
 			Ok(In),
-			Ok(Ident("y".to_string())),
+			Ok(Identifier(Ident::Unknown("y".to_string()))),
 			Ok(RPar),
 		];
 		assert_lex(s, expect);
