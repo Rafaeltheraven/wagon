@@ -1,6 +1,6 @@
-use extendable_enums::extendable_enum;
+use extendable_data::extendable_data;
 
-#[extendable_enum(inherit_from_base)]
+#[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 enum Base {
