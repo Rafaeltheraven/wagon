@@ -96,7 +96,7 @@ mod tests {
 
 	
 	use crate::lexer::ident::Ident;
-	use crate::helpers::assert_lex;
+	use crate::lexer::assert_lex;
 	use super::Math::{*};
 
 	#[test]

@@ -24,23 +24,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
-name = "extendable-enums"
-version = "0.1.1"
+name = "extendable-data"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2370b39a59635405e102b99d8b85489a3b6593bd3d9b1f0d3f89d8ee83e0c76c"
+checksum = "645bc37303cab8035cf7f3c6b432503b7127a99236b8fd95cf236a40f5b814f2"
 dependencies = [
- "extendable-enums-helpers",
- "logos",
+ "extendable-data-helpers",
  "proc-macro2",
  "quote",
  "syn",
 ]
 
 [[package]]
-name = "extendable-enums-helpers"
-version = "0.1.1"
+name = "extendable-data-helpers"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88dce6a0a5d9086b7a929a931122a63ed7b9d700d72bcbc4b518241d4c4d1d82"
+checksum = "6f19697f6c12a4acf74242e0a811a72b54532e2e59afb6b1aa79b030460ba5d1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -203,8 +202,7 @@ dependencies = [
 name = "wagon-macros"
 version = "0.1.0"
 dependencies = [
- "extendable-enums",
- "extendable-enums-helpers",
+ "extendable-data",
  "logos",
  "proc-macro2",
  "quote",

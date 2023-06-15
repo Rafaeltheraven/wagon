@@ -3,6 +3,7 @@ mod math;
 mod productions;
 
 use logos::Logos;
+use std::fmt;
 use productions::Productions;
 use math::Math;
 
@@ -61,6 +62,26 @@ impl<'source> Iterator for LexerBridge<'source> {
         }
     }
 }
+
+pub fn assert_lex<'a, Token>(
+    source: &'a Token::Source,
+    tokens: &[Result<Token, Token::Error>],
+) where
+    Token: Logos<'a> + fmt::Debug + PartialEq,
+    Token::Extras: Default,
+{
+    let mut lex = Token::lexer(source);
+
+    for token in tokens {
+        assert_eq!(
+            &lex.next().expect("Unexpected end"),
+            token
+        );
+    }
+
+    assert_eq!(lex.next(), None);
+}
+
 
 #[cfg(test)]
 mod tests {

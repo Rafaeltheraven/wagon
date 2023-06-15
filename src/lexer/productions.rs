@@ -31,7 +31,7 @@ pub(crate) enum Productions {
 #[cfg(test)]
 mod tests {
 	use crate::lexer::ident::Ident;
-	use crate::helpers::assert_lex;
+	use crate::lexer::assert_lex;
 	use std::assert_eq;
 
 	use logos::Logos;
