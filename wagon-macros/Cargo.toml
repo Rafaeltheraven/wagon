@@ -10,8 +10,7 @@ syn = "2.0.18"
 quote = "1.0.28"
 proc-macro2 = "1.0.59"
 logos = "0.13.0"
-extendable-data = "0.1.0"
-extendable-data-helpers = "0.1.1"
+extendable-data = "0.1.2"
 
 [lib]
 proc-macro = true
