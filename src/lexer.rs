@@ -19,7 +19,7 @@ impl<'source> Lexer<'source> {
 }
 
 #[derive(Debug, PartialEq)]
-enum Tokens {
+pub(crate) enum Tokens {
 	ProductionToken(Productions),
 	MathToken(Math)
 }
