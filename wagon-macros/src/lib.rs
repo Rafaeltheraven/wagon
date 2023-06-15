@@ -4,7 +4,7 @@ use extendable_data::extendable_data;
 #[derive(Clone, Debug, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 enum Base {
-    #[regex("(\\$|!)?([a-zA-Z][a-zA-Z0-9]*)", |lex| detect_ident_type(lex.slice()))]
+    #[regex("(\\$|!)?([a-zA-Z][a-zA-Z0-9]*)", |lex| Ident::detect(lex.slice()))]
     Identifier(Ident),
 
     #[regex("\"([^\"\\\\]|\\\\.)*\"", |lex| rem_first_and_last_char(lex.slice()))]

@@ -1,7 +1,66 @@
+
+use super::TypeDetect;
 use logos::Logos;
 use wagon_macros::inherit_from_base;
 use crate::helpers::rem_first_and_last_char;
-use super::ident::{Ident, detect_ident_type};
+use super::ident::{Ident};
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) enum GrammarType {
+	Conversational,
+	Generative,
+	General
+}
+
+impl TypeDetect for GrammarType {
+	fn detect(inp: &str) -> Self {
+	    if inp.starts_with("c") {
+	    	GrammarType::Conversational
+	    } else if inp.starts_with("ge") {
+	    	GrammarType::Generative
+	    } else {
+	    	GrammarType::General
+	    }
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) enum ImportType {
+	Basic,
+	Full,
+	Recursive,
+	Exclude
+}
+
+impl TypeDetect for ImportType {
+	fn detect(inp: &str) -> Self {
+	    match inp.chars().last().unwrap() {
+	    	'-' => ImportType::Basic,
+	    	'=' => ImportType::Full,
+	    	'<' => ImportType::Recursive,
+	    	'/' => ImportType::Exclude,
+	    	_ => panic!("Tried to match type of import arrow, got unknown type: {}", inp)
+	    }
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) enum EbnfType {
+	Some,
+	Many,
+	Maybe
+}
+
+impl TypeDetect for EbnfType {
+	fn detect(inp: &str) -> Self {
+	    match inp.chars().next().unwrap() {
+	    	'+' => EbnfType::Some,
+	    	'*' => EbnfType::Many,
+	    	'?' => EbnfType::Maybe,
+	    	_ => panic!("Tried to match type of ebnf expansion, got unknown type: {}", inp)
+	    }
+	}
+}
 
 #[inherit_from_base]
 pub(crate) enum Productions {
@@ -12,20 +71,29 @@ pub(crate) enum Productions {
 	#[token("=>")]
 	Generate,
 
-	#[token("<-")]
-	ImportBasic,
-
-	#[token("<=")]
-	ImportFull,
-
-	#[token("<<")]
-	ImportRecursive,
+	#[token("::")]
+	Colons,
 
 	#[token("|")]
 	Alternative,
 
-	#[regex("/([^/\\\\]|\\\\.)*/", |lex| rem_first_and_last_char(lex.slice()))]
-	LitRegex(String)
+	#[token("&")]
+	Additional,
+
+	#[token("include")]
+	Include,
+
+	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
+	Import(ImportType),
+
+	#[regex(r#"/([^/\\]|\\.)*/"#, |lex| rem_first_and_last_char(lex.slice()))]
+	LitRegex(String),
+
+	#[regex("((conversational|generative)\\s+)?grammar", |lex| GrammarType::detect(lex.slice()))]
+	GrammarSpec(GrammarType),
+
+	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice()))]
+	Ebnf(EbnfType)
 }
 
 #[cfg(test)]

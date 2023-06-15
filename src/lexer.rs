@@ -36,6 +36,10 @@ impl<'source> LexerBridge<'source> {
 	}
 }
 
+trait TypeDetect {
+	fn detect(inp: &str) -> Self;
+}
+
 impl<'source> Iterator for LexerBridge<'source> {
 	type Item = Result<Tokens, ()>;
 	fn next(&mut self) -> Option<Self::Item> {

@@ -11,6 +11,8 @@ checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 [[package]]
 name = "extendable-data"
 version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "645bc37303cab8035cf7f3c6b432503b7127a99236b8fd95cf236a40f5b814f2"
 dependencies = [
  "extendable-data-helpers",
  "proc-macro2",
@@ -20,9 +22,10 @@ dependencies = [
 
 [[package]]
 name = "extendable-data-helpers"
-version = "0.1.1"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f19697f6c12a4acf74242e0a811a72b54532e2e59afb6b1aa79b030460ba5d1"
 dependencies = [
- "logos",
  "proc-macro2",
  "quote",
  "syn",

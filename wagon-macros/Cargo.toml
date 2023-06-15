@@ -14,3 +14,4 @@ extendable-data = "0.1.2"
 
 [lib]
 proc-macro = true
+
