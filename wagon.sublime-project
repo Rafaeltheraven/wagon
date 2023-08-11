@@ -1,0 +1,24 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+		}
+	],
+	"debugger_configurations":
+	[
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Cargo launch",
+			"cargo": {
+				"args": [
+					"check",
+					"--lib"
+				]
+			},
+			"args": [],
+			"program": "${folder}/target/debug/wagon"
+		},
+	],
+}
