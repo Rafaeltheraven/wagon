@@ -2,8 +2,9 @@ pub(crate) mod ident;
 pub(crate) mod math;
 pub(crate) mod productions;
 
+use crate::lexer::ident::Ident;
 use logos::Logos;
-use std::fmt::{self};
+use std::{fmt::{self}, iter::Peekable};
 use productions::Productions;
 use math::Math;
 use strum_macros::Display;
@@ -26,20 +27,45 @@ pub(crate) enum Tokens {
 	MathToken(Math)
 }
 
+impl Default for Tokens {
+    fn default() -> Self {
+        Self::ProductionToken(Productions::Identifier(Ident::default()))
+    }
+}
+
 pub(crate) struct LexerBridge<'source> {
 	lexer: Lexer<'source>,
-	counter: u32
+	counter: u16,
 }
 
 impl<'source> LexerBridge<'source> {
 	pub(crate) fn new(s: &'source str) -> Self {
 		Self { lexer: Lexer::new(s), counter: 0 }
 	}
+}
 
-	pub(crate) fn next_unwrap(&mut self) -> Tokens {
+pub(crate) trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
+	fn next_unwrap(&mut self) -> T {
 		match self.next() {
 		    Some(Ok(x)) => x,
-		    _ => panic!("Expected a token, but failed")
+		    Some(Err(e)) => panic!("Got lexing error: {:?}", e),
+		    None => panic!("Expected a token, but failed")
+		}
+	}
+}
+
+pub(crate) trait UnsafePeek<T> {
+	fn peek_unwrap(&mut self) -> &T;
+}
+
+impl<'source> UnsafeNext<Tokens, ()> for &mut LexerBridge<'source>{}
+impl<'source> UnsafeNext<Tokens, ()> for Peekable<LexerBridge<'source>>{}
+impl<'source> UnsafePeek<Tokens> for Peekable<LexerBridge<'source>> {
+	fn peek_unwrap(&mut self) -> &Tokens {
+		match self.peek() {
+			Some(Ok(x)) => x,
+		    Some(Err(e)) => panic!("Got lexing error: {:?}", e),
+		    None => panic!("Expected a token, but failed")
 		}
 	}
 }
@@ -74,6 +100,8 @@ impl<'source> Iterator for LexerBridge<'source> {
         }
     }
 }
+
+pub(crate) type PeekLexer<'source> = Peekable<LexerBridge<'source>>;
 
 #[cfg(test)]
 pub fn assert_lex<'a, Token>(

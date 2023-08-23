@@ -18,3 +18,9 @@ impl TypeDetect for Ident {
         }
     }
 }
+
+impl Default for Ident {
+    fn default() -> Self {
+        Self::Unknown(String::new())
+    }
+}

@@ -1,5 +1,5 @@
 use proc_macro2::{Span};
-use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute};
+use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput};
 use extendable_data::extendable_data;
 use quote::ToTokens;
 use syn::{parse_macro_input, ExprMatch, Arm};
@@ -59,6 +59,32 @@ fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
     None
 }
 
+#[proc_macro_derive(TokenMapper)]
+pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(stream as DeriveInput);
+    let span = ast.span();
+    let ident = ast.ident;
+    let data = match ast.data {
+        syn::Data::Enum(e) => e,
+        _ => return syn::Error::new(span, "Can only derive TokenMapper for enums").into_compile_error().into()
+    };
+    let mut arms: Vec<TokenStream2> = Vec::with_capacity(data.variants.len());
+    for var in data.variants.into_iter() {
+        let name = var.ident;
+        arms.push(quote!(Tokens::MathToken(Math::#name) => Some(Self::#name)))
+    }
+    quote!(
+        impl TokenMapper for #ident {
+            fn token_to_enum(token: &Tokens) -> Option<Self> {
+                match token {
+                    #(#arms,)*
+                    _ => None
+                }
+            }
+        }
+    ).into()
+}
+
 #[proc_macro]
 pub fn match_error(stream: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(stream as ExprMatch);
@@ -71,7 +97,7 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
             let resp = pat_to_str(&arm.pat, span);
             match resp {
                 Ok(stream) => expected.push(quote!(#stream.to_string())),
-                Err(e) => return e.to_compile_error().into()
+                Err(e) => return e.into_compile_error().into()
             }
         }
     }
