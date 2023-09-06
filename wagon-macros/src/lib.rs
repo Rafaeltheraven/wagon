@@ -7,11 +7,14 @@ use syn::{parse_macro_input, ExprMatch, Arm};
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"/\*([^*]|\*[^/])+\*/|[ \t\n\f]+")]
+#[logos(error = LexingError)]
 enum Base {
+    #[display_override("Identifier")]
     #[regex("(\\$|!)?([a-zA-Z][a-zA-Z0-9]*)", |lex| Ident::detect(lex.slice()))]
     Identifier(Ident),
 
+    #[display_override("String Literal")]
     #[regex("\"([^\"\\\\]|\\\\.)*\"", |lex| rem_first_and_last_char(lex.slice()))]
     #[regex("\'([^\'\\\\]|\\\\.)*\'", |lex| rem_first_and_last_char(lex.slice()))]
     LitString(String),
@@ -27,18 +30,15 @@ enum Base {
 
     #[token("}")]
     RCur,
-}
 
-struct Args {
-    message: String,
-}
+    #[token("(")]
+    LPar,
 
-impl Default for Args {
-    fn default() -> Self {
-        Self {
-            message: "Unexpected token {}, expecting {}".to_string(),
-        }
-    }
+    #[token(")")]
+    RPar,
+
+    #[token(";")]
+    Semi,
 }
 
 fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
@@ -104,17 +104,9 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     let joined = quote! {
         #( #expected ),*
     };
-    let mut args = Args::default();
-    if let Some(message) = pop_attr(&mut ast.attrs, "message") {
-        args.message = message.to_string();
-    }
-    let message = args.message;
-    let expr = &ast.expr;
     let wc_arm: Arm = syn::parse_quote!(
-        _ => {
-            let mut expected = [#joined];
-            expected[expected.len() - 1] = format!("or {}", expected[expected.len() - 1]);
-            Err(format!(#message, #expr, expected.join(", ")))
+        _error => {
+            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);
