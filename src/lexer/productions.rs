@@ -1,16 +1,16 @@
 
-use super::TypeDetect;
+use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::inherit_from_base;
 use logos_display::Display;
-use crate::helpers::rem_first_and_last_char;
+use crate::helpers::{rem_first_and_last_char, rem_first_char_n, remove_whitespace};
 use super::ident::{Ident};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum GrammarType {
 	Conversational,
 	Generative,
-	General
+	Analytical
 }
 
 impl TypeDetect for GrammarType {
@@ -20,9 +20,15 @@ impl TypeDetect for GrammarType {
 	    } else if inp.starts_with("ge") {
 	    	GrammarType::Generative
 	    } else {
-	    	GrammarType::General
+	    	GrammarType::Analytical
 	    }
 	}
+}
+
+impl Default for GrammarType {
+    fn default() -> Self {
+        Self::Analytical
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -43,6 +49,12 @@ impl TypeDetect for ImportType {
 	    	_ => panic!("Tried to match type of import arrow, got unknown type: {}", inp)
 	    }
 	}
+}
+
+impl Default for ImportType {
+    fn default() -> Self {
+        Self::Basic
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -81,26 +93,31 @@ pub(crate) enum Productions {
 	#[token("&")]
 	Additional,
 
-	#[token("include")]
-	Include,
+	#[display_override("Include")]
+	#[regex(r"include[\s]([a-zA-Z]*(::[a-zA-Z]*)*)?", |lex| remove_whitespace(rem_first_char_n(lex.slice(), 7)))]
+	Include(String),
 
+	#[display_override("Import")]
 	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
 	Import(ImportType),
 
-	#[regex(r#"/([^/\\]|\\.)*/"#, |lex| rem_first_and_last_char(lex.slice()))]
+	#[display_override("Regex")]
+	#[regex(r#"/[^\*]([^/\\]|\\.)*/"#, |lex| rem_first_and_last_char(lex.slice()))]
 	LitRegex(String),
 
-	#[regex("((conversational|generative)\\s+)?grammar", |lex| GrammarType::detect(lex.slice()))]
+	#[display_override("Grammar Type Definition")]
+	#[regex(r"((conversational|generative)\s+)?grammar", |lex| GrammarType::detect(lex.slice()))]
 	GrammarSpec(GrammarType),
 
+	#[display_override("EBNF Operator")]
 	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice()))]
-	Ebnf(EbnfType)
+	Ebnf(EbnfType),
 }
 
 #[cfg(test)]
 mod tests {
 	use crate::lexer::ident::Ident;
-	use crate::lexer::assert_lex;
+	use crate::lexer::{assert_lex, LexingError};
 	use std::assert_eq;
 
 	use logos::Logos;
@@ -119,11 +136,7 @@ mod tests {
 		let mut lex = Productions::lexer(s2);
 		assert_eq!(lex.next(), Some(Ok(Productions::LitString("This one should \\\\".to_string()))));
 		assert_eq!(lex.next(), Some(Ok(Productions::Identifier(Ident::Unknown("fail".to_string())))));
-		assert_eq!(lex.next(), Some({
-		  <Productions as Logos>::Error::default();
-		  Err(())
-		}));
-
+		assert_eq!(lex.next(), Some(Err(LexingError::UnknownError)));
 	}
 
 	#[test]
@@ -136,10 +149,7 @@ mod tests {
 		let mut lex = Productions::lexer(s2);
 		assert_eq!(lex.next(), Some(Ok(Productions::LitString("This one should \\\\".to_string()))));
 		assert_eq!(lex.next(), Some(Ok(Productions::Identifier(Ident::Unknown("fail".to_string())))));
-		assert_eq!(lex.next(), Some({
-		  <Productions as Logos>::Error::default();
-		  Err(())
-		}));
+		assert_eq!(lex.next(), Some(Err(LexingError::UnknownError)));
 	}
 
 	#[test]
@@ -178,7 +188,7 @@ mod tests {
 		let expect = &[
 			Ok(Productions::GrammarSpec(Conversational)),
 			Ok(Productions::GrammarSpec(Generative)),
-			Ok(Productions::GrammarSpec(General))
+			Ok(Productions::GrammarSpec(Analytical))
 		];
 		assert_lex(s, expect);
 	}
@@ -192,5 +202,19 @@ mod tests {
 			Ok(Productions::Ebnf(EbnfType::Maybe))
 		];
 		assert_lex(s, expect);
+	}
+
+	#[test]
+	fn test_include() {
+		let s = "include some::path";
+		let s2 = "include another";
+		let expect = &[
+			Ok(Productions::Include("some::path".to_string()))
+		];
+		let expect2 = &[
+			Ok(Productions::Include("another".to_string()))
+		];
+		assert_lex(s, expect);
+		assert_lex(s2, expect2)
 	}
 }

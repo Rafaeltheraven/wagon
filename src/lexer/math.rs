@@ -1,4 +1,4 @@
-use super::TypeDetect;
+use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::{inherit_from_base};
 use logos_display::Display;
@@ -15,12 +15,6 @@ pub(crate) enum Math {
 
 	#[token("or")]
 	Or,
-
-	#[token("(")]
-	LPar,
-
-	#[token(")")]
-	RPar,
 
 	#[token("**")]
 	Pow,
@@ -76,9 +70,7 @@ pub(crate) enum Math {
 	#[token("=")]
 	Assigns,
 
-	#[token(";")]
-	Semi,
-
+	#[display_override("Subprocess")]
 	#[regex(r#"\$\(([^\)\\]|\\.)*\)"#, |lex| rem_first_and_last_char(&rem_first_char(lex.slice())))]
 	Bash(String),
 
@@ -86,9 +78,11 @@ pub(crate) enum Math {
     #[token("true", |_| true)]
     LitBool(bool),
 
+    #[display_override("Integer")]
     #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i32>().unwrap())]
 	LitInt(i32),
 
+	#[display_override("Float")]
 	#[regex("(-?[0-9]+\\.[0-9]+)", |lex| lex.slice().parse::<f32>().unwrap())]
 	LitFloat(f32),
 }

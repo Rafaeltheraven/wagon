@@ -3,11 +3,17 @@ pub(crate) mod math;
 pub(crate) mod productions;
 
 use crate::lexer::ident::Ident;
-use logos::Logos;
-use std::{fmt::{self}, iter::Peekable};
+use crate::helpers::peekable::Peekable;
+use logos::{Logos, Span};
+use std::{fmt::{self}};
 use productions::Productions;
 use math::Math;
-use strum_macros::Display;
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub(crate) enum LexingError {
+	#[default]
+	UnknownError
+}
 
 #[derive(Debug)]
 enum Lexer<'source> {
@@ -21,10 +27,19 @@ impl<'source> Lexer<'source> {
 	}
 }
 
-#[derive(Debug, PartialEq, Display)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum Tokens {
 	ProductionToken(Productions),
 	MathToken(Math)
+}
+
+impl fmt::Display for Tokens {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Tokens::ProductionToken(t) => t.fmt(f),
+            Tokens::MathToken(t) => t.fmt(f),
+        }
+    }
 }
 
 impl Default for Tokens {
@@ -58,8 +73,12 @@ pub(crate) trait UnsafePeek<T> {
 	fn peek_unwrap(&mut self) -> &T;
 }
 
-impl<'source> UnsafeNext<Tokens, ()> for &mut LexerBridge<'source>{}
-impl<'source> UnsafeNext<Tokens, ()> for Peekable<LexerBridge<'source>>{}
+pub(crate) trait Spannable {
+	fn span(&mut self) -> Span;
+}
+
+impl<'source> UnsafeNext<Tokens, LexingError> for &mut LexerBridge<'source>{}
+impl<'source> UnsafeNext<Tokens, LexingError> for Peekable<LexerBridge<'source>>{}
 impl<'source> UnsafePeek<Tokens> for Peekable<LexerBridge<'source>> {
 	fn peek_unwrap(&mut self) -> &Tokens {
 		match self.peek() {
@@ -70,12 +89,37 @@ impl<'source> UnsafePeek<Tokens> for Peekable<LexerBridge<'source>> {
 	}
 }
 
+trait GetInnerLexerBridge {
+	fn inner_bridge(&mut self) -> &LexerBridge;
+}
+
+impl Spannable for PeekLexer<'_> {
+    fn span(&mut self) -> Span {
+        self.iter.span()
+    }
+}
+
+impl Spannable for LexerBridge<'_> {
+	fn span(&mut self) -> Span {
+		self.lexer.span()
+	}
+}
+
+impl Spannable for Lexer<'_> {
+	fn span(&mut self) -> Span {
+		match self {
+			Self::Productions(l) => l.span(),
+			Self::Math(l) => l.span()
+		}
+	}
+}
+
 trait TypeDetect {
 	fn detect(inp: &str) -> Self;
 }
 
 impl<'source> Iterator for LexerBridge<'source> {
-	type Item = Result<Tokens, ()>;
+	type Item = Result<Tokens, LexingError>;
 	fn next(&mut self) -> Option<Self::Item> {
         use Tokens::*;
         match &mut self.lexer {
@@ -128,6 +172,7 @@ pub fn assert_lex<'a, Token>(
 mod tests {
 
 	use super::{LexerBridge, Tokens, Tokens::*};
+	use crate::lexer::LexingError;
 	use crate::lexer::productions::Productions;
 	use crate::lexer::math::Math;
 	use crate::lexer::ident::Ident::*;
@@ -137,7 +182,7 @@ mod tests {
 		let s = "[3 + 2.3 - $x] 'a thing' X {y = 4 + (!z['key'] < 3);}";
 		let lexer = LexerBridge::new(s);
 
-		let results: Vec<Result<Tokens, ()>> = lexer.collect();
+		let results: Vec<Result<Tokens, LexingError>> = lexer.collect();
 		let expect = vec![
 			Ok(ProductionToken(Productions::LBr)),
 			Ok(MathToken(Math::LitInt(3))),
