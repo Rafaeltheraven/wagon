@@ -1,21 +1,14 @@
-use super::{Parse, ParseResult, PeekLexer};
-use super::metadata::Metadata;
-use super::rule::Rule;
-use std::matches;
+use petgraph::{Graph, Undirected, graph::DefaultIx};
 
-#[derive(PartialEq, Debug)]
-pub(crate) struct Wag {
-	pub(crate) metadata: Metadata,
-	pub(crate) grammar: Vec<Rule>,
+use super::wag::Wag;
+
+pub(crate) enum WagNode {
+	Root(Wag)
 }
 
-impl Parse for Wag {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
-        let metadata = Metadata::parse(lexer)?;
-        let mut grammar = Vec::new();
-        while matches!(lexer.peek(), Some(_)) {
-        	grammar.push(Rule::parse(lexer)?);
-        }
-        Ok(Self {metadata, grammar})
-    }
+pub(crate) type WagTree = Graph<WagNode, (), Undirected, DefaultIx>;
+
+pub(crate) trait ToGraph {
+	fn to_graph(graph: &mut WagTree) -> ();
+	fn to_node(self) -> WagNode;
 }

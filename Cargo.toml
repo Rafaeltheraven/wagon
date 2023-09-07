@@ -14,7 +14,7 @@ petgraph = {version = "0.6.3", default-features = false}
 wagon-macros = { path = "./wagon-macros"}
 strum = "0.25"
 strum_macros = "0.25"
-logos-display = { path = "../logos_display" }
+logos-display = "0.1.2"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

@@ -2,7 +2,7 @@
 use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::inherit_from_base;
-use logos_display::Display;
+use logos_display::{Debug, Display};
 use crate::helpers::{rem_first_and_last_char, rem_first_char_n, remove_whitespace};
 use super::ident::{Ident};
 

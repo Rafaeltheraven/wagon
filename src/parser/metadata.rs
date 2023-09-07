@@ -1,5 +1,5 @@
-use crate::lexer::{UnsafeNext, UnsafePeek, Spannable};
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
+use crate::{lexer::{UnsafeNext, UnsafePeek, Spannable}};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, helpers::check_semi};
 use crate::lexer::productions::{Productions, GrammarType};
 
 #[derive(PartialEq, Debug)]
@@ -18,8 +18,10 @@ impl Parse for Metadata {
                 return Err(WagParseError::Fatal((lexer.span(), "Something went terribly wrong unwrapping the includes".to_string())))
             }
         }
+        check_semi(lexer)?;
         if let Tokens::ProductionToken(Productions::GrammarSpec(_)) = lexer.peek_unwrap() {
         	if let Tokens::ProductionToken(Productions::GrammarSpec(s)) = lexer.next_unwrap() {
+                check_semi(lexer)?;
         		Ok(Self {includes, spec: Some(s)})
         	} else {
         		Err(WagParseError::Fatal((lexer.span(), "Something went terribly wrong unwrapping the grammarspec token".to_string())))
@@ -27,5 +29,6 @@ impl Parse for Metadata {
         } else {
         	Ok(Self {includes, spec: None})
         }
+
     }
 }

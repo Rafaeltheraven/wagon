@@ -126,7 +126,9 @@ dependencies = [
 
 [[package]]
 name = "logos-display"
-version = "0.1.0"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "212c2fbcf063418665c18cfc065679a56dd92c3440162ba882c2822e2a3496fb"
 dependencies = [
  "proc-macro2",
  "quote",

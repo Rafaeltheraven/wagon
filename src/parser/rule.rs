@@ -15,7 +15,6 @@ pub(crate) enum Rule {
 impl Parse for Rule {
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
         let ident = match_error!(match lexer.next_unwrap() {
-        	#[expect("identifier")]
         	Tokens::ProductionToken(Productions::Identifier(Ident::Unknown(s))) => Ok(s),
         })?;
         let resp = match_error!(match lexer.next_unwrap() {
@@ -26,7 +25,7 @@ impl Parse for Rule {
         			ImportType::Basic | ImportType::Full | ImportType::Recursive => {
         				match lexer.next_unwrap() {
         					Tokens::ProductionToken(Productions::Identifier(Ident::Unknown(s))) => Ok(Self::Import(ident, i, s)),
-        					error => Err(WagParseError::Unexpected {span: lexer.span(), offender: error, expected: vec!["identifier".to_string()]})
+        					error => Err(WagParseError::Unexpected {span: lexer.span(), offender: error, expected: vec![Tokens::ProductionToken(Productions::Identifier(Default::default())).to_string()]})
         				}
         			}
         			ImportType::Exclude => Ok(Self::Exclude(ident, String::parse_sep(lexer, Tokens::ProductionToken(Productions::Additional))?))

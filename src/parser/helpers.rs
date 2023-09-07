@@ -1,4 +1,4 @@
-use crate::{lexer::{UnsafeNext}, string_vec};
+use crate::{lexer::{UnsafeNext, productions::Productions}, string_vec};
 use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError};
 
 impl Parse for String {
@@ -47,4 +47,12 @@ macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {
         Tokens::ProductionToken(Productions::$variant($($arg)*)) | Tokens::MathToken(Math::$variant($($arg)*))
     };
+}
+
+pub(super) fn check_semi(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
+	if lexer.next_if(|x| x.as_ref() == Ok(&Tokens::ProductionToken(Productions::Semi))).is_none() {
+    	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_unwrap(), expected: string_vec![Tokens::ProductionToken(Productions::Semi)] })
+    } else {
+    	Ok(())
+    }
 }

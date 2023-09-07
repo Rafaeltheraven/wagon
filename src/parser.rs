@@ -1,4 +1,5 @@
 #[macro_use]
+pub(crate) mod wag;
 pub(crate) mod ast;
 
 mod assignment;
@@ -20,16 +21,11 @@ mod term;
 mod terminal;
 
 use std::{error::Error, fmt::Display};
-
 use logos::Span;
-
 use crate::{lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable}, helpers::comma_separated_with_or};
-
 use crate::string_vec;
-
 use crate::helpers::peekable::Peekable;
-
-use self::ast::Wag;
+use self::wag::Wag;
 
 pub struct Parser<'source> {
 	lexer: PeekLexer<'source>
@@ -63,7 +59,7 @@ impl Error for WagParseError {}
 impl Display for WagParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	match self {
-	        WagParseError::Unexpected { span: _, offender, expected } => write!{f, "unexpected token {}, expected {:#?}", offender, comma_separated_with_or(expected)},
+	        WagParseError::Unexpected { span: _, offender, expected } => write!{f, "unexpected token {:?}, expected {:#?}", offender, comma_separated_with_or(expected)},
 	        WagParseError::Fatal((_, msg)) => write!(f, "Fatal exception: {:?}", msg),
     	}
     }
@@ -110,7 +106,6 @@ trait ParseOption {
 
 #[cfg(test)]
 mod tests {
-    use std::format;
 
     use super::assignment::Assignment;
     use super::atom::Atom;
@@ -133,9 +128,9 @@ mod tests {
     #[test]
 	fn test_example_wag() {
 		let input = r#"
-		include activities::other
+		include activities::other;
 
-		conversational grammar
+		conversational grammar;
 
 		start -> setup activity* 'stop'; /* a comment */
 		setup -> greet? getname;
@@ -310,12 +305,10 @@ mod tests {
 		let mut parser = Parser::new(input);
 		let output = parser.parse();
 		let expected = Err(crate::parser::WagParseError::Unexpected { 
-			span: Span {start: 28, end: 29}, 
-			offender: Tokens::ProductionToken(crate::lexer::productions::Productions::Semi), 
+			span: Span {start: 59, end: 64}, 
+			offender: Tokens::ProductionToken(crate::lexer::productions::Productions::Identifier(Ident::Unknown("start".to_string()))), 
 			expected: string_vec![
-				Tokens::ProductionToken(crate::lexer::productions::Productions::Identifier(Default::default())),
-				Tokens::ProductionToken(crate::lexer::productions::Productions::GrammarSpec(Default::default())),
-				Tokens::ProductionToken(crate::lexer::productions::Productions::Include(Default::default()))
+				Tokens::ProductionToken(crate::lexer::productions::Productions::Semi)
 			]
 		});
 		assert_eq!(expected, output);
