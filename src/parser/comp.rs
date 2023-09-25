@@ -1,3 +1,4 @@
+use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
 
 use super::helpers::TokenMapper;
@@ -6,19 +7,19 @@ use crate::lexer::{math::Math, UnsafePeek};
 use super::sum::Sum;
 use wagon_macros::TokenMapper;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Comparison {
 	pub(crate) sum: Sum,
 	pub(crate) comp: Option<Comp>
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Comp {
 	pub(crate) op: CompOp,
 	pub(crate) right: Sum
 }
 
-#[derive(TokenMapper, PartialEq, Debug)]
+#[derive(TokenMapper, PartialEq, Debug, Eq, Hash)]
 pub(crate) enum CompOp {
 	Eq,
 	Neq,
@@ -47,5 +48,20 @@ impl ParseOption for Comp {
         	Ok(None)
         }
     }
+}
 
+impl ToAst for Comparison {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        let node = if let Some(op) = self.comp {
+        	let node = ast.add_node(super::ast::WagNode::Comparison(Some(op.op)));
+        	let child = op.right.to_ast(ast);
+        	ast.add_edge(node, child, ());
+        	node
+        } else {
+        	ast.add_node(super::ast::WagNode::Comparison(None))
+        };
+        let child = self.sum.to_ast(ast);
+        ast.add_edge(node, child, ());
+        node
+    }
 }

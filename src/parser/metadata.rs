@@ -2,7 +2,7 @@ use crate::{lexer::{UnsafeNext, UnsafePeek, Spannable}};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, helpers::check_semi};
 use crate::lexer::productions::{Productions, GrammarType};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Metadata {
 	pub(crate) includes: Vec<String>,
 	pub(crate) spec: Option<GrammarType>

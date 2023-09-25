@@ -1,6 +1,6 @@
 use super::TypeDetect;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Ident {
     Inherit(String),
     Synth(String),

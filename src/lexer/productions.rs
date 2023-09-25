@@ -6,7 +6,7 @@ use logos_display::{Debug, Display};
 use crate::helpers::{rem_first_and_last_char, rem_first_char_n, remove_whitespace};
 use super::ident::{Ident};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub(crate) enum GrammarType {
 	Conversational,
 	Generative,
@@ -31,7 +31,7 @@ impl Default for GrammarType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub(crate) enum ImportType {
 	Basic,
 	Full,
@@ -57,7 +57,7 @@ impl Default for ImportType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub(crate) enum EbnfType {
 	Some,
 	Many,

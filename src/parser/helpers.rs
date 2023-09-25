@@ -1,10 +1,16 @@
 use crate::{lexer::{UnsafeNext, productions::Productions}, string_vec};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst};
 
 impl Parse for String {
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
         Ok(lexer.next_unwrap().to_string())
     }
+}
+
+impl ToAst for String {
+	fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+		ast.add_node(super::ast::WagNode::Generic(self))
+	}
 }
 
 pub(super) trait TokenMapper {

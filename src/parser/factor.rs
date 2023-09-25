@@ -1,8 +1,9 @@
+use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, Tokens};
 use super::atom::Atom;
 use crate::lexer::{math::Math, UnsafePeek};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) enum Factor {
 	Primary(Atom),
 	Power {
@@ -27,4 +28,20 @@ impl Parse for Factor {
 			Ok(Factor::Primary(left))
 		}
 	}
+}
+
+impl ToAst for Factor {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        match self {
+            Factor::Primary(a) => a.to_ast(ast),
+            Factor::Power { left, right } => {
+            	let node = ast.add_node(super::ast::WagNode::Factor);
+            	let right_node = (*right).to_ast(ast);
+            	let left_node = left.to_ast(ast);
+            	ast.add_edge(node, right_node, ());
+            	ast.add_edge(node, left_node, ());
+            	node
+            },
+        }
+    }
 }

@@ -1,4 +1,5 @@
 pub mod peekable;
+pub mod binary_children;
 
 use std::str::Chars;
 

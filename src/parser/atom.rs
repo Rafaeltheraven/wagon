@@ -1,24 +1,38 @@
-use crate::lexer::UnsafeNext;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
+use std::hash::{Hash, Hasher};
+
+use super::ast::{ToAst, WagNode};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, expression::Expression};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use crate::lexer::{math::Math, productions::Productions, ident::Ident, Spannable};
+use crate::lexer::{math::Math, productions::Productions, ident::Ident, Spannable, UnsafeNext};
 
 use wagon_macros::match_error;
-use super::expression::Expression;
+use ordered_float::NotNan;
 
-#[derive(PartialEq, Debug)]
+
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Dictionary(Ident, Expression);
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) enum Atom {
 	Ident(Ident),
 	Dict(Dictionary),
 	LitBool(bool),
 	LitNum(i32),
-	LitFloat(f32),
+	LitFloat(NotNan<f32>),
 	LitString(String),
 	Group(Expression)
+}
+
+#[derive(PartialEq, Debug)]
+pub(crate) enum AtomNode {
+	Ident(Ident),
+	Dict(Ident),
+	LitBool(bool),
+	LitNum(i32),
+	LitFloat(NotNan<f32>),
+	LitString(String),
+	Group
 }
 
 impl Parse for Atom {
@@ -35,7 +49,7 @@ impl Parse for Atom {
 	        },
 	        Tokens::MathToken(Math::LitBool(x)) => Ok(Self::LitBool(x)),
 	        Tokens::MathToken(Math::LitInt(x)) => Ok(Self::LitNum(x)),
-	        Tokens::MathToken(Math::LitFloat(x)) => Ok(Self::LitFloat(x)),
+	        Tokens::MathToken(Math::LitFloat(x)) => Ok(Self::LitFloat(NotNan::new(x).unwrap())),
 	        #[expect("string")]
 	        either_token!(LitString(x)) => Ok(Self::LitString(x)),
 	        Tokens::MathToken(Math::LPar) => {
@@ -44,4 +58,28 @@ impl Parse for Atom {
 	        },
 	    })
 	}
+}
+
+impl ToAst for Atom {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        match self {
+            Atom::Ident(x) => ast.add_node(WagNode::Atom(AtomNode::Ident(x))),
+            Atom::LitBool(x) => ast.add_node(WagNode::Atom(AtomNode::LitBool(x))),
+            Atom::LitNum(x) => ast.add_node(WagNode::Atom(AtomNode::LitNum(x))),
+            Atom::LitFloat(x) => ast.add_node(WagNode::Atom(AtomNode::LitFloat(x))),
+            Atom::LitString(x) => ast.add_node(WagNode::Atom(AtomNode::LitString(x))),
+            Atom::Dict(Dictionary(i, e)) => {
+            	let node = ast.add_node(WagNode::Atom(AtomNode::Dict(i)));
+            	let child = e.to_ast(ast);
+            	ast.add_edge(node, child, ());
+            	node
+            },
+            Atom::Group(g) => {
+            	let node = ast.add_node(WagNode::Atom(AtomNode::Group));
+            	let child = g.to_ast(ast);
+            	ast.add_edge(node, child, ());
+            	node
+            },
+        }
+    }
 }

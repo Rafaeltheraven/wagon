@@ -13,7 +13,7 @@ mod factor;
 mod helpers;
 mod inverse;
 mod metadata;
-mod rhs;
+pub (crate) mod rhs;
 mod rule;
 mod sum;
 mod symbol;
@@ -107,7 +107,8 @@ trait ParseOption {
 #[cfg(test)]
 mod tests {
 
-    use super::assignment::Assignment;
+    use ordered_float::NotNan;
+	use super::assignment::Assignment;
     use super::atom::Atom;
     use super::comp::Comparison;
     use super::conjunct::Conjunct;
@@ -133,10 +134,11 @@ mod tests {
 		conversational grammar;
 
 		start -> setup activity* 'stop'; /* a comment */
-		setup -> greet? getname;
+		setup -> greet? getname | ;
 		greet -> ('hello' {hello = true;})+ | "good morning";
 		greet => 'greetings human!' 
 		| [0.3] "What is your name? ";
+		getname -> ;
 		"#;
 		let mut parser = Parser::new(input);
 		let output = parser.parse();
@@ -188,6 +190,10 @@ mod tests {
 								ebnf: None
 							}
 						]
+					},
+					Rhs {
+						weight: None,
+						chunks: Vec::new()
 					}
 				]),
 				Rule::Analytic("greet".to_string(), vec![
@@ -261,7 +267,7 @@ mod tests {
 												sum: Sum {
 													left: Term { 
 														left: Factor::Primary(
-															Atom::LitFloat(0.3)
+															Atom::LitFloat(NotNan::new(0.3).unwrap())
 														), 
 														cont: None 
 													},
@@ -282,6 +288,12 @@ mod tests {
 								ebnf: None
 							}
 						]
+					}
+				]),
+				Rule::Analytic("getname".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: Vec::new()
 					}
 				])
 			]

@@ -1,10 +1,11 @@
+use super::ast::{ToAst, WagNode};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
 use crate::lexer::{math::Math, productions::Productions, ident::Ident, UnsafeNext, UnsafePeek, Spannable};
 
 use super::terminal::Terminal;
 use super::assignment::Assignment;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) enum Symbol {
 	NonTerminal(Ident),
 	Assignment(Vec<Assignment>),
@@ -26,6 +27,16 @@ impl Parse for Symbol {
                 Ok(Self::Assignment(Assignment::parse_sep_end(lexer, Tokens::MathToken(Math::Semi), Tokens::MathToken(Math::RCur))?))
         	},
         	_ => Ok(Self::Terminal(Terminal::parse(lexer)?))
+        }
+    }
+}
+
+impl ToAst for Symbol {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        match self {
+            Symbol::NonTerminal(i) => ast.add_node(WagNode::Ident(i)),
+            Symbol::Terminal(t) => ast.add_node(WagNode::Terminal(t)),
+            Symbol::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
         }
     }
 }

@@ -1,10 +1,10 @@
-use super::ast::{WagTree, WagNode, ToGraph};
+use super::ast::{WagTree, WagNode, ToAst, WagIx};
 use super::{Parse, ParseResult, PeekLexer};
 use super::metadata::Metadata;
 use super::rule::Rule;
 use std::matches;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Wag {
 	pub(crate) metadata: Metadata,
 	pub(crate) grammar: Vec<Rule>,
@@ -21,12 +21,14 @@ impl Parse for Wag {
     }
 }
 
-impl ToGraph for Wag {
+impl ToAst for Wag {
 
-    fn to_graph(_: &mut WagTree) { 
-        
-    }
-    fn to_node(self) -> WagNode { 
-        todo!() 
+    fn to_ast(self, ast: &mut WagTree) -> WagIx {
+        let node = ast.add_node(WagNode::Root(self.metadata));
+        for child in self.grammar {
+            let child_ix = child.to_ast(ast);
+            ast.add_edge(node, child_ix, ());
+        }
+        node
     }
 }

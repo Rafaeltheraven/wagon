@@ -1,5 +1,5 @@
 use crate::lexer::{UnsafePeek, UnsafeNext};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst};
 use crate::lexer::productions::{Productions, EbnfType};
 use super::symbol::Symbol;
 
@@ -7,7 +7,7 @@ use super::symbol::Symbol;
  Chunks are symbols in () with optionally an EBNF token following it.
  If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
 */
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Chunk {
 	pub(crate) symbols: Vec<Symbol>,
 	pub(crate) ebnf: Option<EbnfType>
@@ -39,4 +39,11 @@ impl Parse for Chunk {
 			Ok(Self {symbols, ebnf: None})
 		}
 	}
+}
+
+impl ToAst for Chunk {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+    	let node = super::ast::WagNode::Chunk(self.ebnf);
+        Self::add_vec_children(node, self.symbols, ast)
+    }
 }

@@ -1,3 +1,4 @@
+use crate::parser::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
 
 
@@ -15,13 +16,13 @@ Term -> Factor Term'
 Term' -> Op Factor Term' | epsilon
 */
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Term {
 	pub(crate) left: Factor,
 	pub(crate) cont: Option<TermP>
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct TermP {
 	pub(crate) op: Op2,
 	pub(crate) right: Factor,
@@ -50,10 +51,39 @@ impl ParseOption for TermP {
 	}
 }
 
-#[derive(TokenMapper, PartialEq, Debug)]
+#[derive(TokenMapper, PartialEq, Debug, Eq, Hash)]
 pub(crate) enum Op2 {
 	Mul,
 	Div,
 	Floor,
 	Mod
+}
+
+impl ToAst for Term {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        let node = if let Some(cont) = self.cont {
+        	cont.to_ast(ast)
+        } else {
+        	ast.add_node(super::ast::WagNode::Term(None))
+        };
+        let child = self.left.to_ast(ast);
+        ast.add_edge(node, child, ());
+        node
+    }
+}
+
+impl ToAst for TermP {
+    fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
+        let node = ast.add_node(super::ast::WagNode::Term(Some(self.op)));
+        let ret = if let Some(next) = *self.cont {
+        	let parent = next.to_ast(ast);
+        	ast.add_edge(parent, node, ());
+        	parent
+        } else {
+        	node
+        };
+        let child = self.right.to_ast(ast);
+        ast.add_edge(ret, child, ());
+        ret
+    }
 }
