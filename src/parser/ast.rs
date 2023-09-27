@@ -23,6 +23,7 @@ pub(crate) enum WagNode {
 	Term(Option<Op2>),
 	Atom(AtomNode),
 	Factor,
+	Empty,
 }
 
 pub(crate) type WagIx = NodeIndex<DefaultIx>;

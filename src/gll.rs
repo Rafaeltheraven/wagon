@@ -32,6 +32,6 @@ impl<'a> GrammarSlot<'a> {
 	}
 
 	fn len(&self) -> usize {
-		self.rules[self.alt].chunks[0].symbols.len()
+		self.rules[self.alt].chunks.len()
 	}
 }

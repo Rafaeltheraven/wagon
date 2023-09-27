@@ -1,5 +1,5 @@
 use super::ast::{WagTree, WagNode, ToAst, WagIx};
-use super::{Parse, ParseResult, PeekLexer};
+use super::{Parse, ParseResult, PeekLexer, Rewrite};
 use super::metadata::Metadata;
 use super::rule::Rule;
 use std::matches;
@@ -31,4 +31,18 @@ impl ToAst for Wag {
         }
         node
     }
+}
+
+impl Rewrite<()> for Wag {
+
+    fn rewrite(&mut self, depth: usize) {
+        let mut new_rules = Vec::new();
+        let rules = std::mem::take(&mut self.grammar);
+        for mut rule in rules {
+            new_rules.extend(rule.rewrite(depth));
+            new_rules.push(rule);
+        }
+        self.grammar.extend(new_rules);
+    }
+
 }

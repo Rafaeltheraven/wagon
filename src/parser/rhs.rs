@@ -2,13 +2,10 @@ use std::matches;
 
 use crate::lexer::{UnsafePeek, Spannable};
 use super::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk, ChunkP}, expression::Expression, symbol::Symbol};
 use super::helpers::{between};
 
 use crate::lexer::{productions::Productions, math::Math};
-
-use super::expression::Expression;
-use super::chunk::Chunk;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Rhs {
@@ -43,8 +40,22 @@ impl Rhs {
 				resp.push(Chunk::parse(lexer)?);
 				check = lexer.peek();
 			}
+		} else {
+			resp.push(Chunk { chunk: super::chunk::ChunkP::Unit(super::symbol::Symbol::Epsilon), ebnf: None })
 		}
 		Ok(resp)
+	}
+
+	pub(crate) fn empty() -> Self {
+		Self {
+            weight: None,
+            chunks: vec![
+                Chunk {
+                    ebnf: None,
+                    chunk: ChunkP::Unit(Symbol::Epsilon)
+                }
+            ]
+        }
 	}
 }
 

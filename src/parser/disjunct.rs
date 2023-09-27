@@ -2,7 +2,7 @@ use super::{Parse, PeekLexer, ParseResult, Tokens, ast::ToAst};
 use crate::lexer::{math::Math};
 use super::conjunct::Conjunct;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Disjunct(pub(crate) Vec<Conjunct>);
 
 impl Parse for Disjunct {

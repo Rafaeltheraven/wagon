@@ -7,13 +7,13 @@ use super::term::Term;
 use super::helpers::TokenMapper;
 use wagon_macros::TokenMapper;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Sum {
 	pub(crate) left: Term,
 	pub(crate) cont: Option<SumP>
 }
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct SumP {
 	pub(crate) op: Op1,
 	pub(crate) right: Term,
@@ -42,7 +42,7 @@ impl ParseOption for SumP {
 	}
 }
 
-#[derive(TokenMapper, PartialEq, Debug, Eq, Hash)]
+#[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Op1 {
 	Add,
 	Sub

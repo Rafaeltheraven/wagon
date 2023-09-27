@@ -104,10 +104,15 @@ trait ParseOption {
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized;
 }
 
+trait Rewrite<T> {
+	fn rewrite(&mut self, depth: usize) -> T;
+}
+
 #[cfg(test)]
 mod tests {
 
     use ordered_float::NotNan;
+	use super::Rewrite;
 	use super::assignment::Assignment;
     use super::atom::Atom;
     use super::comp::Comparison;
@@ -121,6 +126,7 @@ mod tests {
     use crate::lexer::Tokens;
     use crate::lexer::productions::GrammarType;
     use crate::lexer::ident::Ident;
+    use crate::parser::chunk::ChunkP;
     use crate::string_vec;
 
     use logos::Span;
@@ -153,21 +159,15 @@ mod tests {
 						weight: None, 
 						chunks: vec![
 							Chunk { 
-								symbols: vec![
-									Symbol::NonTerminal(Ident::Unknown("setup".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("setup".to_string()))),
 								ebnf: None 
 							},
 							Chunk {
-								symbols: vec![
-									Symbol::NonTerminal(Ident::Unknown("activity".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("activity".to_string()))),
 								ebnf: Some(crate::lexer::productions::EbnfType::Many)
 							},
 							Chunk {
-								symbols: vec![
-									Symbol::Terminal(Terminal::LitString("stop".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("stop".to_string()))),
 								ebnf: None
 							}
 						]
@@ -178,32 +178,25 @@ mod tests {
 						weight: None,
 						chunks: vec![
 							Chunk {
-								symbols: vec![
-									Symbol::NonTerminal(Ident::Unknown("greet".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("greet".to_string()))),
 								ebnf: Some(crate::lexer::productions::EbnfType::Maybe)
 							},
 							Chunk {
-								symbols: vec![
-									Symbol::NonTerminal(Ident::Unknown("getname".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("getname".to_string()))),
 								ebnf: None
 							}
 						]
 					},
-					Rhs {
-						weight: None,
-						chunks: Vec::new()
-					}
+					Rhs::empty()
 				]),
 				Rule::Analytic("greet".to_string(), vec![
 					Rhs {
 						weight: None,
 						chunks: vec![
 							Chunk {
-								symbols: vec![
-									Symbol::Terminal(Terminal::LitString("hello".to_string())),
-									Symbol::Assignment(vec![
+								chunk: ChunkP::Group(vec![
+									Chunk { chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("hello".to_string()))), ebnf: None },
+									Chunk { chunk: ChunkP::Unit(Symbol::Assignment(vec![
 										Assignment { 
 											ident: Ident::Unknown("hello".to_string()), 
 											expr: Expression::Disjunct(
@@ -227,8 +220,9 @@ mod tests {
 												])
 											)
 										}
-									])
-								],
+									])), ebnf: None
+									}
+								]),
 								ebnf: Some(crate::lexer::productions::EbnfType::Some)
 							}
 						]
@@ -237,9 +231,7 @@ mod tests {
 						weight: None,
 						chunks: vec![
 							Chunk {
-								symbols: vec![
-									Symbol::Terminal(Terminal::LitString("good morning".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("good morning".to_string()))),
 								ebnf: None
 							}
 						]
@@ -250,9 +242,7 @@ mod tests {
 						weight: None,
 						chunks: vec![
 							Chunk {
-								symbols: vec![
-									Symbol::Terminal(Terminal::LitString("greetings human!".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("greetings human!".to_string()))),
 								ebnf: None
 							}
 						]
@@ -282,19 +272,14 @@ mod tests {
 						),
 						chunks: vec![
 							Chunk {
-								symbols: vec![
-									Symbol::Terminal(Terminal::LitString("What is your name? ".to_string()))
-								],
+								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("What is your name? ".to_string()))),
 								ebnf: None
 							}
 						]
 					}
 				]),
 				Rule::Analytic("getname".to_string(), vec![
-					Rhs {
-						weight: None,
-						chunks: Vec::new()
-					}
+					Rhs::empty()
 				])
 			]
 		};
@@ -323,6 +308,263 @@ mod tests {
 				Tokens::ProductionToken(crate::lexer::productions::Productions::Semi)
 			]
 		});
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_simple_rewrite_maybe() {
+		let input = r#"
+		A -> X Y?;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag { 
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A-0-1".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![Chunk::simple_ident("Y".to_string())]
+					},
+					Rhs::empty()
+				]),
+				Rule::Analytic("A".to_string(), vec![
+					Rhs { 
+						weight: None, 
+						chunks: vec![
+							Chunk::simple_ident("X".to_string()),
+							Chunk::simple_ident("A-0-1".to_string())
+						] 
+					}
+				]),
+			]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_simple_rewrite_many() {
+		let input = r#"
+		A -> X Y*;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag { 
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A-0-1".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("Y".to_string()),
+							Chunk::simple_ident("A-0-1".to_string())
+						]
+					},
+					Rhs::empty()
+				]),
+				Rule::Analytic("A".to_string(), vec![
+					Rhs { 
+						weight: None, 
+						chunks: vec![
+							Chunk::simple_ident("X".to_string()),
+							Chunk::simple_ident("A-0-1".to_string())
+						] 
+					}
+				]),
+			]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_simple_rewrite_some() {
+		let input = r#"
+		A -> X Y+;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag { 
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A-0-1-p".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("Y".to_string()),
+							Chunk::simple_ident("A-0-1-p".to_string())
+						]
+					},
+					Rhs::empty()
+				]),
+				Rule::Analytic("A-0-1".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("Y".to_string()),
+							Chunk::simple_ident("A-0-1-p".to_string())
+						]
+					}
+				]),
+				Rule::Analytic("A".to_string(), vec![
+					Rhs { 
+						weight: None, 
+						chunks: vec![
+							Chunk::simple_ident("X".to_string()),
+							Chunk::simple_ident("A-0-1".to_string())
+						] 
+					}
+				]),
+			]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_simple_group() {
+		let input = r#"
+		A -> (B C?)+;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag {
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A-0-0^0-0-1".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![Chunk::simple_ident("C".to_string())]
+					},
+					Rhs::empty()
+				]),
+				Rule::Analytic("A-0-0^0".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("B".to_string()),
+							Chunk::simple_ident("A-0-0^0-0-1".to_string())
+						]
+					}
+				]),
+				Rule::Analytic("A-0-0-p".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("A-0-0^0".to_string()),
+							Chunk::simple_ident("A-0-0-p".to_string())
+						]
+					},
+					Rhs::empty()
+				]),
+				Rule::Analytic("A-0-0".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk::simple_ident("A-0-0^0".to_string()),
+							Chunk::simple_ident("A-0-0-p".to_string())
+						]
+					},
+				]),
+				Rule::Analytic("A".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![Chunk::simple_ident("A-0-0".to_string())]
+					}
+				])
+			]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_complex_rewrite() {
+		let input = r#"
+		A -> ((X Y)+ Z?)+;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag {
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A-0-0^0-0-0^1".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("X".to_string()),
+	                        Chunk::simple_ident("Y".to_string())
+	                    ],
+	                },
+	            ]),
+		        Rule::Analytic("A-0-0^0-0-0-p".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0^0-0-0^1".to_string()),
+	                        Chunk::simple_ident("A-0-0^0-0-0-p".to_string())
+	                    ],
+	                },
+	                Rhs::empty()
+	            ]),
+		        Rule::Analytic("A-0-0^0-0-0".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0^0-0-0^1".to_string()),
+	                        Chunk::simple_ident("A-0-0^0-0-0-p".to_string())
+	                    ],
+	                },
+	            ]),
+		        Rule::Analytic("A-0-0^0-0-1".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("Z".to_string())
+	                    ],
+	                },
+	                Rhs::empty()
+	            ]),
+		        Rule::Analytic("A-0-0^0".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0^0-0-0".to_string()),
+	                        Chunk::simple_ident("A-0-0^0-0-1".to_string())
+	                    ],
+	                },
+	            ]),
+		        Rule::Analytic("A-0-0-p".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0^0".to_string()),
+	                        Chunk::simple_ident("A-0-0-p".to_string())
+	                    ],
+	                },
+	                Rhs::empty()
+	            ]),
+		        Rule::Analytic("A-0-0".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0^0".to_string()),
+	                        Chunk::simple_ident("A-0-0-p".to_string())
+	                    ],
+	                },
+	            ]),
+		        Rule::Analytic("A".to_string(), vec![
+	                Rhs {
+	                    weight: None,
+	                    chunks: vec![
+	                        Chunk::simple_ident("A-0-0".to_string())
+	                    ],
+	                },
+	            ]),
+		    ]
+		};
 		assert_eq!(expected, output);
 	}
 

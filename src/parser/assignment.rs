@@ -5,7 +5,7 @@ use crate::lexer::{math::Math, ident::Ident, Spannable};
 use wagon_macros::match_error;
 use super::expression::Expression;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Assignment {
 	pub(crate) ident: Ident,
 	pub(crate) expr: Expression

@@ -1,4 +1,4 @@
-use std::hash::{Hash, Hasher};
+use std::hash::{Hash};
 
 use super::ast::{ToAst, WagNode};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, expression::Expression};
@@ -10,10 +10,10 @@ use wagon_macros::match_error;
 use ordered_float::NotNan;
 
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Dictionary(Ident, Expression);
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Atom {
 	Ident(Ident),
 	Dict(Dictionary),

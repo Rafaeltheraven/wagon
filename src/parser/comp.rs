@@ -7,19 +7,19 @@ use crate::lexer::{math::Math, UnsafePeek};
 use super::sum::Sum;
 use wagon_macros::TokenMapper;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Comparison {
 	pub(crate) sum: Sum,
 	pub(crate) comp: Option<Comp>
 }
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Comp {
 	pub(crate) op: CompOp,
 	pub(crate) right: Sum
 }
 
-#[derive(TokenMapper, PartialEq, Debug, Eq, Hash)]
+#[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum CompOp {
 	Eq,
 	Neq,

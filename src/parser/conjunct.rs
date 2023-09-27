@@ -4,7 +4,7 @@ use crate::lexer::{math::Math};
 
 use super::inverse::Inverse;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Conjunct(pub(crate) Vec<Inverse>);
 
 impl Parse for Conjunct {

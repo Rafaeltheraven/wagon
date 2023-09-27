@@ -1,3 +1,5 @@
+use wagon_macros::match_error;
+
 use crate::{lexer::{UnsafeNext, UnsafePeek, Spannable}};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, helpers::check_semi};
 use crate::lexer::productions::{Productions, GrammarType};
@@ -11,14 +13,12 @@ pub(crate) struct Metadata {
 impl Parse for Metadata {
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
         let mut includes = Vec::new();
-        while let Tokens::ProductionToken(Productions::Include(_)) = lexer.peek_unwrap() {
-            if let Some(Ok(Tokens::ProductionToken(Productions::Include(s)))) = lexer.next() {
-                includes.push(s);
-            } else {
-                return Err(WagParseError::Fatal((lexer.span(), "Something went terribly wrong unwrapping the includes".to_string())))
-            }
+        while lexer.next_if_eq(&Ok(Tokens::ProductionToken(Productions::Include))).is_some() {
+            match_error!(match lexer.next_unwrap() {
+                Tokens::ProductionToken(Productions::Path(p)) => {includes.push(p); Ok(())}
+            })?;
+            check_semi(lexer)?;
         }
-        check_semi(lexer)?;
         if let Tokens::ProductionToken(Productions::GrammarSpec(_)) = lexer.peek_unwrap() {
         	if let Tokens::ProductionToken(Productions::GrammarSpec(s)) = lexer.next_unwrap() {
                 check_semi(lexer)?;

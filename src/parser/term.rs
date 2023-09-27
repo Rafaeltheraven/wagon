@@ -16,13 +16,13 @@ Term -> Factor Term'
 Term' -> Op Factor Term' | epsilon
 */
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Term {
 	pub(crate) left: Factor,
 	pub(crate) cont: Option<TermP>
 }
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct TermP {
 	pub(crate) op: Op2,
 	pub(crate) right: Factor,
@@ -51,7 +51,7 @@ impl ParseOption for TermP {
 	}
 }
 
-#[derive(TokenMapper, PartialEq, Debug, Eq, Hash)]
+#[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Op2 {
 	Mul,
 	Div,

@@ -3,7 +3,7 @@ use super::{Parse, PeekLexer, ParseResult, Tokens};
 use super::atom::Atom;
 use crate::lexer::{math::Math, UnsafePeek};
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Factor {
 	Primary(Atom),
 	Power {

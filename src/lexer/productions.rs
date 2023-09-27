@@ -3,7 +3,7 @@ use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::inherit_from_base;
 use logos_display::{Debug, Display};
-use crate::helpers::{rem_first_and_last_char, rem_first_char_n, remove_whitespace};
+use crate::helpers::{rem_first_and_last_char};
 use super::ident::{Ident};
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
@@ -84,18 +84,18 @@ pub(crate) enum Productions {
 	#[token("=>")]
 	Generate,
 
-	#[token("::")]
-	Colons,
-
 	#[token("|")]
 	Alternative,
 
 	#[token("&")]
 	Additional,
 
-	#[display_override("Include")]
-	#[regex(r"include[\s]([a-zA-Z]*(::[a-zA-Z]*)*)?", |lex| remove_whitespace(rem_first_char_n(lex.slice(), 7)))]
-	Include(String),
+	#[token("include")]
+	Include,
+
+	#[display_override("Include Path")]
+	#[regex(r"[a-zA-Z]*(::[a-zA-Z]*)+", |lex| lex.slice().to_string())]
+	Path(String),
 
 	#[display_override("Import")]
 	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
@@ -207,12 +207,14 @@ mod tests {
 	#[test]
 	fn test_include() {
 		let s = "include some::path";
-		let s2 = "include another";
+		let s2 = "include ::another";
 		let expect = &[
-			Ok(Productions::Include("some::path".to_string()))
+			Ok(Productions::Include),
+			Ok(Productions::Path("some::path".to_string()))
 		];
 		let expect2 = &[
-			Ok(Productions::Include("another".to_string()))
+			Ok(Productions::Include),
+			Ok(Productions::Path("::another".to_string()))
 		];
 		assert_lex(s, expect);
 		assert_lex(s2, expect2)

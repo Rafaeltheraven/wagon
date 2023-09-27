@@ -4,7 +4,7 @@ use crate::lexer::{math::Math};
 
 use super::comp::Comparison;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Inverse {
 	Not(Box<Inverse>),
 	Comparison(Comparison)

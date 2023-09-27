@@ -5,11 +5,12 @@ use crate::lexer::{math::Math, productions::Productions, ident::Ident, UnsafeNex
 use super::terminal::Terminal;
 use super::assignment::Assignment;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Symbol {
 	NonTerminal(Ident),
 	Assignment(Vec<Assignment>),
 	Terminal(Terminal),
+    Epsilon
 }
 
 impl Parse for Symbol {
@@ -31,12 +32,19 @@ impl Parse for Symbol {
     }
 }
 
+impl Default for Symbol {
+    fn default() -> Self {
+        Self::Epsilon
+    }
+}
+
 impl ToAst for Symbol {
     fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
         match self {
             Symbol::NonTerminal(i) => ast.add_node(WagNode::Ident(i)),
             Symbol::Terminal(t) => ast.add_node(WagNode::Terminal(t)),
             Symbol::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
+            Symbol::Epsilon => ast.add_node(WagNode::Empty)
         }
     }
 }

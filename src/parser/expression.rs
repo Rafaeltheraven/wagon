@@ -4,7 +4,7 @@ use crate::lexer::{math::Math, UnsafeNext, UnsafePeek};
 use wagon_macros::match_error;
 use super::disjunct::Disjunct;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Expression {
 	Subproc(String),
 	If {

@@ -3,7 +3,7 @@ use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
 use crate::lexer::{productions::Productions, Spannable};
 use wagon_macros::match_error;
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Terminal {
 	Regex(String),
 	LitString(String)
