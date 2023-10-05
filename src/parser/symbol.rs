@@ -38,6 +38,31 @@ impl Default for Symbol {
     }
 }
 
+impl Symbol {
+
+    pub(crate) fn is_terminal(&self) -> bool {
+        match self {
+            Self::Terminal(_) | Self::Epsilon  => true,
+            _ => false
+        }
+    }
+
+    pub(crate) fn is_eps(&self) -> bool {
+        match self {
+            Self::Epsilon => true,
+            _ => false
+        }
+    }
+
+    pub(crate) fn simple_terminal(ident: &str) -> Self {
+        Self::Terminal(Terminal::LitString(ident.to_string()))
+    }
+
+    pub (crate) fn simple_ident(ident: &str) -> Self {
+        Self::NonTerminal(Ident::Unknown(ident.to_string()))
+    }
+}
+
 impl ToAst for Symbol {
     fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
         match self {

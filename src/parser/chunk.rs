@@ -8,26 +8,19 @@ use super::symbol::Symbol;
  Chunks are symbols in () with optionally an EBNF token following it.
  If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
 */
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Chunk {
 	pub(crate) chunk: ChunkP,
 	pub(crate) ebnf: Option<EbnfType>
 }
 
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum ChunkP {
 	Unit(Symbol),
 	Group(Vec<Chunk>)
 }
 
 impl Chunk {
-
-	pub(crate) fn simple_ident(ident: String) -> Self {
-		Self {
-            ebnf: None,
-            chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident)))
-        }
-	}
 
 	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, symbol: Symbol, rule_func: fn(String, Vec<Rhs>) -> Rule, rules: &mut Vec<Rule>) {
 		let chunks = match ebnf {
@@ -42,7 +35,7 @@ impl Chunk {
                                     ebnf: None,
                                     chunk: ChunkP::Unit(symbol.clone())
                                 },
-                                Self::simple_ident(helper_ident.clone())
+                                Self::simple_ident(&helper_ident)
                             ]
                         },
                         Rhs::empty()
@@ -56,7 +49,7 @@ impl Chunk {
                                 ebnf: None,
                                 chunk: ChunkP::Unit(symbol)
                             },
-                            Self::simple_ident(helper_ident)
+                            Self::simple_ident(&helper_ident)
                         ]
                     }
                 ]
@@ -70,7 +63,7 @@ impl Chunk {
                                 ebnf: None,
                                 chunk: ChunkP::Unit(symbol)
                             },
-                            Self::simple_ident(ident.clone())
+                            Self::simple_ident(&ident)
                         ]
                     },
                     Rhs::empty()
@@ -117,6 +110,39 @@ impl Chunk {
         rules
 	}
 
+    pub(crate) fn is_terminal(&self) -> bool {
+        match &self.chunk {
+            ChunkP::Unit(s) => s.is_terminal(),
+            ChunkP::Group(_) => false,
+        }
+    }
+
+    pub(crate) fn simple_terminal(term: &str) -> Self {
+        Self { 
+            ebnf: None, 
+            chunk: ChunkP::Unit(Symbol::simple_terminal(term)) 
+        }
+    }
+
+    pub(crate) fn simple_ident(ident: &str) -> Self {
+        Self {
+            ebnf: None,
+            chunk: ChunkP::Unit(Symbol::simple_ident(ident))
+        }
+    }
+
+    pub(crate) fn extract_symbols(self) -> Vec<Symbol> {
+        match self {
+            Self {chunk: ChunkP::Unit(s), ..} => vec![s],
+            Self {chunk: ChunkP::Group(g), ..} => {
+                let mut ret = Vec::with_capacity(g.len());
+                for chunk in g {
+                    ret.extend(chunk.extract_symbols())
+                }
+                ret
+            }
+        }
+    }
 }
 
 impl Parse for Chunk {

@@ -14,13 +14,11 @@ pub(crate) type SPPFGraph<'a> = Graph<SPPFNode<'a>, (), Directed, SPPFIx>;
 pub(crate) enum SPPFNode<'a> {
     /// $ node in original paper
     Dummy,
-    /// (slot, left, right, children)
     Intermediate {
     	slot: Rc<GrammarSlot<'a>>, 
     	left: usize, 
     	right: usize
     },
-    /// (label, split, children)
     Packed {
     	slot: Rc<GrammarSlot<'a>>, 
     	split: usize

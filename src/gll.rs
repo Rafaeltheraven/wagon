@@ -9,14 +9,13 @@ mod descriptor;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) struct GrammarSlot<'a> {
 	label: String,
-	rules: Vec<&'a Rhs>,
-	alt: usize,
+	rule: &'a Rhs,
 	dot: usize
 }
 
 impl<'a> GrammarSlot<'a> {
-	fn new(label: String, rules: Vec<&'a Rhs>, alt: usize, dot: usize) -> Self {
-		Self {label, rules, alt, dot}
+	fn new(label: String, rule: &'a Rhs, dot: usize) -> Self {
+		Self {label, rule, dot}
 	}
 
 	fn is_special(&self) -> bool {
@@ -32,6 +31,6 @@ impl<'a> GrammarSlot<'a> {
 	}
 
 	fn len(&self) -> usize {
-		self.rules[self.alt].chunks.len()
+		self.rule.chunks.len()
 	}
 }

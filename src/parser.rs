@@ -1,24 +1,24 @@
 #[macro_use]
-pub(crate) mod wag;
-pub(crate) mod ast;
+pub (crate) mod wag;
+pub (crate) mod ast;
 
-mod assignment;
-mod atom;
-mod chunk;
-mod comp;
-mod conjunct;
-mod disjunct;
-mod expression;
-mod factor;
-mod helpers;
-mod inverse;
-mod metadata;
+pub (crate) mod assignment;
+pub (crate) mod atom;
+pub (crate) mod chunk;
+pub (crate) mod comp;
+pub (crate) mod conjunct;
+pub (crate) mod disjunct;
+pub (crate) mod expression;
+pub (crate) mod factor;
+pub (crate) mod helpers;
+pub (crate) mod inverse;
+pub (crate) mod metadata;
 pub (crate) mod rhs;
-mod rule;
-mod sum;
-mod symbol;
-mod term;
-mod terminal;
+pub (crate) mod rule;
+pub (crate) mod sum;
+pub (crate) mod symbol;
+pub (crate) mod term;
+pub (crate) mod terminal;
 
 use std::{error::Error, fmt::Display};
 use logos::Span;
@@ -39,7 +39,9 @@ impl<'source> Parser<'source> {
 	}
 
 	pub(crate) fn parse(&mut self) -> ParseResult<Wag> {
-		Wag::parse(&mut self.lexer)
+		let mut wag = Wag::parse(&mut self.lexer)?;
+		wag.rewrite(0);
+		Ok(wag)
 	}
 }
 
@@ -111,7 +113,10 @@ trait Rewrite<T> {
 #[cfg(test)]
 mod tests {
 
-    use ordered_float::NotNan;
+    use crate::helpers::peekable::Peekable;
+	use crate::parser::Parse;
+	use crate::parser::LexerBridge;
+	use ordered_float::NotNan;
 	use super::Rewrite;
 	use super::assignment::Assignment;
     use super::atom::Atom;
@@ -146,8 +151,8 @@ mod tests {
 		| [0.3] "What is your name? ";
 		getname -> ;
 		"#;
-		let mut parser = Parser::new(input);
-		let output = parser.parse();
+		let mut lexer = Peekable::new(LexerBridge::new(input));
+		let output = Wag::parse(&mut lexer);
 		let expected = Wag { 
 			metadata: Metadata {
 				includes: vec!["activities::other".to_string()],
@@ -325,7 +330,7 @@ mod tests {
 				Rule::Analytic("A-0-1".to_string(), vec![
 					Rhs {
 						weight: None,
-						chunks: vec![Chunk::simple_ident("Y".to_string())]
+						chunks: vec![Chunk::simple_ident("Y")]
 					},
 					Rhs::empty()
 				]),
@@ -333,8 +338,8 @@ mod tests {
 					Rhs { 
 						weight: None, 
 						chunks: vec![
-							Chunk::simple_ident("X".to_string()),
-							Chunk::simple_ident("A-0-1".to_string())
+							Chunk::simple_ident("X"),
+							Chunk::simple_ident("A-0-1")
 						] 
 					}
 				]),
@@ -358,8 +363,8 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("Y".to_string()),
-							Chunk::simple_ident("A-0-1".to_string())
+							Chunk::simple_ident("Y"),
+							Chunk::simple_ident("A-0-1")
 						]
 					},
 					Rhs::empty()
@@ -368,8 +373,8 @@ mod tests {
 					Rhs { 
 						weight: None, 
 						chunks: vec![
-							Chunk::simple_ident("X".to_string()),
-							Chunk::simple_ident("A-0-1".to_string())
+							Chunk::simple_ident("X"),
+							Chunk::simple_ident("A-0-1")
 						] 
 					}
 				]),
@@ -393,8 +398,8 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("Y".to_string()),
-							Chunk::simple_ident("A-0-1-p".to_string())
+							Chunk::simple_ident("Y"),
+							Chunk::simple_ident("A-0-1-p")
 						]
 					},
 					Rhs::empty()
@@ -403,8 +408,8 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("Y".to_string()),
-							Chunk::simple_ident("A-0-1-p".to_string())
+							Chunk::simple_ident("Y"),
+							Chunk::simple_ident("A-0-1-p")
 						]
 					}
 				]),
@@ -412,8 +417,8 @@ mod tests {
 					Rhs { 
 						weight: None, 
 						chunks: vec![
-							Chunk::simple_ident("X".to_string()),
-							Chunk::simple_ident("A-0-1".to_string())
+							Chunk::simple_ident("X"),
+							Chunk::simple_ident("A-0-1")
 						] 
 					}
 				]),
@@ -436,7 +441,7 @@ mod tests {
 				Rule::Analytic("A-0-0^0-0-1".to_string(), vec![
 					Rhs {
 						weight: None,
-						chunks: vec![Chunk::simple_ident("C".to_string())]
+						chunks: vec![Chunk::simple_ident("C")]
 					},
 					Rhs::empty()
 				]),
@@ -444,8 +449,8 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("B".to_string()),
-							Chunk::simple_ident("A-0-0^0-0-1".to_string())
+							Chunk::simple_ident("B"),
+							Chunk::simple_ident("A-0-0^0-0-1")
 						]
 					}
 				]),
@@ -453,8 +458,8 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("A-0-0^0".to_string()),
-							Chunk::simple_ident("A-0-0-p".to_string())
+							Chunk::simple_ident("A-0-0^0"),
+							Chunk::simple_ident("A-0-0-p")
 						]
 					},
 					Rhs::empty()
@@ -463,15 +468,15 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("A-0-0^0".to_string()),
-							Chunk::simple_ident("A-0-0-p".to_string())
+							Chunk::simple_ident("A-0-0^0"),
+							Chunk::simple_ident("A-0-0-p")
 						]
 					},
 				]),
 				Rule::Analytic("A".to_string(), vec![
 					Rhs {
 						weight: None,
-						chunks: vec![Chunk::simple_ident("A-0-0".to_string())]
+						chunks: vec![Chunk::simple_ident("A-0-0")]
 					}
 				])
 			]
@@ -494,8 +499,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("X".to_string()),
-	                        Chunk::simple_ident("Y".to_string())
+	                        Chunk::simple_ident("X"),
+	                        Chunk::simple_ident("Y")
 	                    ],
 	                },
 	            ]),
@@ -503,8 +508,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0^0-0-0^1".to_string()),
-	                        Chunk::simple_ident("A-0-0^0-0-0-p".to_string())
+	                        Chunk::simple_ident("A-0-0^0-0-0^1"),
+	                        Chunk::simple_ident("A-0-0^0-0-0-p")
 	                    ],
 	                },
 	                Rhs::empty()
@@ -513,8 +518,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0^0-0-0^1".to_string()),
-	                        Chunk::simple_ident("A-0-0^0-0-0-p".to_string())
+	                        Chunk::simple_ident("A-0-0^0-0-0^1"),
+	                        Chunk::simple_ident("A-0-0^0-0-0-p")
 	                    ],
 	                },
 	            ]),
@@ -522,7 +527,7 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("Z".to_string())
+	                        Chunk::simple_ident("Z")
 	                    ],
 	                },
 	                Rhs::empty()
@@ -531,8 +536,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0^0-0-0".to_string()),
-	                        Chunk::simple_ident("A-0-0^0-0-1".to_string())
+	                        Chunk::simple_ident("A-0-0^0-0-0"),
+	                        Chunk::simple_ident("A-0-0^0-0-1")
 	                    ],
 	                },
 	            ]),
@@ -540,8 +545,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0^0".to_string()),
-	                        Chunk::simple_ident("A-0-0-p".to_string())
+	                        Chunk::simple_ident("A-0-0^0"),
+	                        Chunk::simple_ident("A-0-0-p")
 	                    ],
 	                },
 	                Rhs::empty()
@@ -550,8 +555,8 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0^0".to_string()),
-	                        Chunk::simple_ident("A-0-0-p".to_string())
+	                        Chunk::simple_ident("A-0-0^0"),
+	                        Chunk::simple_ident("A-0-0-p")
 	                    ],
 	                },
 	            ]),
@@ -559,11 +564,61 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A-0-0".to_string())
+	                        Chunk::simple_ident("A-0-0")
 	                    ],
 	                },
 	            ]),
 		    ]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_rewrite_group_no_ebnf() {
+		let input = r#"
+		A -> (B C);
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag {
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A".to_string(), vec![
+					Rhs {
+						weight: None,
+						chunks: vec![
+							Chunk {ebnf: None, chunk: ChunkP::Group(vec![
+								Chunk::simple_ident("B"),
+								Chunk::simple_ident("C")
+							])}
+						]
+					}
+				])
+			]
+		};
+		assert_eq!(expected, output);
+	}
+
+	#[test]
+	fn test_rewrite_conflict() {
+		let input = r#"
+		A -> B;
+		A -> C;
+		A -> ;
+		"#;
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0);
+		let expected = Wag {
+			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			grammar: vec![
+				Rule::Analytic("A".to_string(), vec![
+					Rhs::simple_ident("B"),
+					Rhs::simple_ident("C"),
+					Rhs::empty()
+				])
+			]
 		};
 		assert_eq!(expected, output);
 	}

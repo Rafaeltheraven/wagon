@@ -2,7 +2,9 @@ use super::ast::{WagTree, WagNode, ToAst, WagIx};
 use super::{Parse, ParseResult, PeekLexer, Rewrite};
 use super::metadata::Metadata;
 use super::rule::Rule;
-use std::matches;
+use std::collections::HashMap;
+use std::{matches, todo};
+use indexmap::IndexMap;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 pub(crate) struct Wag {
@@ -36,13 +38,31 @@ impl ToAst for Wag {
 impl Rewrite<()> for Wag {
 
     fn rewrite(&mut self, depth: usize) {
-        let mut new_rules = Vec::new();
-        let rules = std::mem::take(&mut self.grammar);
-        for mut rule in rules {
-            new_rules.extend(rule.rewrite(depth));
-            new_rules.push(rule);
+        fn handle_conflict(mut new_rule: Rule, map: &mut IndexMap<String, Rule>) { // Combine rules for the same ident into a single rule
+            let ident = match &new_rule {
+                Rule::Analytic(s, ..) | Rule::Generate(s, ..) => s.clone(),
+                Rule::Import(..) | Rule::Exclude(..) => todo!(),
+            };
+            if let Some(orig) = map.get_mut(&ident) {
+                match (orig, &mut new_rule) {
+                    (Rule::Analytic(_, v1), Rule::Analytic(_, v2)) | (Rule::Generate(_, v1), Rule::Generate(_, v2)) => {
+                        v1.extend(std::mem::take(v2));
+                    },
+                    _ => {map.insert(ident, new_rule);}
+                }
+            } else {
+                 map.insert(ident, new_rule);
+            };
         }
-        self.grammar.extend(new_rules);
+        let rules = std::mem::take(&mut self.grammar);
+        let mut map: IndexMap<String, Rule> = IndexMap::with_capacity(rules.len());
+        for mut rule in rules {
+            for new_rule in rule.rewrite(depth).into_iter() {
+                handle_conflict(new_rule, &mut map);
+            }
+            handle_conflict(rule, &mut map)
+        }
+        self.grammar.extend(map.into_values());
     }
 
 }

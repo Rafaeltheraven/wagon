@@ -57,6 +57,36 @@ impl Rhs {
             ]
         }
 	}
+
+	pub(crate) fn simple_ident(ident: &str) -> Self {
+		Self {
+			weight: None,
+			chunks: vec![
+				Chunk::simple_ident(ident)
+			]
+		}
+	}
+
+	pub(crate) fn blocks(self) -> Vec<Vec<Symbol>> {
+		let mut blocks = Vec::new();
+		let mut curr = Vec::new();
+		for chunk in self.chunks.into_iter() {
+			let symbols = match chunk {
+				Chunk { ebnf: Some(_), .. } => panic!("{:?}", "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out"),
+				c => c.extract_symbols(), // Deal with groups
+			};
+			for symbol in symbols {
+				let is_terminal = symbol.is_terminal();
+				curr.push(symbol);
+				if !is_terminal {
+					blocks.push(curr);
+					curr = Vec::new();
+				}
+			}
+		}
+		blocks.push(curr);
+		blocks
+	}
 }
 
 impl ToAst for Rhs {
@@ -68,4 +98,50 @@ impl ToAst for Rhs {
         }
         node
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::{chunk::Chunk, symbol::Symbol};
+
+    use super::Rhs;
+
+    use pretty_assertions::assert_eq;
+
+
+	#[test]
+	fn test_simple_gll_blocks() {
+		let rhs = Rhs {
+		    weight: None,
+		    chunks: vec![
+		    	Chunk::simple_terminal("a"),
+		    	Chunk::simple_terminal("b"),
+		    	Chunk::simple_ident("C"),
+		    	Chunk::simple_ident("D"),
+		    	Chunk {
+		    		ebnf: None,
+		    		chunk: crate::parser::chunk::ChunkP::Group(vec![Chunk::simple_terminal("e"), Chunk::simple_ident("F")])
+		    	}
+		    ],
+		};
+		let blocks = rhs.blocks();
+		let expected = vec![
+			vec![
+				Symbol::simple_terminal("a"),
+		    	Symbol::simple_terminal("b"),
+		    	Symbol::simple_ident("C"),
+			],
+			vec![
+				Symbol::simple_ident("D")
+			],
+			vec![
+				Symbol::simple_terminal("e"),
+				Symbol::simple_ident("F")
+			],
+			vec![]
+		];
+		assert_eq!(blocks, expected);
+
+	}
+
 }
