@@ -1,9 +1,8 @@
-
-Generic Blob(String) token which holds any space separated string
-This means that input must always be whitespace sensitive but honestly yeah
-
 Any NT first/follow set must be calculated at runtime. We can terminate once we exhaust all options and the optionally check a T which has a pre-defined first set
 Use dynamic programming to make it "fast"
 
 For `test` we pass a list of literals in this block. We check the first one, if it matches, done. If not, if it contains epsilon we check the next one.
 This avoids having to create a FOLLOW set. Since we're doing runtime calculation already anyway it's not a big slowdown.
+
+Fuck lexing, all my homies hate lexing. We scannerless now.
+Could define and recognize regexes at runtime. Can compile all known regex machines beforehand to speed things up.

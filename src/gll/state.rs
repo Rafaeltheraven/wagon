@@ -1,29 +1,31 @@
 use std::{collections::{HashSet, HashMap}, rc::Rc};
 
-use logos::{Lexer, Logos};
 use petgraph::Direction::Outgoing;
 
-use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot};
+use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Label};
 
-pub(crate) struct GLLState<'a, 'b, T: Logos<'b>> {
+pub(crate) struct GLLState<'a> {
 	// Main structures
-	pub input: Lexer<'b, T>,
+	pub input: &'a [u8],
 	pub gss: GSS<'a>,
 	pub sppf: SPPFGraph<'a>,
 	// Pointers
 	pub input_pointer: usize, //C_i
 	pub gss_pointer: GSSNodeIndex, // C_u
 	pub sppf_pointer: SPPFNodeIndex, // C_n
+	pub sppf_root: SPPFNodeIndex, // Points to $
 	// Memoization
 	pub todo: HashSet<Descriptor<'a>>, // R
 	pub visited: HashSet<Descriptor<'a>>, // U
 	pub pop: HashMap<GSSNodeIndex, Vec<SPPFNodeIndex>>, // P
 	// Easy Maps
 	pub gss_map: HashMap<Rc<GSSNode<'a>>, GSSNodeIndex>,
-	pub sppf_map: HashMap<SPPFNode<'a>, GSSNodeIndex>
+	pub sppf_map: HashMap<SPPFNode<'a>, GSSNodeIndex>,
+	pub rule_map: HashMap<&'a str, Rc<Vec<&'a dyn Label<'a>>>>,
+	pub label_map: HashMap<&'a str, Rc<dyn Label<'a>>>,
 }
 
-impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
+impl<'a> GLLState<'a> {
 	fn create(&'a mut self, slot: Rc<GrammarSlot<'a>>) {
 		let candidate = Rc::new(GSSNode::new(slot.clone(), self.input_pointer));
 		let v = if let Some(i) = self.gss_map.get(&candidate) {
@@ -44,7 +46,7 @@ impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
 		}
 	}
 
-	fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: Rc<GrammarSlot>, i: usize) -> Option<SPPFNodeIndex> {
+	fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
 		for child in self.sppf.neighbors_directed(parent, Outgoing) {
 			match self.sppf.node_weight(child) {
 				Some(SPPFNode::Packed { slot, split }) if *slot == ref_slot && *split == i => return Some(child),
@@ -63,7 +65,7 @@ impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
 			let j =  right_node.right_extend().unwrap();
 			if let SPPFNode::Dummy = left_node {
 				let i = right_node.left_extend().unwrap();
-				let node = self.find_or_create_sppf(slot.clone(), i, j);
+				let node = self.find_or_create_sppf_intermediate(slot.clone(), i, j);
 				if self.get_packed_node(node, slot.clone(), i).is_none() {
 					let packed = SPPFNode::Packed { slot, split: i };
 					let ix = self.sppf.add_node(packed);
@@ -72,7 +74,7 @@ impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
 				node
 			} else {
 				let (i, k) = (left_node.left_extend().unwrap(), left_node.right_extend().unwrap());
-				let node = self.find_or_create_sppf(slot.clone(), i, j);
+				let node = self.find_or_create_sppf_intermediate(slot.clone(), i, j);
 				if self.get_packed_node(node, slot.clone(), k).is_none() {
 					let packed = SPPFNode::Packed { slot, split: k };
 					let ix = self.sppf.add_node(packed);
@@ -84,14 +86,23 @@ impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
 		}
 	}
 
-	fn get_node_t(&mut self, slot: Rc<GrammarSlot<'a>>) -> SPPFNodeIndex {
+	fn get_node_t(&mut self, terminal: &'a [u8]) -> SPPFNodeIndex {
 		let left = self.input_pointer;
-		let right = if slot.is_eps() { left } else { left + 1 };
-		self.find_or_create_sppf(slot, left, right)
+		let right = left + terminal.len();
+		self.find_or_create_sppf_symbol(terminal, left, right)
 	}
 
-	fn find_or_create_sppf(&mut self, slot: Rc<GrammarSlot<'a>>, left: usize, right: usize) -> SPPFNodeIndex {
+	fn find_or_create_sppf_symbol(&mut self, terminal: &'a [u8], left: usize, right: usize) -> SPPFNodeIndex {
+		let candidate = SPPFNode::Symbol { terminal, left, right};
+		self.find_or_create_sppf(candidate)
+	}
+
+	fn find_or_create_sppf_intermediate(&mut self, slot: Rc<GrammarSlot<'a>>, left: usize, right: usize) -> SPPFNodeIndex {
 		let candidate = SPPFNode::Intermediate { slot: slot.clone(), left, right};
+		self.find_or_create_sppf(candidate)
+	}
+
+	fn find_or_create_sppf(&mut self, candidate: SPPFNode<'a>) -> SPPFNodeIndex {
 		*(self.sppf_map.get(&candidate).unwrap_or(&self.sppf.add_node(candidate)))
 	}
 
@@ -119,5 +130,40 @@ impl<'a, 'b, T: Logos<'b>> GLLState<'a, 'b, T> {
 			}
 			self.gss = gss;
 		}
+	}
+
+	fn next(&mut self, bytes: &Terminal) -> ParseResult<()> {
+		let len = bytes.len();
+		for (i, expected) in bytes.iter().enumerate() {
+			let pointer = self.input_pointer + i;
+			let check = self.input[pointer];
+			if self.input[self.input_pointer + i] != *expected {
+				return Err(GLLParseError::UnexpectedByte { pointer, expected: *expected, offender: check })
+			}
+		};
+		self.input_pointer += len;
+		Ok(())
+	}
+
+	fn has_next(&mut self, bytes: &Terminal) -> bool {
+		let curr = self.input_pointer.clone();
+		if self.next(bytes).is_err() {
+			self.input_pointer = curr;
+			false
+		} else {
+			true
+		}
+	}
+
+	fn test_next(&'a mut self, label: &'a dyn Label<'a>) -> bool {
+		label.first(&self.input[self.input_pointer], self)
+	}
+
+	fn get_rule(&'a self, ident: &'a str) -> Rc<Vec<&'a dyn Label>> {
+		self.rule_map.get(ident).unwrap().clone()
+	}
+
+	fn get_label(&'a self, ident: &'a str) -> Rc<dyn Label<'a>> {
+		self.label_map.get(ident).unwrap().clone()
 	}
 }

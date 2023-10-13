@@ -1,6 +1,6 @@
 
-use crate::lexer::{UnsafePeek, UnsafeNext, ident::Ident};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst, rule::Rule, rhs::Rhs, Rewrite};
+use crate::lexer::{UnsafePeek, UnsafeNext};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, ast::ToAst, rule::Rule, rhs::Rhs, Rewrite};
 use crate::lexer::productions::{Productions, EbnfType};
 use super::symbol::Symbol;
 
@@ -25,7 +25,7 @@ impl Chunk {
 	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, symbol: Symbol, rule_func: fn(String, Vec<Rhs>) -> Rule, rules: &mut Vec<Rule>) {
 		let chunks = match ebnf {
             crate::lexer::productions::EbnfType::Some => {
-                let helper_ident = format!("{}-p", ident);
+                let helper_ident = format!("{}·p", ident);
                 rules.push(rule_func(helper_ident.clone(), 
                     vec![
                         Rhs {
@@ -97,7 +97,7 @@ impl Chunk {
                 self.ebnf = None;
             },
             Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
-                let new_ident = format!("{}^{}", ident, depth);
+                let new_ident = format!("{}_{}", ident, depth);
                 let mut new_rule = rule_func(new_ident.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }]);
                 rules.extend(new_rule.rewrite(depth+1));
                 rules.push(new_rule);

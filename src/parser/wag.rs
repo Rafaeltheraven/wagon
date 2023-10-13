@@ -2,7 +2,6 @@ use super::ast::{WagTree, WagNode, ToAst, WagIx};
 use super::{Parse, ParseResult, PeekLexer, Rewrite};
 use super::metadata::Metadata;
 use super::rule::Rule;
-use std::collections::HashMap;
 use std::{matches, todo};
 use indexmap::IndexMap;
 

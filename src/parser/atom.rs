@@ -1,10 +1,10 @@
 use std::hash::{Hash};
 
 use super::ast::{ToAst, WagNode};
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, expression::Expression};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, expression::Expression};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use crate::lexer::{math::Math, productions::Productions, ident::Ident, Spannable, UnsafeNext};
+use crate::lexer::{math::Math, productions::Productions, Spannable, UnsafeNext};
 
 use wagon_macros::match_error;
 use ordered_float::NotNan;

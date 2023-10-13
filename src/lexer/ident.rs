@@ -1,11 +1,5 @@
-use super::TypeDetect;
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub enum Ident {
-    Inherit(String),
-    Synth(String),
-    Unknown(String)
-}
+use super::{TypeDetect, Ident};
 
 impl TypeDetect for Ident {
     fn detect(inp: &str) -> Self {
@@ -16,11 +10,5 @@ impl TypeDetect for Ident {
             '!' => Ident::Inherit(chars.as_str().to_string()),
             _ => Ident::Unknown(inp.to_string()),
         }
-    }
-}
-
-impl Default for Ident {
-    fn default() -> Self {
-        Self::Unknown(String::new())
     }
 }

@@ -1,9 +1,10 @@
 use super::ast::{ToAst, WagNode};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
-use crate::lexer::{math::Math, productions::Productions, ident::Ident, UnsafeNext, UnsafePeek, Spannable};
+use crate::lexer::{math::Math, productions::Productions, UnsafeNext, UnsafePeek, Spannable};
 
 use super::terminal::Terminal;
 use super::assignment::Assignment;
+use super::Ident;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Symbol {

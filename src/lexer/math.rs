@@ -2,7 +2,7 @@ use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::{inherit_from_base};
 use logos_display::{Debug, Display};
-use super::ident::{Ident};
+use super::Ident;
 use crate::helpers::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]
@@ -91,7 +91,7 @@ pub(crate) enum Math {
 mod tests {
 
 	
-	use crate::lexer::ident::Ident;
+	use crate::lexer::Ident;
 	use crate::lexer::assert_lex;
 	use super::Math::{*};
 

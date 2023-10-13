@@ -2,12 +2,12 @@ pub(crate) mod ident;
 pub(crate) mod math;
 pub(crate) mod productions;
 
-use crate::lexer::ident::Ident;
 use crate::helpers::peekable::Peekable;
 use logos::{Logos, Span};
 use std::{fmt::{self}};
 use productions::Productions;
 use math::Math;
+use super::gll::ident::Ident;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub(crate) enum LexingError {
@@ -175,7 +175,7 @@ mod tests {
 	use crate::lexer::LexingError;
 	use crate::lexer::productions::Productions;
 	use crate::lexer::math::Math;
-	use crate::lexer::ident::Ident::*;
+	use crate::gll::ident::Ident::*;
 
 	#[test]
 	fn test_mode_switching() {

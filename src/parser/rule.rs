@@ -1,7 +1,8 @@
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, ast::ToAst, helpers::check_semi, Rewrite};
-use crate::lexer::{ident::Ident, productions::{ImportType, Productions}, UnsafeNext, Spannable};
+use crate::lexer::{productions::{ImportType, Productions}, UnsafeNext, Spannable};
 
 use super::rhs::Rhs;
+use super::Ident;
 use wagon_macros::match_error;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
@@ -48,9 +49,9 @@ impl Parse for Rule {
 /*
 Ident format:
 
-{BASE}-{alt}-{chunk}             - Default
-                    -p           - Helper for '+'
-                    [^{chunk}]+  - Deeper layers of recursive EBNF
+{BASE}·{alt}·{chunk}             - Default
+                    ·p           - Helper for '+'
+                    [_{chunk}]+  - Deeper layers of recursive EBNF
                                - - Default again but at this layer
 
 */
@@ -61,7 +62,7 @@ impl Rewrite<Vec<Rule>> for Rule {
                 let mut rules = Vec::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.chunks.iter_mut().enumerate() {
-                        let ident = format!("{}-{}-{}", s, i, j);
+                        let ident = format!("{}·{}·{}", s, i, j);
                         rules.extend(chunk.rewrite(ident, Rule::Analytic, depth));
                     }
                 }
@@ -71,7 +72,7 @@ impl Rewrite<Vec<Rule>> for Rule {
                 let mut rules = Vec::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.chunks.iter_mut().enumerate() {
-                        let ident = format!("{}-{}-{}", s, i, j);
+                        let ident = format!("{}·{}·{}", s, i, j);
                         rules.extend(chunk.rewrite(ident, Rule::Generate, depth));
                     }
                 }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, hash::{Hash, Hasher}};
 
 use petgraph::{Graph, graph::{DefaultIx, NodeIndex}, Directed};
 
@@ -8,10 +8,25 @@ pub(crate) type GSSNodeIndex = NodeIndex<GSSIx>;
 
 type GSSIx = DefaultIx;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub(crate) struct GSSNode<'a> {
 	pub(crate) slot: Rc<GrammarSlot<'a>>,
 	inp_pointer: usize
+}
+
+impl<'a> PartialEq for GSSNode<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.slot == other.slot && self.inp_pointer == other.inp_pointer
+    }
+}
+
+impl<'a> Eq for GSSNode<'a> {}
+
+impl<'a> Hash for GSSNode<'a> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.slot.hash(state);
+        self.inp_pointer.hash(state);
+    }
 }
 
 pub(crate) type GSS<'a> = Graph<Rc<GSSNode<'a>>, SPPFNodeIndex, Directed, GSSIx>;

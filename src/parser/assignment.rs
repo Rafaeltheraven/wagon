@@ -1,6 +1,6 @@
 use crate::lexer::UnsafeNext;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, ast::ToAst};
-use crate::lexer::{math::Math, ident::Ident, Spannable};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, ast::ToAst};
+use crate::lexer::{math::Math, Spannable};
 
 use wagon_macros::match_error;
 use super::expression::Expression;

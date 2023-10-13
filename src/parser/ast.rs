@@ -1,8 +1,8 @@
 use petgraph::{Graph, Directed, graph::DefaultIx, graph::NodeIndex, Direction::Incoming};
 
-use crate::lexer::{productions::EbnfType, ident::Ident};
+use crate::lexer::{productions::EbnfType};
 
-use super::{metadata::Metadata, rule::Arrow, terminal::Terminal, inverse::InverseNode, comp::CompOp, sum::Op1, term::Op2, atom::AtomNode};
+use super::{metadata::Metadata, rule::Arrow, terminal::Terminal, inverse::InverseNode, comp::CompOp, sum::Op1, term::Op2, atom::AtomNode, Ident};
 
 pub(crate) enum WagNode {
 	Root(Metadata),

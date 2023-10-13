@@ -4,7 +4,7 @@ use logos::Logos;
 use wagon_macros::inherit_from_base;
 use logos_display::{Debug, Display};
 use crate::helpers::{rem_first_and_last_char};
-use super::ident::{Ident};
+use super::Ident;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub(crate) enum GrammarType {
@@ -116,7 +116,7 @@ pub(crate) enum Productions {
 
 #[cfg(test)]
 mod tests {
-	use crate::lexer::ident::Ident;
+	use crate::lexer::Ident;
 	use crate::lexer::{assert_lex, LexingError};
 	use std::assert_eq;
 
