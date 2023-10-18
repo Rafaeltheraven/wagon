@@ -25,7 +25,7 @@ use logos::Span;
 use crate::{lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable}, helpers::comma_separated_with_or};
 use crate::string_vec;
 use crate::helpers::peekable::Peekable;
-use crate::gll::ident::Ident;
+use wagon_gll::ident::Ident;
 use self::wag::Wag;
 
 pub struct Parser<'source> {
@@ -131,7 +131,7 @@ mod tests {
     use super::{Parser, Wag, metadata::Metadata, rule::Rule, rhs::Rhs, chunk::Chunk, symbol::Symbol, terminal::Terminal, sum::Sum};
     use crate::lexer::Tokens;
     use crate::lexer::productions::GrammarType;
-    use crate::gll::ident::Ident;
+    use wagon_gll::ident::Ident;
     use crate::parser::chunk::ChunkP;
     use crate::string_vec;
 

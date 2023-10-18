@@ -7,7 +7,7 @@ use logos::{Logos, Span};
 use std::{fmt::{self}};
 use productions::Productions;
 use math::Math;
-use super::gll::ident::Ident;
+use wagon_gll::ident::Ident;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub(crate) enum LexingError {
@@ -175,7 +175,7 @@ mod tests {
 	use crate::lexer::LexingError;
 	use crate::lexer::productions::Productions;
 	use crate::lexer::math::Math;
-	use crate::gll::ident::Ident::*;
+	use wagon_gll::ident::Ident::*;
 
 	#[test]
 	fn test_mode_switching() {

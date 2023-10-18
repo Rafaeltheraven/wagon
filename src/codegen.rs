@@ -4,10 +4,10 @@ mod rule;
 mod rhs;
 mod symbol;
 
-use std::{rc::Rc, collections::HashSet, eprintln, fs::write, path::Path, print, println};
+use std::{rc::Rc, collections::HashSet, eprintln, print};
 use proc_macro2::{TokenStream, Ident};
 use quote::{quote, format_ident};
-use std::{todo, collections::{HashMap}};
+use std::{collections::{HashMap}};
 
 use crate::{parser::{Parser, WagParseError, wag::Wag}};
 
@@ -20,7 +20,7 @@ pub(crate) enum CharByte {
 #[derive(Debug, Default)]
 pub(crate) struct CodeGenState {
 	// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set
-	first_queue: HashMap<Rc<Ident>, Vec<(Vec<crate::gll::ident::Ident>, Option<CharByte>)>>,
+	first_queue: HashMap<Rc<Ident>, Vec<(Vec<wagon_gll::ident::Ident>, Option<CharByte>)>>,
 	code: HashMap<Rc<Ident>, Vec<TokenStream>>,
 	roots: HashSet<Rc<Ident>>
 }

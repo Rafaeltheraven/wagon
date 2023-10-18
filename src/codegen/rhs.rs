@@ -32,7 +32,7 @@ impl Rhs {
                     }
                 ));
             }
-            firsts.push(crate::gll::ident::Ident::Unknown(label_str));
+            firsts.push(wagon_gll::ident::Ident::Unknown(label_str));
 		}
         state.first_queue.get_mut(&ident).unwrap().push((firsts, None))
     }
