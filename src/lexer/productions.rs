@@ -219,4 +219,17 @@ mod tests {
 		assert_lex(s, expect);
 		assert_lex(s2, expect2)
 	}
+
+	#[test]
+	fn test_simple() {
+		let s = "S -> 'a' S | ";
+		let expect = &[
+			Ok(Productions::Identifier(Ident::Unknown("S".to_string()))),
+			Ok(Productions::Produce),
+			Ok(Productions::LitString("a".to_string())),
+			Ok(Productions::Identifier(Ident::Unknown("S".to_string()))),
+			Ok(Productions::Alternative)
+		];
+		assert_lex(s, expect)
+	}
 }

@@ -25,10 +25,14 @@ impl Default for Ident {
 }
 
 impl Ident {
-    fn to_ident(self) -> proc_macro2::Ident {
-        let s = match self {
+    pub(crate) fn extract_string(&self) -> &str {
+        match self {
             Ident::Inherit(s) | Ident::Synth(s) | Ident::Unknown(s) => s,
-        };
+        }
+    }
+
+    pub(crate) fn to_ident(self) -> proc_macro2::Ident {
+        let s = self.extract_string();
         proc_macro2::Ident::new(&s, proc_macro2::Span::call_site())
     }
 }

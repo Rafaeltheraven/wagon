@@ -131,7 +131,7 @@ mod tests {
     use super::{Parser, Wag, metadata::Metadata, rule::Rule, rhs::Rhs, chunk::Chunk, symbol::Symbol, terminal::Terminal, sum::Sum};
     use crate::lexer::Tokens;
     use crate::lexer::productions::GrammarType;
-    use crate::lexer::ident::Ident;
+    use crate::gll::ident::Ident;
     use crate::parser::chunk::ChunkP;
     use crate::string_vec;
 
@@ -288,6 +288,26 @@ mod tests {
 					Rhs::empty()
 				])
 			]
+		};
+		assert_eq!(Ok(expected), output);
+	}
+
+	#[test]
+	fn test_simple_empty_alt() {
+		let input = "S -> 'a' | ;";
+		let mut lexer = Peekable::new(LexerBridge::new(input));
+		let output = Wag::parse(&mut lexer);
+		let expected = Wag {
+		    metadata: Metadata { includes: vec![], spec: None },
+		    grammar: vec![
+		    	Rule::Analytic("S".to_string(), vec![
+		    		Rhs { 
+		    			weight: None, 
+		    			chunks: vec![Chunk::simple_terminal("a")] 
+		    		},
+		    		Rhs::empty()
+		    	])
+		    ],
 		};
 		assert_eq!(Ok(expected), output);
 	}

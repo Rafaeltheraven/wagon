@@ -16,6 +16,8 @@ quote = "1.0.33"
 proc-macro2 = "1.0.67"
 indexmap = "2.0.2"
 cached = "0.46.0"
+prettyplease = "0.2.15"
+syn = "2.0.38"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

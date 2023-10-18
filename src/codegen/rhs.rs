@@ -9,11 +9,13 @@ use super::{CodeGenState, Rc};
 
 impl Rhs {
     pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize) {
-        state.first_queue.get_mut(&ident).unwrap().push((Vec::with_capacity(self.chunks.len()), None));
         let mut found_first = false;
         let mut k = 0;
+        let mut firsts = Vec::with_capacity(self.chunks.len());
         for (j, block) in self.blocks().into_iter().enumerate() {
-            let label = Rc::new(Ident::new(&format!("{}_{}_{}", &ident, alt, j), Span::call_site()));
+            let label_str = format!("{}_{}_{}", &ident, alt, j);
+            let label = Rc::new(Ident::new(&label_str, Span::call_site()));
+            state.first_queue.insert(label.clone(), vec![(Vec::with_capacity(block.len()), None)]);
             let block_size = block.len();
         	for symbol in block {
                 k += 1;
@@ -30,6 +32,8 @@ impl Rhs {
                     }
                 ));
             }
+            firsts.push(crate::gll::ident::Ident::Unknown(label_str));
 		}
+        state.first_queue.get_mut(&ident).unwrap().push((firsts, None))
     }
 }

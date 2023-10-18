@@ -181,7 +181,6 @@ mod tests {
 	fn test_mode_switching() {
 		let s = "[3 + 2.3 - $x] 'a thing' X {y = 4 + (!z['key'] < 3);}";
 		let lexer = LexerBridge::new(s);
-
 		let results: Vec<Result<Tokens, LexingError>> = lexer.collect();
 		let expect = vec![
 			Ok(ProductionToken(Productions::LBr)),

@@ -16,6 +16,7 @@ impl Rule {
             	for (i, alt) in rhs.into_iter().enumerate() {
             		alt.gen(state, pointer.clone(), i);
             	}
+                state.roots.insert(pointer);
             },
             Rule::Generate(_, _) => todo!(),
             Rule::Import(..) | Rule::Exclude(..) => panic!("{:?}", "Encountered import rule during codegen. These should have been converted away.")

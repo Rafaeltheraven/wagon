@@ -1,6 +1,6 @@
 use std::matches;
 
-use crate::lexer::{UnsafePeek, Spannable};
+use crate::lexer::{Spannable};
 use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk, ChunkP}, expression::Expression, symbol::Symbol};
 use super::helpers::{between};
@@ -22,8 +22,8 @@ impl Parse for Rhs {
 impl Rhs {
 
 	fn parse_weight(lexer: &mut PeekLexer) -> ParseResult<Option<Expression>> {
-		match lexer.peek_unwrap() {
-			Tokens::ProductionToken(Productions::LBr) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
+		match lexer.peek() {
+			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
 			_ => Ok(None)
 		}
 	}

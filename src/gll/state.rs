@@ -1,8 +1,9 @@
 use std::{collections::{HashSet, HashMap}, rc::Rc};
 
+use indexmap::IndexSet;
 use petgraph::Direction::Outgoing;
 
-use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Label};
+use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Label, ident::Ident, ROOT_UUID};
 
 pub(crate) struct GLLState<'a> {
 	// Main structures
@@ -15,17 +16,48 @@ pub(crate) struct GLLState<'a> {
 	pub sppf_pointer: SPPFNodeIndex, // C_n
 	pub sppf_root: SPPFNodeIndex, // Points to $
 	// Memoization
-	pub todo: HashSet<Descriptor<'a>>, // R
+	pub todo: IndexSet<Descriptor<'a>>, // R
 	pub visited: HashSet<Descriptor<'a>>, // U
 	pub pop: HashMap<GSSNodeIndex, Vec<SPPFNodeIndex>>, // P
 	// Easy Maps
 	pub gss_map: HashMap<Rc<GSSNode<'a>>, GSSNodeIndex>,
-	pub sppf_map: HashMap<SPPFNode<'a>, GSSNodeIndex>,
-	pub rule_map: HashMap<&'a str, Rc<Vec<&'a dyn Label<'a>>>>,
+	pub sppf_map: HashMap<SPPFNode<'a>, SPPFNodeIndex>,
+	pub rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
 	pub label_map: HashMap<&'a str, Rc<dyn Label<'a>>>,
 }
 
 impl<'a> GLLState<'a> {
+	fn init(input: &'a [u8], label_map: HashMap<&'a str, Rc<dyn Label<'a>>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
+		let mut sppf = SPPFGraph::new();
+		let mut gss = GSS::new();
+		let mut sppf_map = HashMap::new();
+		let mut gss_map = HashMap::new();
+		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, ROOT_UUID));
+		let gss_root_node = Rc::new(GSSNode::new(root_slot.clone(), 0));
+		let sppf_root = sppf.add_node(SPPFNode::Dummy);
+		let gss_root = gss.add_node(gss_root_node.clone());
+		sppf_map.insert(SPPFNode::Dummy, sppf_root);
+		gss_map.insert(gss_root_node, gss_root);
+		let mut state = GLLState { 
+			input, 
+			gss, 
+			sppf, 
+			input_pointer: 0, 
+			gss_pointer: gss_root, 
+			sppf_pointer: sppf_root, 
+			sppf_root, 
+			todo: Default::default(), 
+			visited: Default::default(), 
+			pop: Default::default(), 
+			gss_map: Default::default(), 
+			sppf_map: Default::default(), 
+			rule_map,
+			label_map 
+		};
+		state.add(root_slot, sppf_root);
+		state
+	}
+
 	fn create(&'a mut self, slot: Rc<GrammarSlot<'a>>) {
 		let candidate = Rc::new(GSSNode::new(slot.clone(), self.input_pointer));
 		let v = if let Some(i) = self.gss_map.get(&candidate) {
@@ -57,7 +89,7 @@ impl<'a> GLLState<'a> {
 	}
 
 	fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex) -> SPPFNodeIndex {
-		if slot.is_special() {
+		if self.is_special_slot(&slot) {
 			right
 		} else {
 			let left_node = self.sppf.node_weight(left).unwrap();
@@ -155,15 +187,49 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
-	fn test_next(&'a mut self, label: &'a dyn Label<'a>) -> bool {
+	fn test_next(&mut self, label: &'a dyn Label<'a>) -> bool {
 		label.first(&self.input[self.input_pointer], self)
 	}
 
-	fn get_rule(&'a self, ident: &'a str) -> Rc<Vec<&'a dyn Label>> {
+	fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
 		self.rule_map.get(ident).unwrap().clone()
 	}
 
-	fn get_label(&'a self, ident: &'a str) -> Rc<dyn Label<'a>> {
-		self.label_map.get(ident).unwrap().clone()
+	fn get_label(&self, ident: &Ident) -> Rc<dyn Label<'a>> {
+		let raw_string = ident.extract_string();
+		if let Some(label) = self.label_map.get(raw_string) {
+			label.clone()
+		} else { // Must evaluate at runtime
+			todo!()
+		}
+	}
+
+	fn get_label_by_uuid(&self, label: &str) -> Rc<dyn Label<'a>> {
+		self.label_map.get(label).unwrap().clone()
+	}
+
+	fn is_special_slot(&self, slot: &GrammarSlot<'a>) -> bool {
+		let a = self.get_current_label_slot(slot);
+		slot.dot == 1 && !slot.is_last() && (a.is_terminal() || !a.is_eps())
+	}
+
+	fn get_current_label_slot(&self, slot: &GrammarSlot<'a>) -> Rc<dyn Label<'a>> {
+		let uuid = slot.uuid;
+		let rule = self.get_rule(uuid);
+		self.get_label(rule.get(slot.dot).unwrap())
+	}
+
+	fn goto(&mut self, slot: &GrammarSlot<'a>) {
+		let label = self.get_current_label_slot(slot);
+		label.code(self)
+	}
+
+	fn main(&mut self) {
+		while let Some(Descriptor {slot, gss, pointer, sppf}) = self.todo.pop() {
+			self.sppf_pointer = sppf;
+			self.gss_pointer = gss;
+			self.input_pointer = pointer;
+			self.goto(&slot);
+		}
 	}
 }
