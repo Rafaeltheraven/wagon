@@ -1,3 +1,5 @@
+use std::{fmt::Display, write};
+
 use crate::lexer::UnsafeNext;
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, ast::ToAst};
 use crate::lexer::{math::Math, Spannable};
@@ -31,5 +33,11 @@ impl ToAst for Assignment {
         let child = self.expr.to_ast(ast);
         ast.add_edge(node, child, ());
         node
+    }
+}
+
+impl Display for Assignment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} = {}", self.ident, self.expr)
     }
 }

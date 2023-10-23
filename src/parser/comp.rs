@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::write;
+
 use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
 
@@ -63,5 +66,29 @@ impl ToAst for Comparison {
         let child = self.sum.to_ast(ast);
         ast.add_edge(node, child, ());
         node
+    }
+}
+
+impl Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(c) = &self.comp {
+            write!(f, "{} {} {}", self.sum, c.op, c.right)
+        } else {
+            write!(f, "{}", self.sum)
+        }
+    }
+}
+
+impl Display for CompOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompOp::Eq => write!(f, "=="),
+            CompOp::Neq => write!(f, "!="),
+            CompOp::Lte => write!(f, "<="),
+            CompOp::Lt => write!(f, "<"),
+            CompOp::Gte => write!(f, ">="),
+            CompOp::Gt => write!(f, ">"),
+            CompOp::In => write!(f, "in"),
+        }
     }
 }

@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::write;
+
 use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, Tokens};
 use super::atom::Atom;
@@ -42,6 +45,15 @@ impl ToAst for Factor {
             	ast.add_edge(node, left_node, ());
             	node
             },
+        }
+    }
+}
+
+impl Display for Factor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Factor::Primary(p) => write!(f, "{}", p),
+            Factor::Power { left, right } => write!(f, "{}^{}", left, right),
         }
     }
 }

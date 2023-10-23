@@ -8,10 +8,13 @@ use super::{CodeGenState, Rc};
 
 
 impl Rule {
-    pub(crate) fn gen(self, state: &mut CodeGenState) {
+    pub(crate) fn gen(self, state: &mut CodeGenState, fst: bool) {
         match self {
             Rule::Analytic(ident, rhs) => {
                 let pointer: Rc<Ident> = Rc::new(Ident::new(&ident, Span::call_site()));
+                if fst {
+                    state.top = Some(pointer.clone());
+                }
                 state.first_queue.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
             	for (i, alt) in rhs.into_iter().enumerate() {
             		alt.gen(state, pointer.clone(), i);

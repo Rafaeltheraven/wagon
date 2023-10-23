@@ -4,7 +4,7 @@ mod rule;
 mod rhs;
 mod symbol;
 
-use std::{rc::Rc, collections::HashSet, eprintln, print};
+use std::{rc::Rc, collections::HashSet};
 use proc_macro2::{TokenStream, Ident};
 use quote::{quote, format_ident};
 use std::{collections::{HashMap}};
@@ -22,7 +22,9 @@ pub(crate) struct CodeGenState {
 	// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set
 	first_queue: HashMap<Rc<Ident>, Vec<(Vec<wagon_gll::ident::Ident>, Option<CharByte>)>>,
 	code: HashMap<Rc<Ident>, Vec<TokenStream>>,
-	roots: HashSet<Rc<Ident>>
+	roots: HashSet<Rc<Ident>>,
+	top: Option<Rc<Ident>>,
+	str_repr: HashMap<Rc<Ident>, String>
 }
 
 impl CodeGenState {
@@ -36,54 +38,63 @@ impl CodeGenState {
 
     fn gen_struct_stream(&self) -> TokenStream {
     	let mut stream = TokenStream::new();
-    	for (i, (id, firsts)) in self.first_queue.iter().enumerate() {
+    	for (_i, (id, firsts)) in self.first_queue.iter().enumerate() {
     		let mut has_eps = false;
     		let mut first_stream = Vec::new();
     		for (alt, fin) in firsts {
     			let byte = match fin {
-			        Some(CharByte::Byte(b)) => quote!(Some(#b)),
-			        Some(CharByte::Epsilon) => {has_eps = true; quote!(Some(0))},
+			        Some(CharByte::Byte(b)) => quote!(Some(&#b)),
+			        Some(CharByte::Epsilon) => {has_eps = true; quote!(Some(&0))},
 			        None => quote!(None),
 			    };
 			    first_stream.push(quote!(
-			    	(vec![#(state.get_label(#alt),)*], #byte)
+			    	(vec![#(state.get_label(&#alt),)*], #byte)
 			    ));
     		}
-    		let str_repr = id.to_string();
+    		let uuid = id.to_string();
+    		let str_repr = self.str_repr.get(id).unwrap();
     		let code = self.code.get(id).unwrap();
     		stream.extend(quote!(
+    			#[derive(Debug)]
     			struct #id;
 
-    			impl<'a> wagon::gll::Label<'a> for #id {
-    				fn first_set(&'a self, state: &GLLState<'a>) -> Vec<(Vec<&'a dyn Label>, Option<TerminalBit>)> {
+    			impl<'a> wagon_gll::Label<'a> for #id {
+    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::TerminalBit>)> {
     					vec![#(#first_stream,)*]
     				}
     				fn is_eps(&self) -> bool {
     					#has_eps
     				}
+    				fn uuid(&self) -> &str {
+    					#uuid
+    				}
+    				fn code(&self, state: &mut wagon_gll::state::GLLState<'a>) {
+    					#(#code)*
+    				}
     				fn to_string(&self) -> &str {
     					#str_repr
     				}
-    				fn code(&self, state: &mut wagon::gll::state::GLLState<'a>) {
-    					#(#code)*
-    				}
     			}
     		));
-    		if i == 0 {
+    		if Some(id) == self.top.as_ref() {
     			stream.extend(quote!(
+    				#[derive(Debug)]
 		    		struct _S;
 
-		    		impl<'a> wagon::gll::Label<'a> for _S {
-		    			fn first_set(&'a self, state: &GLLState<'a>) -> Vec<(Vec<&'a dyn Label>, Option<TerminalBit>)> {
-							vec![(vec![state.get_label_by_uuid(#str_repr)], None)]
+		    		impl<'a> wagon_gll::Label<'a> for _S {
+		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::TerminalBit>)> {
+							vec![(vec![state.get_label_by_uuid(#uuid)], None)]
 						}
 						fn is_eps(&self) -> bool {
 							false
 						}
-						fn to_string(&self) -> &str {
-							"S'"
+						fn uuid(&self) -> &str {
+							wagon_gll::ROOT_UUID
 						}
-						fn code(&self, state: &mut wagon::gll::state::GLLState<'a>) {
+						fn to_string(&self) -> &str {
+							wagon_gll::ROOT_UUID
+						}
+						fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
 							unreachable!("This should never be called")
 						}
 		    		}
@@ -100,7 +111,7 @@ impl CodeGenState {
     		let str_repr = id.to_string();
     		let label_id = format_ident!("label_{}", i);
     		stream.extend(quote!(
-    			let #label_id = Rc::new(#id{});
+    			let #label_id = std::rc::Rc::new(#id{});
     			label_map.insert(#str_repr, #label_id);
     		));
     		if self.roots.contains(id) {
@@ -108,15 +119,15 @@ impl CodeGenState {
     				let rule_id = format!("{}_{}", id, j);
     				let rule_var = format_ident!("alt_{}", rule_id);
     				stream.extend(quote!(
-    					let #rule_var = vec![#(#alt,)*];
+    					let #rule_var = std::rc::Rc::new(vec![#(#alt,)*]);
     					rule_map.insert(#rule_id, #rule_var);
     				));
     			}
     		}
     		if i == 0 {
     			stream.extend(quote!(
-    				label_map.insert("S'", Rc::new(_S{}));
-    				rule_map.insert("S'", vec![wagon::gll::ident::Ident::Unknown(#str_repr.to_string())]);
+    				label_map.insert(wagon_gll::ROOT_UUID, std::rc::Rc::new(_S{}));
+    				rule_map.insert(wagon_gll::ROOT_UUID, std::rc::Rc::new(vec![wagon_gll::ident::Ident::Unknown(#str_repr.to_string())]));
     			));
     		}
     	}
@@ -124,28 +135,26 @@ impl CodeGenState {
     	let root_len = self.roots.len();
     	quote!(
     		fn main() {
-    			let label_map = HashMap::with_capacity(#label_len);
-    			let rule_map = HashMap::with_capacity(#root_len);
-    			#stream
-    			let args: Vec<String> = env::args().collect();
+    			let args: Vec<String> = std::env::args().collect();
 			    let input_file: &String = &args[1];
-			    let contents = fs::read_to_string(input_file).expect("Couldn't read file");
-    			let state = wagon::gll::state::GLLState::init(contents.into_bytes(), label_map, rule_map);
+			    let contents = std::fs::read_to_string(input_file).expect("Couldn't read file").into_bytes();
+    			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
+    			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_gll::ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
+    			#stream
+    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map);
     			state.main();
     		}
     	)
     }
 }
 
-pub fn gen_parser(input: &str) {
+pub(crate) fn gen_parser(input: &str) -> Result<String, WagParseError> {
 	let mut g_parser = Parser::new(input);
-	match g_parser.parse() {
-	    Ok(w) => _gen_parser(w),
-	    Err(e) => parse_error(e),
-	}
+	let wag = g_parser.parse()?;
+	Ok(_gen_parser(wag))
 }
 
-fn _gen_parser(wag: Wag) {
+fn _gen_parser(wag: Wag) -> String {
 	let mut state = CodeGenState::default();
 	wag.gen(&mut state);
 	let structs = state.gen_struct_stream();
@@ -155,11 +164,5 @@ fn _gen_parser(wag: Wag) {
 		#main
 	);
 	let tree = syn::parse_file(&fin.to_string()).unwrap();
-	let formatted = prettyplease::unparse(&tree);
-	print!("{}", formatted);
-
-}
-
-fn parse_error(err: WagParseError) {
-	eprintln!("{}", err);
+	prettyplease::unparse(&tree)
 }

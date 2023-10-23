@@ -1,3 +1,5 @@
+use std::{fmt::Display, write};
+
 use super::{Parse, PeekLexer, ParseResult, Tokens, ast::{ToAst, WagNode}};
 
 use crate::lexer::{math::Math};
@@ -42,6 +44,15 @@ impl ToAst for Inverse {
                 ast.add_edge(node, child, ());
                 node
             },
+        }
+    }
+}
+
+impl Display for Inverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Inverse::Not(i) => write!(f, "not {}", i),
+            Inverse::Comparison(c) => write!(f, "{}", c),
         }
     }
 }

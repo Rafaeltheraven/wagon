@@ -13,24 +13,22 @@ impl Symbol {
 		let rule_uuid = format!("{}_{}", uuid, alt);
 		match self {
 			Symbol::NonTerminal(i) => {
-				let next = format!("{}_{}_{}", ident, alt, block+1); // Will always exist as there will always be an empty last block
 				let next_block = block + 1;
 				let base = quote!(
-					let next = state.get_label(#next);
 					state.gss_pointer = state.create(
-						wagon::gll::GrammarSlot::new(
+						std::rc::Rc::new(wagon_gll::GrammarSlot::new(
 							state.get_label_by_uuid(#uuid), 
 							state.get_rule(#rule_uuid),
 							#next_block, 
 							#rule_uuid
-						)
+						))
 					);
-					let label = state.get_label(#i);
 					label.code(state);
 				);
+				state.add_code(label.clone(), quote!(let label = state.get_label(&#i);));
 				if !first_symbol {
 					state.add_code(label.clone(), quote!(
-						if state.test_next(next) {
+						if state.test_next(label.clone()) {
 							#base
 						}
 					));
@@ -57,25 +55,25 @@ impl Symbol {
 							}
 						}
 						state.add_code(label.clone(), quote!(
-							let bytes = #s.into_bytes();
+							let bytes = #s.as_bytes();
 						));
 						if first_symbol && block_size != 1 {
 							state.add_code(label.clone(), quote!(
 								let new_node = state.get_node_t(bytes);
 								state.sppf_pointer = new_node;
-								state.next(bytes);
+								state.next(bytes).unwrap();
 							));
 						}
 						let base = quote!(
 							let node = state.get_node_t(bytes);
 							state.next(&bytes);
-							let slot = wagon::gll::GrammarSlot::new(
+							let slot = wagon_gll::GrammarSlot::new(
 								state.get_label_by_uuid(#uuid), 
 								state.get_rule(#rule_uuid),
 								#block, 
 								#rule_uuid
 							);
-							state.sppf_pointer = state.get_node_p(Rc::new(slot), state.sppf_pointer, node);
+							state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node);
 						);
 						if !first_symbol {
 							state.add_code(label, quote!(
@@ -91,7 +89,7 @@ impl Symbol {
 				true
 			},
 			Symbol::Epsilon => {
-				state.first_queue.get_mut(&ident).unwrap()[0].1 = Some(CharByte::Epsilon);
+				state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharByte::Epsilon);
 				true
 			},
 		}

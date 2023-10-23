@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::write;
+
 use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
 
@@ -17,7 +20,7 @@ pub(crate) struct Sum {
 pub(crate) struct SumP {
 	pub(crate) op: Op1,
 	pub(crate) right: Term,
-	pub(crate) cont: Box<Option<SumP>>
+	pub(crate) cont: Option<Box<SumP>>
 }
 
 impl Parse for Sum {
@@ -35,7 +38,7 @@ impl ParseOption for SumP {
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op1::token_to_enum(lexer.peek_unwrap()) {
 	    	lexer.next();
-	    	Ok(Some(SumP { op, right: Term::parse(lexer)?, cont: Box::new(SumP::parse_option(lexer)?) }))
+	    	Ok(Some(SumP { op, right: Term::parse(lexer)?, cont: SumP::parse_option(lexer)?.map(|x| Box::new(x)) }))
 	    } else {
 	    	Ok(None)
 	    }
@@ -64,7 +67,7 @@ impl ToAst for Sum {
 impl ToAst for SumP {
     fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
         let node = ast.add_node(super::ast::WagNode::Sum(Some(self.op)));
-        let ret = if let Some(next) = *self.cont {
+        let ret = if let Some(next) = self.cont {
         	let parent = next.to_ast(ast);
         	ast.add_edge(parent, node, ());
         	parent
@@ -74,5 +77,34 @@ impl ToAst for SumP {
         let child = self.right.to_ast(ast);
         ast.add_edge(ret, child, ());
         ret
+    }
+}
+
+impl Display for Sum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(c) = &self.cont {
+        	write!(f, "{} {}", self.left, c)
+        } else {
+        	write!(f, "{}", self.left)
+        }
+    }
+}
+
+impl Display for SumP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(c) = &self.cont {
+        	write!(f, "{} {} {}", self.op, self.right, c)
+        } else {
+        	write!(f, "{} {}", self.op, self.right)
+        }
+    }
+}
+
+impl Display for Op1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Op1::Add => write!(f, "+"),
+            Op1::Sub => write!(f, "-"),
+        }
     }
 }

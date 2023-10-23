@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::write;
+
 use super::ast::{ToAst, WagNode};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
 use crate::lexer::{math::Math, productions::Productions, UnsafeNext, UnsafePeek, Spannable};
@@ -71,6 +74,17 @@ impl ToAst for Symbol {
             Symbol::Terminal(t) => ast.add_node(WagNode::Terminal(t)),
             Symbol::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
             Symbol::Epsilon => ast.add_node(WagNode::Empty)
+        }
+    }
+}
+
+impl Display for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Symbol::NonTerminal(i) => write!(f, "{}", i),
+            Symbol::Assignment(i) => write!(f, "{}", i.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("; ")),
+            Symbol::Terminal(i) => write!(f, "{}", i),
+            Symbol::Epsilon => write!(f, "ε"),
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::{fmt::Display, write};
+
 use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst};
 use crate::lexer::{math::Math, UnsafeNext, UnsafePeek};
 
@@ -63,6 +65,22 @@ impl ToAst for Expression {
             	ast.add_edge(node, child, ());
             	node
             },
+        }
+    }
+}
+
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::Subproc(s) => write!(f, "$({})", s),
+            Expression::If { this, then, r#else } => {
+            	if let Some(e) = r#else {
+            		write!(f, "if {} {{ {} }} else {{ {} }}", this, then, e)
+            	} else {
+            		write!(f, "if {} {{ {} }}", this, then)
+            	}
+            },
+            Expression::Disjunct(d) => write!(f, "{}", d),
         }
     }
 }

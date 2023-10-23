@@ -1,3 +1,5 @@
+use std::{fmt::Display, write};
+
 use crate::parser::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
 
@@ -26,7 +28,7 @@ pub(crate) struct Term {
 pub(crate) struct TermP {
 	pub(crate) op: Op2,
 	pub(crate) right: Factor,
-	pub(crate) cont: Box<Option<TermP>>
+	pub(crate) cont: Option<Box<TermP>>
 }
 
 impl Parse for Term {
@@ -44,7 +46,7 @@ impl ParseOption for TermP {
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op2::token_to_enum(lexer.peek_unwrap()) {
 	    	lexer.next();
-	    	Ok(Some(TermP { op, right: Factor::parse(lexer)?, cont: Box::new(TermP::parse_option(lexer)?) }))
+	    	Ok(Some(TermP { op, right: Factor::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(|x| Box::new(x)) }))
 	    } else {
 	    	Ok(None)
 	    }
@@ -75,7 +77,7 @@ impl ToAst for Term {
 impl ToAst for TermP {
     fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
         let node = ast.add_node(super::ast::WagNode::Term(Some(self.op)));
-        let ret = if let Some(next) = *self.cont {
+        let ret = if let Some(next) = self.cont {
         	let parent = next.to_ast(ast);
         	ast.add_edge(parent, node, ());
         	parent
@@ -85,5 +87,36 @@ impl ToAst for TermP {
         let child = self.right.to_ast(ast);
         ast.add_edge(ret, child, ());
         ret
+    }
+}
+
+impl Display for Term {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(c) = &self.cont {
+        	write!(f, "{} {}", self.left, c)
+        } else {
+        	write!(f, "{}", self.left)
+        }
+    }
+}
+
+impl Display for TermP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(c) = &self.cont {
+        	write!(f, "{} {} {}", self.op, self.right, c)
+        } else {
+        	write!(f, "{} {}", self.op, self.right)
+        }
+    }
+}
+
+impl Display for Op2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Op2::Mul => write!(f, "*"),
+            Op2::Div => write!(f, "/"),
+            Op2::Floor => write!(f, "//"),
+            Op2::Mod => write!(f, "%"),
+        }
     }
 }

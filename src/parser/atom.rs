@@ -1,4 +1,6 @@
+use std::fmt::Display;
 use std::hash::{Hash};
+use std::write;
 
 use super::ast::{ToAst, WagNode};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, expression::Expression};
@@ -81,5 +83,25 @@ impl ToAst for Atom {
             	node
             },
         }
+    }
+}
+
+impl Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Atom::Ident(x) => write!(f, "{}", x),
+            Atom::Dict(x) => write!(f, "{}", x),
+            Atom::LitBool(x) => write!(f, "{}", x),
+            Atom::LitNum(x) => write!(f, "{}", x),
+            Atom::LitFloat(x) => write!(f, "{}", x),
+            Atom::LitString(x) => write!(f, "\"{}\"", x),
+            Atom::Group(x) => write!(f, "({})", x),
+        }
+    }
+}
+
+impl Display for Dictionary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}[{}]", self.0, self.1)
     }
 }
