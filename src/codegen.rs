@@ -24,13 +24,44 @@ pub(crate) struct CodeGenState {
 	code: HashMap<Rc<Ident>, Vec<TokenStream>>,
 	roots: HashSet<Rc<Ident>>,
 	top: Option<Rc<Ident>>,
-	str_repr: HashMap<Rc<Ident>, String>
+	str_repr: HashMap<Rc<Ident>, Vec<String>>
 }
 
 impl CodeGenState {
     fn add_code(&mut self, label: Rc<Ident>, tokens: TokenStream) {
-    	if let Some(stream) = self.code.get_mut(&label) {
-    		stream.push(tokens);
+    	if let Some(streams) = self.code.get_mut(&label) {
+    		streams.push(tokens);
+    	} else {
+    		self.code.insert(label, vec![tokens]);
+    	}
+    }
+
+    fn add_if(&mut self, label: Rc<Ident>, prefix: TokenStream, if_tokens: TokenStream, code_tokens: TokenStream) {
+    	if let Some(streams) = self.code.get_mut(&label) {
+    		let last = streams.pop().unwrap();
+	    	streams.push(quote!(
+	    		#prefix
+	    		if #if_tokens {
+	    			#code_tokens
+	    			#last
+	    		}
+	    	));
+    	} else {
+    		self.code.insert(label, vec![quote!(
+    			#prefix
+    			if #if_tokens {
+    				#code_tokens
+    			}
+    		)]);
+    	}
+    	
+    }
+
+    fn prepend_code(&mut self, label: Rc<Ident>, tokens: TokenStream) {
+    	if let Some(streams) = self.code.get_mut(&label) {
+    		streams.push(tokens);
+    		let len = streams.len();
+    		streams.swap(len-1, len-2);
     	} else {
     		self.code.insert(label, vec![tokens]);
     	}
@@ -52,7 +83,8 @@ impl CodeGenState {
 			    ));
     		}
     		let uuid = id.to_string();
-    		let str_repr = self.str_repr.get(id).unwrap();
+    		let str_list = self.str_repr.get(id).unwrap();
+    		let str_repr = str_list.join(" ");
     		let code = self.code.get(id).unwrap();
     		stream.extend(quote!(
     			#[derive(Debug)]
@@ -74,6 +106,10 @@ impl CodeGenState {
     				fn to_string(&self) -> &str {
     					#str_repr
     				}
+    				fn str_parts(&self) -> Vec<&str> {
+    					vec![#(#str_list,)*]
+    				}
+
     			}
     		));
     		if Some(id) == self.top.as_ref() {
@@ -93,6 +129,9 @@ impl CodeGenState {
 						}
 						fn to_string(&self) -> &str {
 							wagon_gll::ROOT_UUID
+						}
+						fn str_parts(&self) -> Vec<&str> {
+							vec![wagon_gll::ROOT_UUID]
 						}
 						fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
 							unreachable!("This should never be called")
@@ -124,7 +163,7 @@ impl CodeGenState {
     				));
     			}
     		}
-    		if i == 0 {
+    		if Some(id) == self.top.as_ref() {
     			stream.extend(quote!(
     				label_map.insert(wagon_gll::ROOT_UUID, std::rc::Rc::new(_S{}));
     				rule_map.insert(wagon_gll::ROOT_UUID, std::rc::Rc::new(vec![wagon_gll::ident::Ident::Unknown(#str_repr.to_string())]));
@@ -143,6 +182,8 @@ impl CodeGenState {
     			#stream
     			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map);
     			state.main();
+    			println!("{}", state.print_sppf_dot());
+    			assert!(state.accepts());
     		}
     	)
     }

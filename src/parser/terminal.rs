@@ -24,7 +24,7 @@ impl Display for Terminal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Terminal::Regex(r) => write!(f, "/{}/", r),
-            Terminal::LitString(s) => write!(f, "{}", s),
+            Terminal::LitString(s) => write!(f, "'{}'", s),
         }
     }
 }

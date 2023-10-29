@@ -16,6 +16,7 @@ impl Rule {
                     state.top = Some(pointer.clone());
                 }
                 state.first_queue.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
+                state.str_repr.insert(pointer.clone(), vec![ident]);
             	for (i, alt) in rhs.into_iter().enumerate() {
             		alt.gen(state, pointer.clone(), i);
             	}
