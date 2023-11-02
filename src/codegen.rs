@@ -62,7 +62,7 @@ impl CodeGenState {
 
     			impl<'a> wagon_gll::Label<'a> for #id {
     				#[allow(unused_variables)]
-    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::Terminal<'a>>)> {
+    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
     					vec![#(#first_stream,)*]
     				}
     				fn is_eps(&self) -> bool {
@@ -89,7 +89,7 @@ impl CodeGenState {
 		    		struct _S;
 
 		    		impl<'a> wagon_gll::Label<'a> for _S {
-		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::Terminal<'a>>)> {
+		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
 							vec![(vec![state.get_label_by_uuid(#uuid)], None)]
 						}
 						fn is_eps(&self) -> bool {
@@ -148,17 +148,12 @@ impl CodeGenState {
     		fn main() {
     			let args = clap::command!()
 			        .arg(
-			            clap::arg!([filename] "Input file to parse")
-			                .required(true)
-			                .index(1)
-			                .value_parser(clap::value_parser!(std::path::PathBuf))
+			            clap::arg!(<filename> "Input file to parse")
+			                .value_parser(clap::value_parser!(std::path::PathBuf)),
 			        )
 			        .arg(
-			            clap::Arg::new("no-crop")
-			            .help("Don't crop resulting sppf")
-			            .long("no-crop")
-			            .required(false)
-			            .num_args(0)
+			            clap::arg!(--"no-crop" "Don't crop resulting sppf")
+			                .num_args(0),
 			        )
 			        .get_matches();
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");

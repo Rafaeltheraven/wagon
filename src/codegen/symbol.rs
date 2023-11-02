@@ -7,6 +7,7 @@ use proc_macro2::{Ident, Literal, TokenStream};
 use super::{CodeGenState, Rc, CharBytes};
 
 impl Symbol {
+	#[allow(clippy::too_many_arguments)]
 	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool) -> bool {
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
