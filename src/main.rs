@@ -49,6 +49,7 @@ fn write_parser(data: String, proj_name: &str, overwrite: bool) {
             .output()
             .unwrap();
         Command::new("cargo").current_dir(proj_name).args(["add", "petgraph"]).output().unwrap();
+        Command::new("cargo").current_dir(proj_name).args(["add", "clap", "--features", "derive,cargo"]).output().unwrap();
     }
     let mut file = File::create(format!("./{}/src/main.rs", proj_name)).unwrap();
     file.write_all(&data.into_bytes()).unwrap();

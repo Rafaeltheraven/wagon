@@ -5,22 +5,22 @@ mod rhs;
 mod symbol;
 
 use std::{rc::Rc, collections::HashSet};
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::{TokenStream, Ident, Literal};
 use quote::{quote, format_ident};
 use std::{collections::{HashMap}};
 
 use crate::{parser::{Parser, WagParseError, wag::Wag}};
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub(crate) enum CharByte {
+#[derive(Debug)]
+pub(crate) enum CharBytes {
 	Epsilon,
-	Byte(u8)
+	Bytes(Literal)
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct CodeGenState {
 	// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set
-	first_queue: HashMap<Rc<Ident>, Vec<(Vec<wagon_gll::ident::Ident>, Option<CharByte>)>>,
+	first_queue: HashMap<Rc<Ident>, Vec<(Vec<wagon_gll::ident::Ident>, Option<CharBytes>)>>,
 	code: HashMap<Rc<Ident>, Vec<TokenStream>>,
 	roots: HashSet<Rc<Ident>>,
 	top: Option<Rc<Ident>>,
@@ -74,8 +74,8 @@ impl CodeGenState {
     		let mut first_stream = Vec::new();
     		for (alt, fin) in firsts {
     			let byte = match fin {
-			        Some(CharByte::Byte(b)) => quote!(Some(&#b)),
-			        Some(CharByte::Epsilon) => {has_eps = true; quote!(Some(&0))},
+			        Some(CharBytes::Bytes(b)) => quote!(Some(#b)),
+			        Some(CharBytes::Epsilon) => {has_eps = true; quote!(Some(&[]))},
 			        None => quote!(None),
 			    };
 			    first_stream.push(quote!(
@@ -88,10 +88,12 @@ impl CodeGenState {
     		let code = self.code.get(id).unwrap();
     		stream.extend(quote!(
     			#[derive(Debug)]
+    			#[allow(non_camel_case_types)]
     			struct #id;
 
     			impl<'a> wagon_gll::Label<'a> for #id {
-    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::TerminalBit>)> {
+    				#[allow(unused_variables)]
+    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::Terminal<'a>>)> {
     					vec![#(#first_stream,)*]
     				}
     				fn is_eps(&self) -> bool {
@@ -118,7 +120,7 @@ impl CodeGenState {
 		    		struct _S;
 
 		    		impl<'a> wagon_gll::Label<'a> for _S {
-		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::TerminalBit>)> {
+		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<std::rc::Rc<dyn wagon_gll::Label<'a>>>, Option<wagon_gll::Terminal<'a>>)> {
 							vec![(vec![state.get_label_by_uuid(#uuid)], None)]
 						}
 						fn is_eps(&self) -> bool {
@@ -174,15 +176,31 @@ impl CodeGenState {
     	let root_len = self.roots.len();
     	quote!(
     		fn main() {
-    			let args: Vec<String> = std::env::args().collect();
-			    let input_file: &String = &args[1];
-			    let contents = std::fs::read_to_string(input_file).expect("Couldn't read file").into_bytes();
+    			let args = clap::command!()
+			        .arg(
+			            clap::arg!([filename] "Input file to parse")
+			                .required(true)
+			                .index(1)
+			                .value_parser(clap::value_parser!(std::path::PathBuf))
+			        )
+			        .arg(
+			            clap::Arg::new("no-crop")
+			            .help("Don't crop resulting sppf")
+			            .long("no-crop")
+			            .required(false)
+			            .num_args(0)
+			        )
+			        .get_matches();
+			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
+			    let crop = args.get_one::<bool>("no-crop").unwrap() == &false;
+			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
+			    let content = content_string.trim_end().as_bytes();
     			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_gll::ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
     			#stream
     			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map);
     			state.main();
-    			println!("{}", state.print_sppf_dot());
+    			println!("{}", state.print_sppf_dot(crop));
     			assert!(state.accepts());
     		}
     	)
