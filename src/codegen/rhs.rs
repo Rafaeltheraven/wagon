@@ -19,7 +19,7 @@ impl Rhs {
             let block_size = block.len();
             let mut str_repr = Vec::with_capacity(block_size);
             if block_size == 0 {
-                state.first_queue.get_mut(&label).unwrap()[0].1 = Some(super::CharByte::Epsilon);
+                state.first_queue.get_mut(&label).unwrap()[0].1 = Some(super::CharBytes::Epsilon);
             }
         	for (k, symbol) in block.into_iter().enumerate().rev() {
                 str_repr.push(symbol.to_string());

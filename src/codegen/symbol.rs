@@ -4,7 +4,7 @@ use quote::quote;
 use crate::{parser::symbol::Symbol};
 use crate::parser::terminal::Terminal;
 use proc_macro2::{Ident, Literal, TokenStream};
-use super::{CodeGenState, Rc, CharByte};
+use super::{CodeGenState, Rc, CharBytes};
 
 impl Symbol {
 	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize) {
@@ -54,23 +54,20 @@ impl Symbol {
 						*/
 						let mut firsts = &mut state.first_queue.get_mut(&label).unwrap()[0];
 						firsts.0.clear();
-						if let Some(byte) = s.bytes().next() {
-							firsts.1 = Some(CharByte::Byte(byte));
-						} else {
-							firsts.1 = Some(CharByte::Epsilon);
-						}
-						let mut stream = TokenStream::new();
 						let bytes = Literal::byte_string(s.as_bytes());
+						let mut stream = TokenStream::new();
 						stream.extend(quote!(
 							let bytes = #bytes;
 						));
+						firsts.1 = Some(CharBytes::Bytes(bytes));
 						if first_symbol && block_size != 1 {
-							state.prepend_code(label.clone(), quote!(
-								let bytes = #bytes;
+							stream.extend(quote!(
 								let new_node = state.get_node_t(bytes);
 								state.sppf_pointer = new_node;
 								state.next(bytes).unwrap();
 							));
+							state.prepend_code(label.clone(), stream);
+							return;
 						}
 						let (dot, pos) = if symbol == block_size-1 {
 							(block+1, 0)
@@ -112,7 +109,7 @@ impl Symbol {
 				));
 				let mut firsts = &mut state.first_queue.get_mut(&label).unwrap()[0];
 				firsts.0.clear();
-				firsts.1 = Some(CharByte::Epsilon);
+				firsts.1 = Some(CharBytes::Epsilon);
 			},
 		}
 	}
