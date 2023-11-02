@@ -12,6 +12,7 @@ impl Rhs {
         let mut firsts = Vec::with_capacity(self.chunks.len());
         let blocks = self.blocks();
         let blocks_count = blocks.len();
+        let mut found_first = false;
         for (j, block) in blocks.into_iter().enumerate() {
             let label_str = format!("{}_{}_{}", &ident, alt, j);
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
@@ -21,11 +22,10 @@ impl Rhs {
             if block_size == 0 {
                 state.first_queue.get_mut(&label).unwrap()[0].1 = Some(super::CharBytes::Epsilon);
             }
-        	for (k, symbol) in block.into_iter().enumerate().rev() {
+        	for (k, symbol) in block.into_iter().enumerate() {
                 str_repr.push(symbol.to_string());
-        		symbol.gen(state, ident.clone(), alt, j, k, label.clone(), block_size);
+        		found_first = symbol.gen(state, ident.clone(), alt, j, k, label.clone(), block_size, found_first);
         	}
-            str_repr.reverse();
             state.str_repr.insert(label.clone(), str_repr);
             if j == blocks_count - 1 {
                 state.add_code(label.clone(), quote!(

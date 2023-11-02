@@ -36,37 +36,6 @@ impl CodeGenState {
     	}
     }
 
-    fn add_if(&mut self, label: Rc<Ident>, prefix: TokenStream, if_tokens: TokenStream, code_tokens: TokenStream) {
-    	if let Some(streams) = self.code.get_mut(&label) {
-    		let last = streams.pop().unwrap();
-	    	streams.push(quote!(
-	    		#prefix
-	    		if #if_tokens {
-	    			#code_tokens
-	    			#last
-	    		}
-	    	));
-    	} else {
-    		self.code.insert(label, vec![quote!(
-    			#prefix
-    			if #if_tokens {
-    				#code_tokens
-    			}
-    		)]);
-    	}
-    	
-    }
-
-    fn prepend_code(&mut self, label: Rc<Ident>, tokens: TokenStream) {
-    	if let Some(streams) = self.code.get_mut(&label) {
-    		streams.push(tokens);
-    		let len = streams.len();
-    		streams.swap(len-1, len-2);
-    	} else {
-    		self.code.insert(label, vec![tokens]);
-    	}
-    }
-
     fn gen_struct_stream(&self) -> TokenStream {
     	let mut stream = TokenStream::new();
     	for (_i, (id, firsts)) in self.first_queue.iter().enumerate() {
@@ -175,6 +144,7 @@ impl CodeGenState {
     	let label_len = self.first_queue.len();
     	let root_len = self.roots.len();
     	quote!(
+    		#[allow(non_snake_case)]
     		fn main() {
     			let args = clap::command!()
 			        .arg(
@@ -194,7 +164,7 @@ impl CodeGenState {
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
 			    let crop = args.get_one::<bool>("no-crop").unwrap() == &false;
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
-			    let content = content_string.trim_end().as_bytes();
+			    let contents = content_string.trim_end().as_bytes();
     			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_gll::ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
     			#stream

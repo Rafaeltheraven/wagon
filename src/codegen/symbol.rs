@@ -7,7 +7,7 @@ use proc_macro2::{Ident, Literal, TokenStream};
 use super::{CodeGenState, Rc, CharBytes};
 
 impl Symbol {
-	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize) {
+	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool) -> bool {
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
 		let rule_uuid = format!("{}_{}", uuid, alt);
@@ -31,6 +31,8 @@ impl Symbol {
 						let label = state.get_label(&#i);
 						if state.test_next(label.clone()) {
 							#base
+						} else {
+							return;
 						}
 					));
 				} else {
@@ -39,7 +41,10 @@ impl Symbol {
 						#base
 					));
 				}
-				state.first_queue.get_mut(&label).unwrap()[0].0.push(i);
+				if !found_first {
+					state.first_queue.get_mut(&label).unwrap()[0].0.push(i);
+				}
+				found_first
 			},
 			Symbol::Assignment(_) => todo!(),
 			Symbol::Terminal(t) => {
@@ -48,26 +53,22 @@ impl Symbol {
 						unimplemented!("Still determining what to do with regexes");
 					},
 					Terminal::LitString(s) => {
-						/*
-						We are working backwards, so any time we encounter a terminal, we must clear out any non-terminals we have encountered,
-						set a new candidate for the final T and start counting NT's again. At the end, the list of NT's must also be reversed.
-						*/
-						let mut firsts = &mut state.first_queue.get_mut(&label).unwrap()[0];
-						firsts.0.clear();
 						let bytes = Literal::byte_string(s.as_bytes());
 						let mut stream = TokenStream::new();
 						stream.extend(quote!(
 							let bytes = #bytes;
 						));
-						firsts.1 = Some(CharBytes::Bytes(bytes));
+						if !found_first {
+							state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Bytes(bytes))
+						}
 						if first_symbol && block_size != 1 {
 							stream.extend(quote!(
 								let new_node = state.get_node_t(bytes);
 								state.sppf_pointer = new_node;
 								state.next(bytes).unwrap();
 							));
-							state.prepend_code(label.clone(), stream);
-							return;
+							state.add_code(label.clone(), stream);
+							return true;
 						}
 						let (dot, pos) = if symbol == block_size-1 {
 							(block+1, 0)
@@ -87,13 +88,21 @@ impl Symbol {
 							state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node);
 						);
 						if !first_symbol {
-							state.add_if(label, stream, quote!(state.has_next(bytes)), base);
+							stream.extend(quote!(
+								if state.has_next(bytes) {
+									#base
+								} else {
+									return;
+								}
+							));
+							state.add_code(label, stream);
 						} else if block_size == 1 {
 							stream.extend(base);
 							state.add_code(label, stream);
 						}
 					},
 				};
+				true
 			},
 			Symbol::Epsilon => {
 				state.add_code(label.clone(), quote!(
@@ -107,9 +116,8 @@ impl Symbol {
 					);
 					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr);
 				));
-				let mut firsts = &mut state.first_queue.get_mut(&label).unwrap()[0];
-				firsts.0.clear();
-				firsts.1 = Some(CharBytes::Epsilon);
+				state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Epsilon);
+				true
 			},
 		}
 	}
