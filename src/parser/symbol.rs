@@ -45,17 +45,7 @@ impl Default for Symbol {
 impl Symbol {
 
     pub(crate) fn is_terminal(&self) -> bool {
-        match self {
-            Self::Terminal(_) | Self::Epsilon  => true,
-            _ => false
-        }
-    }
-
-    pub(crate) fn is_eps(&self) -> bool {
-        match self {
-            Self::Epsilon => true,
-            _ => false
-        }
+        matches!(self, Self::Terminal(_) | Self::Assignment(_) | Self::Epsilon)
     }
 
     pub(crate) fn simple_terminal(ident: &str) -> Self {

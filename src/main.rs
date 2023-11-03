@@ -42,14 +42,17 @@ fn write_parser(data: String, proj_name: &str, overwrite: bool) {
         exists = false;
     }
     if !exists {
+        let libs = ["petgraph", "subprocess", "serde_json"];
         Command::new("cargo").args(["new", proj_name]).output().unwrap();
         Command::new("cargo") 
             .current_dir(proj_name)
             .args(["add", "wagon-gll", "--path", "../../wagon_gll"])
             .output()
             .unwrap();
-        Command::new("cargo").current_dir(proj_name).args(["add", "petgraph"]).output().unwrap();
         Command::new("cargo").current_dir(proj_name).args(["add", "clap", "--features", "derive,cargo"]).output().unwrap();
+        for lib in libs {
+            Command::new("cargo").current_dir(proj_name).args(["add", lib]).output().unwrap();
+        }
     }
     let mut file = File::create(format!("./{}/src/main.rs", proj_name)).unwrap();
     file.write_all(&data.into_bytes()).unwrap();

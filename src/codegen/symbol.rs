@@ -1,8 +1,7 @@
 
 use quote::quote;
 
-use crate::{parser::symbol::Symbol};
-use crate::parser::terminal::Terminal;
+use crate::parser::{symbol::Symbol, terminal::Terminal};
 use proc_macro2::{Ident, Literal, TokenStream};
 use super::{CodeGenState, Rc, CharBytes};
 
@@ -47,10 +46,15 @@ impl Symbol {
 				}
 				found_first
 			},
-			Symbol::Assignment(_) => todo!(),
+			Symbol::Assignment(v) => {
+				for ass in v {
+					ass.gen(state, label.clone());
+				}
+				found_first
+			},
 			Symbol::Terminal(t) => {
 				match t {
-					Terminal::Regex(r) => {
+					Terminal::Regex(_r) => {
 						unimplemented!("Still determining what to do with regexes");
 					},
 					Terminal::LitString(s) => {

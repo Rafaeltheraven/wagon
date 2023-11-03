@@ -15,6 +15,12 @@ use ordered_float::NotNan;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Dictionary(Ident, Expression);
 
+impl Dictionary {
+	pub(crate) fn deconstruct(&self) -> (&Ident, &Expression) {
+		(&self.0, &self.1)
+	}
+}
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) enum Atom {
 	Ident(Ident),

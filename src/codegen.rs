@@ -3,6 +3,16 @@ mod wag;
 mod rule;
 mod rhs;
 mod symbol;
+mod assignment;
+mod expression;
+mod disjunct;
+mod conjunct;
+mod inverse;
+mod comp;
+mod sum;
+mod term;
+mod factor;
+mod atom;
 
 use std::{rc::Rc, collections::HashSet};
 use proc_macro2::{TokenStream, Ident, Literal};
