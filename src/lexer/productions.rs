@@ -145,7 +145,7 @@ mod tests {
 		let mut lex = Productions::lexer(s);
 		assert_eq!(lex.next(), Some(Ok(Productions::LitString("This is \\' a \"with double quotes inside\" string \\\\\\' ".to_string()))));
 
-		let s2 = r#"'This one should \\' fail' before this"#;
+		let s2 = r"'This one should \\' fail' before this";
 		let mut lex = Productions::lexer(s2);
 		assert_eq!(lex.next(), Some(Ok(Productions::LitString("This one should \\\\".to_string()))));
 		assert_eq!(lex.next(), Some(Ok(Productions::Identifier(Ident::Unknown("fail".to_string())))));
@@ -154,10 +154,11 @@ mod tests {
 
 	#[test]
 	fn test_identifier_matching() {
-		let s = "$synthesized !inherited unknown";
+		let s = "&synthesized *inherited $local unknown";
 		let expect = &[
 			Ok(Productions::Identifier(Ident::Synth("synthesized".to_string()))),
 			Ok(Productions::Identifier(Ident::Inherit("inherited".to_string()))),
+			Ok(Productions::Identifier(Ident::Local("local".to_string()))),
 			Ok(Productions::Identifier(Ident::Unknown("unknown".to_string())))
 		];
 		assert_lex(s, expect);
@@ -165,7 +166,7 @@ mod tests {
 
 	#[test]
 	fn test_regex() {
-		let s = r#"/[a-z][A-Z][^\/]/"#;
+		let s = r"/[a-z][A-Z][^\/]/";
 		let expect = &[Ok(Productions::LitRegex("[a-z][A-Z][^\\/]".to_string()))];
 		assert_lex(s, expect);
 	}

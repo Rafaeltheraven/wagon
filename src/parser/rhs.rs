@@ -2,7 +2,7 @@ use std::matches;
 
 use crate::lexer::{Spannable};
 use super::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk, ChunkP}, expression::Expression, symbol::Symbol};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk}, expression::Expression, symbol::Symbol};
 use super::helpers::{between};
 
 use crate::lexer::{productions::Productions, math::Math};
@@ -41,7 +41,7 @@ impl Rhs {
 				check = lexer.peek();
 			}
 		} else {
-			resp.push(Chunk { chunk: super::chunk::ChunkP::Unit(super::symbol::Symbol::Epsilon), ebnf: None })
+			resp.push(Chunk::empty())
 		}
 		Ok(resp)
 	}
@@ -50,10 +50,7 @@ impl Rhs {
 		Self {
             weight: None,
             chunks: vec![
-                Chunk {
-                    ebnf: None,
-                    chunk: ChunkP::Unit(Symbol::Epsilon)
-                }
+                Chunk::empty()
             ]
         }
 	}
@@ -64,6 +61,13 @@ impl Rhs {
 			chunks: vec![
 				Chunk::simple_ident(ident)
 			]
+		}
+	}
+
+	pub(crate) fn simple_terminal(term: &str) -> Self {
+		Self {
+			weight: None,
+			chunks: vec![Chunk::simple_terminal(term)]
 		}
 	}
 

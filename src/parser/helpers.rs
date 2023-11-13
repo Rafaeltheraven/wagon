@@ -1,4 +1,4 @@
-use crate::{lexer::{UnsafeNext, productions::Productions}, string_vec};
+use crate::{lexer::{UnsafePeek, UnsafeNext, productions::Productions}, string_vec};
 use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst};
 
 impl Parse for String {
@@ -19,20 +19,24 @@ pub(super) trait TokenMapper {
 
 fn __between_right<T>(lexer: &mut PeekLexer, right: Tokens, fun: Box<dyn FnOnce(&mut PeekLexer) -> ParseResult<T>>) -> ParseResult<T> {
 	let resp = fun(lexer)?;
-	let token = lexer.next_unwrap();
-	if token == right {
+	let span = lexer.span();
+	let token = lexer.peek_unwrap();
+	if token == &right {
+		lexer.next();
 		Ok(resp)
 	} else {
-		Err(WagParseError::Unexpected { span: lexer.span(), offender: token, expected: string_vec!(right) })
+		Err(WagParseError::Unexpected { span, offender: token.clone(), expected: string_vec!(right) })
 	}
 }
 
 fn __between<T>(lexer: &mut PeekLexer, left: Tokens, right: Tokens, fun: Box<dyn FnOnce(&mut PeekLexer) -> ParseResult<T>>) -> ParseResult<T> {
-	let token = lexer.next_unwrap();
-	if token == left {
+	let span = lexer.span();
+	let token = lexer.peek_unwrap();
+	if token == &left {
+		lexer.next();
 		__between_right(lexer, right, fun)
 	} else {
-		Err(WagParseError::Unexpected { span: lexer.span(), offender: token, expected: string_vec!(left) })
+		Err(WagParseError::Unexpected { span, offender: token.clone(), expected: string_vec!(left) })
 	}
 }
 
@@ -52,6 +56,13 @@ pub(super) fn between_sep<T: Parse + std::fmt::Debug>(lexer: &mut PeekLexer, lef
 macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {
         Tokens::ProductionToken(Productions::$variant($($arg)*)) | Tokens::MathToken(Math::$variant($($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! either_token_ref {
+	($variant:ident($($arg:tt)*)) => {
+        &Tokens::ProductionToken(Productions::$variant($($arg)*)) | &Tokens::MathToken(Math::$variant($($arg)*))
     };
 }
 

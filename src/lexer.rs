@@ -27,7 +27,7 @@ impl<'source> Lexer<'source> {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum Tokens {
 	ProductionToken(Productions),
 	MathToken(Math)
@@ -57,14 +57,21 @@ impl<'source> LexerBridge<'source> {
 	pub(crate) fn new(s: &'source str) -> Self {
 		Self { lexer: Lexer::new(s), counter: 0 }
 	}
+
+	pub(crate) fn slice(&self) -> &str {
+		match &self.lexer {
+		    Lexer::Productions(l) => l.slice(),
+		    Lexer::Math(l) => l.slice(),
+		}
+	}
 }
 
 pub(crate) trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
 	fn next_unwrap(&mut self) -> T {
 		match self.next() {
 		    Some(Ok(x)) => x,
-		    Some(Err(e)) => panic!("Got lexing error: {:?}", e),
-		    None => panic!("Expected a token, but failed")
+		    Some(Err(e)) => panic!("Got error: {:?}", e),
+		    None => panic!("Expected a value, but failed")
 		}
 	}
 }
@@ -77,8 +84,28 @@ pub(crate) trait Spannable {
 	fn span(&mut self) -> Span;
 }
 
-impl<'source> UnsafeNext<Tokens, LexingError> for &mut LexerBridge<'source>{}
-impl<'source> UnsafeNext<Tokens, LexingError> for Peekable<LexerBridge<'source>>{}
+impl<'source> UnsafeNext<Tokens, LexingError> for &mut LexerBridge<'source> {
+    fn next_unwrap(&mut self) -> Tokens {
+		match self.next() {
+		    Some(Ok(x)) => x,
+		    Some(Err(LexingError::UnknownError)) => {
+		    	panic!("Encountered unknown character {}", self.slice())
+		    },
+		    None => panic!("Expected a token, but failed")
+		}
+	}
+}
+impl<'source> UnsafeNext<Tokens, LexingError> for Peekable<LexerBridge<'source>> {
+    fn next_unwrap(&mut self) -> Tokens {
+		match self.next() {
+		    Some(Ok(x)) => x,
+		    Some(Err(LexingError::UnknownError)) => {
+		    	panic!("Encountered unknown character {}", self.iter.slice())
+		    },
+		    None => panic!("Expected a token, but failed")
+		}
+	}
+}
 impl<'source> UnsafePeek<Tokens> for Peekable<LexerBridge<'source>> {
 	fn peek_unwrap(&mut self) -> &Tokens {
 		match self.peek() {
@@ -179,7 +206,7 @@ mod tests {
 
 	#[test]
 	fn test_mode_switching() {
-		let s = "[3 + 2.3 - $x] 'a thing' X {y = 4 + (!z['key'] < 3);}";
+		let s = "[3 + 2.3 - &x] 'a thing' X {y = 4 + ($z['key'] < 3);}";
 		let lexer = LexerBridge::new(s);
 		let results: Vec<Result<Tokens, LexingError>> = lexer.collect();
 		let expect = vec![
@@ -198,7 +225,7 @@ mod tests {
 			Ok(MathToken(Math::LitInt(4))),
 			Ok(MathToken(Math::Add)),
 			Ok(MathToken(Math::LPar)),
-			Ok(MathToken(Math::Identifier(Inherit("z".to_string())))),
+			Ok(MathToken(Math::Identifier(Local("z".to_string())))),
 			Ok(MathToken(Math::LBr)),
 			Ok(MathToken(Math::LitString("key".to_string()))),
 			Ok(MathToken(Math::RBr)),

@@ -1,16 +1,17 @@
+use indexmap::IndexSet;
 use crate::parser::assignment::Assignment;
 use proc_macro2::Ident;
 use quote::quote;
 use super::{Rc, CodeGenState};
 
 impl Assignment {
-	pub(crate) fn gen(self, state: &mut CodeGenState, label: Rc<Ident>) {
+	pub(crate) fn gen(self, state: &mut CodeGenState, label: Rc<Ident>, args: &mut IndexSet<wagon_gll::ident::Ident>) {
 		let expr = self.expr;
 		let ident = self.ident;
 		let ident_label = ident.to_ident();
+		args.insert(ident);
 		state.add_code(label, quote!(
-			#ident_label = #expr;
-			state.set_attribute(#ident, #ident_label);
+			let #ident_label: wagon_gll::value::Value = #expr;
 		));
 	}
 }

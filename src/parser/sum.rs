@@ -38,7 +38,7 @@ impl ParseOption for SumP {
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op1::token_to_enum(lexer.peek_unwrap()) {
 	    	lexer.next();
-	    	Ok(Some(SumP { op, right: Term::parse(lexer)?, cont: SumP::parse_option(lexer)?.map(|x| Box::new(x)) }))
+	    	Ok(Some(SumP { op, right: Term::parse(lexer)?, cont: SumP::parse_option(lexer)?.map(Box::new) }))
 	    } else {
 	    	Ok(None)
 	    }

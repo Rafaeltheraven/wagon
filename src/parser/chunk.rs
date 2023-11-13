@@ -1,8 +1,6 @@
 
-use crate::lexer::{UnsafePeek, UnsafeNext};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, ast::ToAst, rule::Rule, rhs::Rhs, Rewrite};
-use crate::lexer::productions::{Productions, EbnfType};
-use super::symbol::Symbol;
+use crate::{lexer::{UnsafePeek, UnsafeNext, productions::{Productions, EbnfType}}, firstpass::{FirstPassResult, FirstPassState}};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ast::ToAst, rule::Rule, rhs::Rhs, symbol::Symbol};
 
 /*
  Chunks are symbols in () with optionally an EBNF token following it.
@@ -22,11 +20,11 @@ pub(crate) enum ChunkP {
 
 impl Chunk {
 
-	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, symbol: Symbol, rule_func: fn(String, Vec<Rhs>) -> Rule, rules: &mut Vec<Rule>) {
+	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<Ident>, symbol: Symbol, rule_func: fn(String, Vec<Ident>, Vec<Rhs>) -> Rule, rules: &mut Vec<Rule>) {
 		let chunks = match ebnf {
             crate::lexer::productions::EbnfType::Some => {
                 let helper_ident = format!("{}·p", ident);
-                rules.push(rule_func(helper_ident.clone(), 
+                rules.push(rule_func(helper_ident.clone(), args.clone(),
                     vec![
                         Rhs {
                             weight: None,
@@ -84,30 +82,30 @@ impl Chunk {
                 ]
             },
         };
-        rules.push(rule_func(ident, chunks));
+        rules.push(rule_func(ident, args, chunks));
 	}
 
-	pub(crate) fn rewrite(&mut self, ident: String, rule_func: fn(String, Vec<Rhs>) -> Rule, depth: usize) -> Vec<Rule> {
+	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<Ident>, rule_func: fn(String, Vec<Ident>, Vec<Rhs>) -> Rule, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<Rule>> {
 		let mut rules = Vec::new();
 		match self {
             Self { ebnf: None, .. } => {}
             Self { ebnf: Some(e), chunk: ChunkP::Unit(u)} => {
-                let yanked = std::mem::replace(u, Symbol::NonTerminal(Ident::Unknown(ident.clone())));
-                Self::rewrite_ebnf(e, ident, yanked, rule_func, &mut rules);
+                let yanked = std::mem::replace(u, Symbol::NonTerminal(Ident::Unknown(ident.clone()), args.clone()));
+                Self::rewrite_ebnf(e, ident, args, yanked, rule_func, &mut rules);
                 self.ebnf = None;
             },
             Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
                 let new_ident = format!("{}_{}", ident, depth);
-                let mut new_rule = rule_func(new_ident.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }]);
-                rules.extend(new_rule.rewrite(depth+1));
+                let mut new_rule = rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }]);
+                rules.extend(new_rule.rewrite(depth+1, state)?);
                 rules.push(new_rule);
-            	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident));
-            	Self::rewrite_ebnf(e, ident.clone(), symbol, rule_func, &mut rules);
+            	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident), args.clone());
+            	Self::rewrite_ebnf(e, ident.clone(), args.clone(), symbol, rule_func, &mut rules);
             	self.ebnf = None;
-            	self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident)));
+            	self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident), args));
             }
         };
-        rules
+        Ok(rules)
 	}
 
     pub(crate) fn is_terminal(&self) -> bool {
@@ -128,6 +126,13 @@ impl Chunk {
         Self {
             ebnf: None,
             chunk: ChunkP::Unit(Symbol::simple_ident(ident))
+        }
+    }
+
+    pub(crate) fn empty() -> Self {
+        Self {
+            ebnf: None,
+            chunk: ChunkP::Unit(Symbol::Epsilon)
         }
     }
 

@@ -261,6 +261,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "4.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "536900a8093134cf9ccf00a27deb3532421099e958d9dd431135d0c7543ca1e8"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "petgraph"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -393,7 +402,7 @@ dependencies = [
  "logos",
  "logos-derive",
  "logos-display",
- "ordered-float",
+ "ordered-float 3.9.1",
  "petgraph",
  "pretty_assertions",
  "prettyplease",
@@ -410,6 +419,7 @@ name = "wagon-gll"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "ordered-float 4.1.1",
  "petgraph",
  "proc-macro2",
  "quote",

@@ -19,7 +19,7 @@ use proc_macro2::{TokenStream, Ident, Literal};
 use quote::{quote, format_ident};
 use std::{collections::{HashMap}};
 
-use crate::{parser::{Parser, WagParseError, wag::Wag}};
+use crate::{parser::{Parser, WagParseError, wag::Wag}, firstpass::{FirstPassState, Rewrite}};
 
 #[derive(Debug)]
 pub(crate) enum CharBytes {
@@ -27,17 +27,25 @@ pub(crate) enum CharBytes {
 	Bytes(Literal)
 }
 
+type FirstSet = (Vec<wagon_gll::ident::Ident>, Option<CharBytes>);
+
 #[derive(Debug, Default)]
 pub(crate) struct CodeGenState {
 	// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set
-	first_queue: HashMap<Rc<Ident>, Vec<(Vec<wagon_gll::ident::Ident>, Option<CharBytes>)>>,
+	first_queue: HashMap<Rc<Ident>, Vec<FirstSet>>,
 	code: HashMap<Rc<Ident>, Vec<TokenStream>>,
 	roots: HashSet<Rc<Ident>>,
 	top: Option<Rc<Ident>>,
-	str_repr: HashMap<Rc<Ident>, Vec<String>>
+	str_repr: HashMap<Rc<Ident>, Vec<String>>,
+	attr_repr: HashMap<Rc<Ident>, (Vec<String>, Vec<String>)>,
+	call_info: FirstPassState
 }
 
 impl CodeGenState {
+	fn set_call_info(&mut self, state: FirstPassState) {
+		self.call_info = state;
+	}
+
     fn add_code(&mut self, label: Rc<Ident>, tokens: TokenStream) {
     	if let Some(streams) = self.code.get_mut(&label) {
     		streams.push(tokens);
@@ -46,8 +54,25 @@ impl CodeGenState {
     	}
     }
 
+    fn add_ret_attr(&mut self, label: Rc<Ident>, attr: String) {
+    	if let Some((ret, _)) = self.attr_repr.get_mut(&label) {
+    		ret.push(attr);
+    	} else {
+    		self.attr_repr.insert(label, (vec![attr], Vec::new()));
+    	}
+    }
+
+    fn add_ctx_attr(&mut self, label: Rc<Ident>, attr: String) {
+    	if let Some((_, ctx)) = self.attr_repr.get_mut(&label) {
+    		ctx.push(attr);
+    	} else {
+    		self.attr_repr.insert(label, (Vec::new(), vec![attr]));
+    	}
+    }
+
     fn gen_struct_stream(&self) -> TokenStream {
     	let mut stream = TokenStream::new();
+    	let empty_repr = (Vec::new(), Vec::new());
     	for (_i, (id, firsts)) in self.first_queue.iter().enumerate() {
     		let mut has_eps = false;
     		let mut first_stream = Vec::new();
@@ -64,6 +89,7 @@ impl CodeGenState {
     		let uuid = id.to_string();
     		let str_list = self.str_repr.get(id).unwrap();
     		let str_repr = str_list.join(" ");
+    		let (pop_repr, ctx_repr) = self.attr_repr.get(id).unwrap_or(&empty_repr);
     		let code = self.code.get(id).unwrap();
     		stream.extend(quote!(
     			#[derive(Debug)]
@@ -81,6 +107,7 @@ impl CodeGenState {
     				fn uuid(&self) -> &str {
     					#uuid
     				}
+    				#[allow(unused_variables)]
     				fn code(&self, state: &mut wagon_gll::state::GLLState<'a>) {
     					#(#code)*
     				}
@@ -89,6 +116,9 @@ impl CodeGenState {
     				}
     				fn str_parts(&self) -> Vec<&str> {
     					vec![#(#str_list,)*]
+    				}
+    				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) {
+    					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
     				}
 
     			}
@@ -116,6 +146,9 @@ impl CodeGenState {
 						}
 						fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
 							unreachable!("This should never be called")
+						}
+						fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
+							(Vec::new(), Vec::new())
 						}
 		    		}
 		    	));
@@ -184,12 +217,15 @@ impl CodeGenState {
 
 pub(crate) fn gen_parser(input: &str) -> Result<String, WagParseError> {
 	let mut g_parser = Parser::new(input);
-	let wag = g_parser.parse()?;
-	Ok(_gen_parser(wag))
+	let mut wag = g_parser.parse()?;
+	let mut check_state = FirstPassState::default();
+	wag.rewrite(0, &mut check_state)?;
+	Ok(_gen_parser(wag, check_state))
 }
 
-fn _gen_parser(wag: Wag) -> String {
+fn _gen_parser(wag: Wag, check_state: FirstPassState) -> String {
 	let mut state = CodeGenState::default();
+	state.set_call_info(check_state);
 	wag.gen(&mut state);
 	let structs = state.gen_struct_stream();
 	let main = state.gen_state_stream();

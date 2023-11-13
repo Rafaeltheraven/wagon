@@ -1,4 +1,5 @@
 
+use indexmap::IndexSet;
 use quote::quote;
 
 use crate::parser::{symbol::Symbol, terminal::Terminal};
@@ -7,13 +8,15 @@ use super::{CodeGenState, Rc, CharBytes};
 
 impl Symbol {
 	#[allow(clippy::too_many_arguments)]
-	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool) -> bool {
+	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool, full_args: &mut IndexSet<wagon_gll::ident::Ident>) -> (bool, Vec<wagon_gll::ident::Ident>) {
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
 		let rule_uuid = format!("{}_{}", uuid, alt);
 		match self {
-			Symbol::NonTerminal(i) => {
+			Symbol::NonTerminal(i, args) => {
 				let next_block = block + 1;
+				let args_idents = args.iter().map(|x| x.to_ident());
+				let full_args_idents = full_args.iter().map(|x| x.to_ident());
 				let base = quote!(
 					state.gss_pointer = state.create(
 						std::rc::Rc::new(wagon_gll::GrammarSlot::new(
@@ -22,7 +25,8 @@ impl Symbol {
 							#next_block,
 							0, 
 							#rule_uuid
-						))
+						)),
+						vec![#(#args_idents.clone(),)*#(#full_args_idents,)*]
 					);
 					label.code(state);
 				);
@@ -44,13 +48,13 @@ impl Symbol {
 				if !found_first {
 					state.first_queue.get_mut(&label).unwrap()[0].0.push(i);
 				}
-				found_first
+				(found_first, args)
 			},
 			Symbol::Assignment(v) => {
 				for ass in v {
-					ass.gen(state, label.clone());
+					ass.gen(state, label.clone(), full_args);
 				}
-				found_first
+				(found_first, Vec::new())
 			},
 			Symbol::Terminal(t) => {
 				match t {
@@ -73,7 +77,7 @@ impl Symbol {
 								state.next(bytes).unwrap();
 							));
 							state.add_code(label.clone(), stream);
-							return true;
+							return (true, Vec::new());
 						}
 						let (dot, pos) = if symbol == block_size-1 {
 							(block+1, 0)
@@ -107,7 +111,7 @@ impl Symbol {
 						}
 					},
 				};
-				true
+				(true, Vec::new())
 			},
 			Symbol::Epsilon => {
 				state.add_code(label.clone(), quote!(
@@ -122,7 +126,7 @@ impl Symbol {
 					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr);
 				));
 				state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Epsilon);
-				true
+				(true, Vec::new())
 			},
 		}
 	}

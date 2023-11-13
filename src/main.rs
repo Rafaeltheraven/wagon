@@ -1,6 +1,7 @@
 mod lexer;
 mod parser;
 mod codegen;
+mod firstpass;
 
 pub mod helpers;
 

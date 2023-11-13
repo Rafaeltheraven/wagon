@@ -5,8 +5,12 @@ use quote::{ToTokens, quote};
 impl ToTokens for Disjunct {
     fn to_tokens(&self, tokens: &mut TokenStream) {
     	let c = &self.0;
-        tokens.extend(quote!(
-        	#(#c &&)*
-        ))
+        if c.len() > 1 {
+            tokens.extend(quote!(
+            	#(#c &&)*
+            ))
+        } else {
+            c[0].to_tokens(tokens)
+        };
     }
 }
