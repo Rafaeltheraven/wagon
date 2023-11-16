@@ -1,16 +1,18 @@
 use crate::parser::conjunct::Conjunct;
-use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
+use super::{CodeGenState, Rc};
+use proc_macro2::{TokenStream, Ident};
+use quote::quote;
 
-impl ToTokens for Conjunct {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-    	let i = &self.0;
+impl Conjunct {
+    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+        let i = &self.0;
         if i.len() > 1 {
-            tokens.extend(quote!(
-                #(#i ||)*
-            ))
+            let stream: Vec<TokenStream> = i.iter().map(|x| x.to_tokens(state, label.clone(), is_weight_expr)).collect();
+            quote!(
+                #(#stream ||)*
+            )
         } else {
-            i[0].to_tokens(tokens)
-        };
+            i[0].to_tokens(state, label, is_weight_expr)
+        }
     }
 }

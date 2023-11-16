@@ -1,4 +1,6 @@
 
+use std::matches;
+
 use indexmap::IndexSet;
 use quote::quote;
 
@@ -16,7 +18,11 @@ impl Symbol {
 			Symbol::NonTerminal(i, args) => {
 				let next_block = block + 1;
 				let args_idents = args.iter().map(|x| x.to_ident());
-				let full_args_idents = full_args.iter().map(|x| x.to_ident());
+				let mut full_args_idents = Vec::with_capacity(full_args.len());
+				for arg in full_args.iter() {
+					state.add_req_code_attr(label.clone(), arg.clone());
+					full_args_idents.push(arg.to_ident());
+				}
 				let base = quote!(
 					state.gss_pointer = state.create(
 						std::rc::Rc::new(wagon_gll::GrammarSlot::new(
@@ -46,7 +52,11 @@ impl Symbol {
 					));
 				}
 				if !found_first {
-					state.first_queue.get_mut(&label).unwrap()[0].0.push(i);
+					state.add_req_first_attr(label.clone(), i.clone());
+					state.first_queue.get_mut(&label).unwrap()[0].0.push(i.clone());
+				}
+				if !matches!(i, wagon_gll::ident::Ident::Unknown(_)) {
+					state.add_req_code_attr(label.clone(), i);
 				}
 				(found_first, args)
 			},

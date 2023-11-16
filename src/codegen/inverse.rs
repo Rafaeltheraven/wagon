@@ -1,18 +1,19 @@
-use quote::{ToTokens, quote};
-
+use quote::quote;
+use super::{CodeGenState, Rc};
+use proc_macro2::{TokenStream, Ident};
 use crate::parser::inverse::Inverse;
 
-
-impl ToTokens for Inverse {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+impl Inverse {
+    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
         match self {
             Inverse::Not(i) => {
-            	tokens.extend(quote!(
-            		!#i
-            	));
+                let i_stream = i.to_tokens(state, label, is_weight_expr);
+                quote!(
+                    !#i_stream
+                )
             },
             Inverse::Comparison(c) => {
-            	c.to_tokens(tokens);
+                c.to_tokens(state, label, is_weight_expr)
             },
         }
     }

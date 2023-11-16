@@ -110,7 +110,9 @@ impl<'source> UnsafePeek<Tokens> for Peekable<LexerBridge<'source>> {
 	fn peek_unwrap(&mut self) -> &Tokens {
 		match self.peek() {
 			Some(Ok(x)) => x,
-		    Some(Err(e)) => panic!("Got lexing error: {:?}", e),
+		    Some(Err(LexingError::UnknownError)) => {
+		    	panic!("Encountered unknown character")
+		    },
 		    None => panic!("Expected a token, but failed")
 		}
 	}

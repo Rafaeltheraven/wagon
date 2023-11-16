@@ -11,7 +11,7 @@ use syn::{parse_macro_input, ExprMatch, Arm};
 #[logos(error = LexingError)]
 enum Base {
     #[display_override("Identifier")]
-    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9]*)", |lex| Ident::detect(lex.slice()))]
+    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| Ident::detect(lex.slice()))]
     Identifier(Ident),
 
     #[display_override("String Literal")]

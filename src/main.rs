@@ -13,6 +13,10 @@ use std::io::Write;
 use std::process::Command;
 
 use parser::WagParseError;
+use proc_macro2::Ident;
+use proc_macro2::Span;
+use proc_macro2::TokenStream;
+use quote::quote;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -34,7 +38,29 @@ fn handle_error(err: WagParseError) {
     eprintln!("{}", err);
 }
 
-fn write_parser(data: String, proj_name: &str, overwrite: bool) {
+fn write_parser(data: codegen::CodeMap, proj_name: &str, overwrite: bool) {
+    let (subcode, code) = data;
+    let root_terms = subcode.keys().collect();
+    create_structure(proj_name, &root_terms, overwrite);
+    let path = std::path::Path::new(proj_name).join("src");
+    let main_path = path.join("main.rs");
+    let mut file = File::create(&main_path).unwrap();
+    file.write_all(pretty_code(code, &main_path).as_bytes()).unwrap();
+    let term_path = path.join("terminals");
+    let term_file_path = path.join(format!("{}.rs", "terminals"));
+    let mut term_file = File::create(&term_file_path).unwrap();
+    let root_terms_idents = root_terms.iter().map(|x| Ident::new(x, Span::call_site()));
+    term_file.write_all(pretty_code(quote!(
+        #![allow(non_snake_case)]
+        
+        #(pub(crate) mod #root_terms_idents;)*
+    ), &term_file_path).as_bytes()).unwrap();
+    for (terminal, structs) in subcode {
+        write_terminal(&term_path, terminal, structs);
+    }
+}
+
+fn create_structure(proj_name: &str, terminals: &Vec<&String>, overwrite: bool) {
     let path = std::path::Path::new(proj_name);
     let mut exists = path.exists();
     if exists && overwrite {
@@ -42,19 +68,64 @@ fn write_parser(data: String, proj_name: &str, overwrite: bool) {
         std::fs::remove_dir_all(path).unwrap();
         exists = false;
     }
+    let term_path = path.join("src").join("terminals");
     if !exists {
-        let libs = ["petgraph", "subprocess", "serde_json"];
+        let libs = ["petgraph", "subprocess", "serde_json", "rand_dist", "itertools"];
         Command::new("cargo").args(["new", proj_name]).output().unwrap();
         Command::new("cargo") 
-            .current_dir(proj_name)
+            .current_dir(path)
             .args(["add", "wagon-gll", "--path", "../../wagon_gll"])
             .output()
             .unwrap();
-        Command::new("cargo").current_dir(proj_name).args(["add", "clap", "--features", "derive,cargo"]).output().unwrap();
+        Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().unwrap();
+        Command::new("cargo").current_dir(path).args(["add", "rand", "--features", "small_rng"]).output().unwrap();
         for lib in libs {
-            Command::new("cargo").current_dir(proj_name).args(["add", lib]).output().unwrap();
+            Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap();
+        }
+        std::fs::create_dir(&term_path).unwrap();
+    }
+    for term in terminals {
+        let curr_path = term_path.join(term);
+        if !curr_path.exists() {
+            std::fs::create_dir(curr_path).unwrap();
         }
     }
-    let mut file = File::create(format!("./{}/src/main.rs", proj_name)).unwrap();
-    file.write_all(&data.into_bytes()).unwrap();
+}
+
+fn pretty_code(code: TokenStream, path: &std::path::Path) -> String {
+    let code_string = code.to_string();
+    match syn::parse_file(&code_string) {
+        Ok(tree) => prettyplease::unparse(&tree),
+        Err(e) => {
+            eprintln!("Error parsing code for {}: {}", path.display(), e);
+            code_string
+        }
+    }
+}
+
+fn write_terminal(root_path: &std::path::Path, terminal: String, structs: Vec<(String, TokenStream)>) {
+    let term_path = root_path.join(&terminal);
+    let mut root_term = TokenStream::new();
+    let mut sub_structs = Vec::new();
+    for (curr_struct, code) in structs {
+        if curr_struct == terminal {
+            root_term.extend([code]);
+        } else {
+            sub_structs.push(Ident::new(&curr_struct, Span::call_site()));
+            let curr_path = term_path.join(format!("{}.rs", curr_struct));
+            let mut file = File::create(&curr_path).unwrap();
+            file.write_all(pretty_code(quote!(
+                #![allow(non_snake_case)] 
+                #code
+            ), &curr_path).as_bytes()).unwrap();
+        }
+    }
+    let file_path = root_path.join(format!("{}.rs", terminal));
+    let mut file = File::create(&file_path).unwrap();
+    file.write_all(pretty_code(quote!(
+        #![allow(non_snake_case)]
+
+        #(pub(crate) mod #sub_structs;)*
+        #root_term
+    ), &file_path).as_bytes()).unwrap();
 }

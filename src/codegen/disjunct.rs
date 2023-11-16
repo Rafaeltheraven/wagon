@@ -1,16 +1,18 @@
 use crate::parser::disjunct::Disjunct;
-use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
+use super::{CodeGenState, Rc};
+use proc_macro2::{TokenStream, Ident};
+use quote::quote;
 
-impl ToTokens for Disjunct {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-    	let c = &self.0;
+impl Disjunct {
+    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+        let c = &self.0;
         if c.len() > 1 {
-            tokens.extend(quote!(
-            	#(#c &&)*
-            ))
+            let stream: Vec<TokenStream> = c.iter().map(|x| x.to_tokens(state, label.clone(), is_weight_expr)).collect();
+            quote!(
+                #(#stream &&)*
+            )
         } else {
-            c[0].to_tokens(tokens)
-        };
+            c[0].to_tokens(state, label, is_weight_expr)
+        }
     }
 }

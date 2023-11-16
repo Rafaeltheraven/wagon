@@ -9,8 +9,9 @@ use super::{CodeGenState, Rc};
 
 
 impl Rhs {
-    pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, args: &mut IndexSet<wagon_gll::ident::Ident>) {
+    pub(crate) fn gen(mut self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, args: &mut IndexSet<wagon_gll::ident::Ident>) {
         let mut firsts = Vec::with_capacity(self.chunks.len());
+        let weight = std::mem::take(&mut self.weight);
         let blocks = self.blocks();
         let blocks_count = blocks.len();
         let mut found_first = false;
@@ -28,14 +29,14 @@ impl Rhs {
             for (k, arg) in args.iter().enumerate() {
                 let proc_ident = arg.to_ident();
                 if j == 0 { // We have no context, only parameters
-                    state.add_code(label.clone(), quote!( 
+                    state.add_attribute_mapping(label.clone(), arg, quote!( 
                         let #proc_ident = state.get_attribute(#k).to_owned();
                     ));
                     state.add_ret_attr(label.clone(), arg.to_string());
                 } else {
                     let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
                     if prev_args.contains(arg) {
-                        state.add_code(label.clone(), quote!(
+                        state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = if let Some(v) = state.get_ret_val(#counter) {
                                 v
                             } else {
@@ -46,7 +47,7 @@ impl Rhs {
                         state.add_ctx_attr(label.clone(), arg.to_string());
                         counter += 1;
                     } else {
-                        state.add_code(label.clone(), quote!( 
+                        state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = state.restore_attribute(#skipped_k).to_owned();
                         ));
                         state.add_ctx_attr(label.clone(), arg.to_string());
@@ -67,6 +68,7 @@ impl Rhs {
                         wagon_gll::ident::Ident::Synth(_) => {
                             let arg_ident = arg.to_ident();
                             ret_vals.push(quote!(Some(#arg_ident)));
+                            state.add_req_code_attr(label.clone(), arg.clone());
                         },
                         _ => ret_vals.push(quote!(None))
                     }
@@ -76,6 +78,12 @@ impl Rhs {
                 ));
             }
             if j == 0 {
+                let weight_stream = if let Some(ref expr) = weight {
+                    expr.to_tokens(state, label.clone(), true)
+                } else {
+                    quote!(wagon_gll::value::Value::Natural(1))
+                };
+                state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
                 let rule_str = format!("{}_{}", &ident, alt);
                 state.add_code(ident.clone(), quote!(
@@ -84,7 +92,7 @@ impl Rhs {
                         let root = state.get_label_by_uuid(#root_str);
                         let rules = state.get_rule(#rule_str);
                         let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
-                        state.add(std::rc::Rc::new(slot), state.gss_pointer, state.input_pointer, state.sppf_root)
+                        candidates.push(std::rc::Rc::new(slot));
                     }
                 ));
             }

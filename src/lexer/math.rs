@@ -7,13 +7,13 @@ use crate::helpers::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]
 pub(crate) enum Math {
-	#[token("not")]
+	#[token("!")]
 	Not,
 
-	#[token("and")]
+	#[token("&&")]
 	And,
 
-	#[token("or")]
+	#[token("||")]
 	Or,
 
 	#[token("**")]
