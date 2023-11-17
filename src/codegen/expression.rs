@@ -1,10 +1,10 @@
 use crate::parser::expression::Expression;
 use proc_macro2::{TokenStream, Ident};
 use quote::quote;
-use super::{CodeGenState, Rc};
+use super::{CodeGenState, Rc, ToTokensState};
 
-impl Expression {
-    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+impl ToTokensState for Expression {
+    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
         match self {
             Expression::Subproc(s) => {
                 quote!(

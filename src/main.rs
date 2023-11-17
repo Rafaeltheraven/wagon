@@ -30,12 +30,25 @@ fn main() {
     let contents = fs::read_to_string(input_file).expect("Couldn't read file");
     match codegen::gen_parser(&contents) {
         Ok(data) => write_parser(data, proj_name, overwrite),
-        Err(e) => handle_error(e),
+        Err(e) => handle_error(e, input_file, contents),
     }
 }
 
-fn handle_error(err: WagParseError) {
-    eprintln!("{}", err);
+fn handle_error(err: WagParseError, file_path: &str, file: String) {
+    use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
+    let mut colors = ColorGenerator::new();
+    let a = colors.next();
+    let ((head, msg), span) = err.msg_and_span();
+    Report::build(ReportKind::Error, file_path, 12)
+        .with_message(head)
+        .with_label(
+            Label::new((file_path, span))
+                .with_message(msg)
+                .with_color(a),
+        )
+        .finish()
+        .eprint((file_path, Source::from(file)))
+        .unwrap();
 }
 
 fn write_parser(data: codegen::CodeMap, proj_name: &str, overwrite: bool) {
@@ -52,7 +65,7 @@ fn write_parser(data: codegen::CodeMap, proj_name: &str, overwrite: bool) {
     let root_terms_idents = root_terms.iter().map(|x| Ident::new(x, Span::call_site()));
     term_file.write_all(pretty_code(quote!(
         #![allow(non_snake_case)]
-        
+
         #(pub(crate) mod #root_terms_idents;)*
     ), &term_file_path).as_bytes()).unwrap();
     for (terminal, structs) in subcode {
@@ -70,7 +83,7 @@ fn create_structure(proj_name: &str, terminals: &Vec<&String>, overwrite: bool) 
     }
     let term_path = path.join("src").join("terminals");
     if !exists {
-        let libs = ["petgraph", "subprocess", "serde_json", "rand_dist", "itertools"];
+        let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
         Command::new("cargo").args(["new", proj_name]).output().unwrap();
         Command::new("cargo") 
             .current_dir(path)

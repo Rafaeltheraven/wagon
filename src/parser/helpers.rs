@@ -48,7 +48,7 @@ pub(super) fn between<T: Parse>(lexer: &mut PeekLexer, left: Tokens, right: Toke
 	__between(lexer, left, right, Box::new(|x| T::parse(x)))
 }
 
-pub(super) fn between_sep<T: Parse + std::fmt::Debug>(lexer: &mut PeekLexer, left: Tokens, right: Tokens, sep: Tokens) -> ParseResult<Vec<T>> {
+pub(super) fn between_sep<T: Parse>(lexer: &mut PeekLexer, left: Tokens, right: Tokens, sep: Tokens) -> ParseResult<Vec<T>> {
 	__between(lexer, left, right, Box::new(|x| T::parse_sep(x, sep)))
 }
 

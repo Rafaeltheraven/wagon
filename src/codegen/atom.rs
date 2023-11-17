@@ -1,18 +1,18 @@
 use quote::quote;
 
 use crate::parser::atom::Atom;
-use super::{CodeGenState, Rc};
+use super::{CodeGenState, Rc, ToTokensState};
 use proc_macro2::{TokenStream, Ident};
 
-impl Atom {
-    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+impl ToTokensState for Atom {
+    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
         match self {
             Atom::Ident(i) => {
                 let proc_ident = i.to_ident();
                 if is_weight_expr {
-                    state.add_req_weight_attr(label, i.clone());
+                    state.add_req_weight_attr(label, i.clone().into());
                 } else {
-                    state.add_req_code_attr(label, i.clone());
+                    state.add_req_code_attr(label, i.clone().into());
                 };
                 quote!(#proc_ident)
             },
@@ -32,9 +32,9 @@ impl Atom {
                 let e_stream = e.to_tokens(state, label.clone(), is_weight_expr);
                 let ident = i.to_ident();
                 if is_weight_expr {
-                    state.add_req_weight_attr(label, i.clone());
+                    state.add_req_weight_attr(label, i.clone().into());
                 } else {
-                    state.add_req_code_attr(label, i.clone());
+                    state.add_req_code_attr(label, i.clone().into());
                 };
                 quote!(#ident[#e_stream])
             },

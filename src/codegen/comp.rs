@@ -2,6 +2,7 @@ use quote::ToTokens;
 use quote::quote;
 use std::panic;
 
+use super::ToTokensState;
 use super::{CodeGenState, Rc};
 use proc_macro2::{TokenStream, Ident};
 
@@ -21,8 +22,8 @@ impl ToTokens for CompOp {
     }
 }
 
-impl Comparison {
-    pub(crate) fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+impl ToTokensState for Comparison {
+    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
         if let Some(comp_op) = &self.comp {
             let left = self.sum.to_tokens(state, label.clone(), is_weight_expr);
             let op  = &comp_op.op;

@@ -3,7 +3,7 @@ use std::hash::{Hash};
 use std::write;
 
 use super::ast::{ToAst, WagNode};
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, expression::Expression};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, SpannableNode, expression::Expression};
 use super::helpers::{between, between_right};
 use crate::either_token;
 use crate::lexer::{math::Math, productions::Productions, Spannable, UnsafeNext};
@@ -11,6 +11,8 @@ use crate::lexer::{math::Math, productions::Productions, Spannable, UnsafeNext};
 use wagon_macros::match_error;
 use ordered_float::NotNan;
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 pub(crate) struct Dictionary(Ident, Expression);
@@ -22,6 +24,7 @@ impl Dictionary {
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) enum Atom {
 	Ident(Ident),
 	Dict(Dictionary),
@@ -29,7 +32,7 @@ pub(crate) enum Atom {
 	LitNum(i32),
 	LitFloat(NotNan<f32>),
 	LitString(String),
-	Group(Expression)
+	Group(SpannableNode<Expression>)
 }
 
 #[derive(PartialEq, Debug)]

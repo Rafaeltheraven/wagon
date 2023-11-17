@@ -25,7 +25,7 @@ impl Rule {
                 ));
                 let mut as_set = IndexSet::from_iter(args);
             	for (i, alt) in rhs.into_iter().enumerate() {
-            		alt.gen(state, pointer.clone(), i, &mut as_set);
+            		alt.into_inner().gen(state, pointer.clone(), i, &mut as_set);
             	}
                 state.add_code(pointer.clone(), quote!(
                     if !candidates.is_empty() {

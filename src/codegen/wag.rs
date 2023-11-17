@@ -7,7 +7,7 @@ impl Wag {
         self.metadata.gen(state);
         let mut fst = true;
         for rule in self.grammar {
-            rule.gen(state, fst);
+            rule.into_inner().gen(state, fst);
             fst = false;
         }
     }

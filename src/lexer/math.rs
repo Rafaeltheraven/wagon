@@ -116,7 +116,7 @@ mod tests {
 
 	#[test]
 	fn test_pure_bool() {
-		let s = "not(true and false or x)";
+		let s = "!(true && false || x)";
 		let expect = &[
 			Ok(Not),
 			Ok(LPar),
@@ -132,7 +132,7 @@ mod tests {
 
 	#[test]
 	fn test_complex_combination() {
-		let s = "0.5 * ((2 + 3 < 4 + x) and (x != 2) or '4' in y)";
+		let s = "0.5 * ((2 + 3 < 4 + x) && (x != 2) || '4' in y)";
 		let expect = &[
 			Ok(LitFloat(0.5)),
 			Ok(Mul),

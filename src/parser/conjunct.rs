@@ -1,18 +1,22 @@
 use std::fmt::Display;
 
 use super::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, Tokens};
+use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode};
 use crate::lexer::{math::Math};
 
 use super::inverse::Inverse;
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-pub(crate) struct Conjunct(pub(crate) Vec<Inverse>);
+#[cfg_attr(test, new_unspanned)]
+pub(crate) struct Conjunct(pub(crate) Vec<SpannableNode<Inverse>>);
 
 impl Parse for Conjunct {
     
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
-        Ok(Self(Inverse::parse_sep(lexer, Tokens::MathToken(Math::Or))?))
+        Ok(Self(SpannableNode::parse_sep(lexer, Tokens::MathToken(Math::Or))?))
     }
 
 }

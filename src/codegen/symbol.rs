@@ -6,22 +6,22 @@ use quote::quote;
 
 use crate::parser::{symbol::Symbol, terminal::Terminal};
 use proc_macro2::{Ident, Literal, TokenStream};
-use super::{CodeGenState, Rc, CharBytes};
+use super::{CodeGenState, Rc, CharBytes, SpannableIdent};
 
 impl Symbol {
 	#[allow(clippy::too_many_arguments)]
-	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool, full_args: &mut IndexSet<wagon_gll::ident::Ident>) -> (bool, Vec<wagon_gll::ident::Ident>) {
+	pub(crate) fn gen(self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, block: usize, symbol: usize, label: Rc<Ident>, block_size: usize, found_first: bool, full_args: &mut IndexSet<SpannableIdent>) -> (bool, Vec<SpannableIdent>) {
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
 		let rule_uuid = format!("{}_{}", uuid, alt);
 		match self {
 			Symbol::NonTerminal(i, args) => {
 				let next_block = block + 1;
-				let args_idents = args.iter().map(|x| x.to_ident());
+				let args_idents = args.iter().map(|x| x.to_inner().to_ident());
 				let mut full_args_idents = Vec::with_capacity(full_args.len());
 				for arg in full_args.iter() {
 					state.add_req_code_attr(label.clone(), arg.clone());
-					full_args_idents.push(arg.to_ident());
+					full_args_idents.push(arg.to_inner().to_ident());
 				}
 				let base = quote!(
 					state.gss_pointer = state.create(
@@ -55,19 +55,19 @@ impl Symbol {
 					state.add_req_first_attr(label.clone(), i.clone());
 					state.first_queue.get_mut(&label).unwrap()[0].0.push(i.clone());
 				}
-				if !matches!(i, wagon_gll::ident::Ident::Unknown(_)) {
+				if !matches!(i.to_inner(), wagon_gll::ident::Ident::Unknown(_)) {
 					state.add_req_code_attr(label.clone(), i);
 				}
 				(found_first, args)
 			},
 			Symbol::Assignment(v) => {
 				for ass in v {
-					ass.gen(state, label.clone(), full_args);
+					ass.into_inner().gen(state, label.clone(), full_args);
 				}
 				(found_first, Vec::new())
 			},
 			Symbol::Terminal(t) => {
-				match t {
+				match t.into_inner() {
 					Terminal::Regex(_r) => {
 						unimplemented!("Still determining what to do with regexes");
 					},

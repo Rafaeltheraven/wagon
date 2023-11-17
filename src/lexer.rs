@@ -82,6 +82,7 @@ pub(crate) trait UnsafePeek<T> {
 
 pub(crate) trait Spannable {
 	fn span(&mut self) -> Span;
+	fn set_span(&mut self, _span: Span) {}
 }
 
 impl<'source> UnsafeNext<Tokens, LexingError> for &mut LexerBridge<'source> {

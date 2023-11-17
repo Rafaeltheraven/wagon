@@ -1,16 +1,22 @@
+use crate::parser::Span;
 use std::matches;
 
 use crate::lexer::{Spannable};
+use super::SpannableNode;
 use super::ast::ToAst;
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk}, expression::Expression, symbol::Symbol};
 use super::helpers::{between};
 
 use crate::lexer::{productions::Productions, math::Math};
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Rhs {
-	pub(crate) weight: Option<Expression>,
-	pub(crate) chunks: Vec<Chunk>
+	pub(crate) weight: Option<SpannableNode<Expression>>,
+	pub(crate) chunks: Vec<SpannableNode<Chunk>>,
 }
 
 impl Parse for Rhs {
@@ -21,27 +27,27 @@ impl Parse for Rhs {
 
 impl Rhs {
 
-	fn parse_weight(lexer: &mut PeekLexer) -> ParseResult<Option<Expression>> {
+	fn parse_weight(lexer: &mut PeekLexer) -> ParseResult<Option<SpannableNode<Expression>>> {
 		match lexer.peek() {
 			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
 			_ => Ok(None)
 		}
 	}
 
-	fn parse_chunks(lexer: &mut PeekLexer) -> ParseResult<Vec<Chunk>> {
+	fn parse_chunks(lexer: &mut PeekLexer) -> ParseResult<Vec<SpannableNode<Chunk>>> {
 		let mut resp = Vec::new();
 		if lexer.peek() != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) { // If we immediately encounter a ;, this is an empty rule
-			resp.push(Chunk::parse(lexer)?);
+			resp.push(SpannableNode::parse(lexer)?);
 			let mut check = lexer.peek();
 			while check.is_some() && check != Some(&Ok(Tokens::ProductionToken(Productions::Alternative))) && check != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) {
 				if matches!(check, Some(Err(_))) {
 					return Err(WagParseError::Fatal((lexer.span(), "An unknown error occurred during tokenizing".to_string())))
 				}
-				resp.push(Chunk::parse(lexer)?);
+				resp.push(SpannableNode::parse(lexer)?);
 				check = lexer.peek();
 			}
 		} else {
-			resp.push(Chunk::empty())
+			resp.push(SpannableNode::new(Chunk::empty(), lexer.span()))
 		}
 		Ok(resp)
 	}
@@ -50,16 +56,25 @@ impl Rhs {
 		Self {
             weight: None,
             chunks: vec![
-                Chunk::empty()
+                Chunk::empty().into()
             ]
         }
+	}
+
+	pub(crate) fn empty_spanned(span: Span) -> SpannableNode<Self> {
+		SpannableNode::new(Self {
+			weight: None,
+			chunks: vec![
+				Chunk::empty_spanned(span.clone())
+			]
+		}, span)
 	}
 
 	pub(crate) fn simple_ident(ident: &str) -> Self {
 		Self {
 			weight: None,
 			chunks: vec![
-				Chunk::simple_ident(ident)
+				Chunk::simple_ident(ident).into()
 			]
 		}
 	}
@@ -67,7 +82,7 @@ impl Rhs {
 	pub(crate) fn simple_terminal(term: &str) -> Self {
 		Self {
 			weight: None,
-			chunks: vec![Chunk::simple_terminal(term)]
+			chunks: vec![Chunk::simple_terminal(term).into()],
 		}
 	}
 
@@ -75,7 +90,7 @@ impl Rhs {
 		let mut blocks = Vec::new();
 		let mut curr = Vec::new();
 		for chunk in self.chunks.into_iter() {
-			let symbols = match chunk {
+			let symbols = match chunk.into_inner() {
 				Chunk { ebnf: Some(_), .. } => panic!("{:?}", "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out"),
 				c => c.extract_symbols(), // Deal with groups
 			};
@@ -106,16 +121,18 @@ impl ToAst for Rhs {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::{chunk::Chunk, symbol::Symbol};
+    use crate::parser::chunk::ChunkP;
+	use crate::parser::{chunk::Chunk, symbol::Symbol};
 
     use super::Rhs;
 
     use pretty_assertions::assert_eq;
+    use wagon_macros::unspanned_tree;
 
 
 	#[test]
 	fn test_simple_gll_blocks() {
-		let rhs = Rhs {
+		let rhs = unspanned_tree!(Rhs {
 		    weight: None,
 		    chunks: vec![
 		    	Chunk::simple_terminal("a"),
@@ -123,11 +140,11 @@ mod tests {
 		    	Chunk::simple_ident("C"),
 		    	Chunk::simple_ident("D"),
 		    	Chunk {
-		    		ebnf: None,
-		    		chunk: crate::parser::chunk::ChunkP::Group(vec![Chunk::simple_terminal("e"), Chunk::simple_ident("F")])
+		    		chunk: ChunkP::Group(vec![Chunk::simple_terminal("e"), Chunk::simple_ident("F")]),
+		    		ebnf: None
 		    	}
 		    ],
-		};
+		});
 		let blocks = rhs.blocks();
 		let expected = vec![
 			vec![

@@ -14,6 +14,7 @@ mod term;
 mod factor;
 mod atom;
 
+use crate::parser::SpannableNode;
 use std::{rc::Rc, collections::HashSet};
 use proc_macro2::{TokenStream, Ident, Literal};
 use quote::{quote, format_ident};
@@ -27,9 +28,10 @@ pub(crate) enum CharBytes {
 	Bytes(Literal)
 }
 
-type FirstSet = (Vec<wagon_gll::ident::Ident>, Option<CharBytes>);
+type FirstSet = (Vec<SpannableIdent>, Option<CharBytes>);
+type SpannableIdent = SpannableNode<wagon_gll::ident::Ident>;
 
-type AttrSet = HashSet<wagon_gll::ident::Ident>;
+type AttrSet = HashSet<SpannableIdent>;
 type ReqCodeAttrs = AttrSet;
 type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
@@ -47,8 +49,18 @@ pub(crate) struct CodeGenState {
 	str_repr: HashMap<Rc<Ident>, Vec<String>>,
 	attr_repr: HashMap<Rc<Ident>, (Vec<String>, Vec<String>)>,
 	call_info: FirstPassState,
-	attribute_map: HashMap<Rc<Ident>, HashMap<wagon_gll::ident::Ident, TokenStream>>,
+	attribute_map: HashMap<Rc<Ident>, HashMap<SpannableIdent, TokenStream>>,
 	req_attribute_map: HashMap<Rc<Ident>, (ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs)>
+}
+
+trait ToTokensState {
+	fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream;
+}
+
+impl<T: crate::parser::Parse + ToTokensState> ToTokensState for SpannableNode<T> {
+    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+        self.to_inner().to_tokens(state, label, is_weight_expr)
+    }
 }
 
 impl CodeGenState {
@@ -72,7 +84,7 @@ impl CodeGenState {
     	}
     }
 
-    fn add_req_code_attr(&mut self, label: Rc<Ident>, ident: wagon_gll::ident::Ident) {
+    fn add_req_code_attr(&mut self, label: Rc<Ident>, ident: SpannableIdent) {
     	if let Some((attrs, _, _)) = self.req_attribute_map.get_mut(&label) {
     		attrs.insert(ident);
     	} else {
@@ -82,7 +94,7 @@ impl CodeGenState {
     	}
     }
 
-    fn add_req_weight_attr(&mut self, label: Rc<Ident>, ident: wagon_gll::ident::Ident) {
+    fn add_req_weight_attr(&mut self, label: Rc<Ident>, ident: SpannableIdent) {
     	if let Some((_, attrs, _)) = self.req_attribute_map.get_mut(&label) {
     		attrs.insert(ident);
     	} else {
@@ -92,7 +104,7 @@ impl CodeGenState {
     	}
     }
 
-    fn add_req_first_attr(&mut self, label: Rc<Ident>, ident: wagon_gll::ident::Ident) {
+    fn add_req_first_attr(&mut self, label: Rc<Ident>, ident: SpannableIdent) {
     	if let Some((_, _, attrs)) = self.req_attribute_map.get_mut(&label) {
     		attrs.insert(ident);
     	} else {
@@ -140,7 +152,7 @@ impl CodeGenState {
     	stream
     }
 
-    fn add_attribute_mapping(&mut self, label: Rc<Ident>, ident: &wagon_gll::ident::Ident, code: TokenStream) {
+    fn add_attribute_mapping(&mut self, label: Rc<Ident>, ident: &SpannableIdent, code: TokenStream) {
     	if let Some(inner_map) = self.attribute_map.get_mut(&label) {
     		if let Some(stream) = inner_map.get_mut(ident) {
     			stream.extend(code);
@@ -186,7 +198,7 @@ impl CodeGenState {
 			    };
 			    let mut vec_stream = Vec::new();
 			    for ident in alt {
-			    	let stream = match ident {
+			    	let stream = match ident.to_inner() {
 			            wagon_gll::ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)),
 			            other => {
 			            	let i = other.to_ident();

@@ -2,33 +2,37 @@ use std::fmt::Display;
 use std::write;
 
 use super::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, Tokens};
+use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode};
 use super::atom::Atom;
 use crate::lexer::{math::Math, UnsafePeek};
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) enum Factor {
-	Primary(Atom),
+	Primary(SpannableNode<Atom>),
 	Power {
-		left: Atom,
-		right: Box<Factor>
+		left: SpannableNode<Atom>,
+		right: Box<SpannableNode<Factor>>
 	}
 }
 
 impl Parse for Factor {
 
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
-		let left = Atom::parse(lexer)?;
+		let left = SpannableNode::parse(lexer)?;
 		if &Tokens::MathToken(Math::Pow) == lexer.peek_unwrap() {
 			lexer.next();
 			Ok(
 				Factor::Power {
 					left, 
-					right: Box::new(Self::parse(lexer)?)
+					right: Box::new(SpannableNode::parse(lexer)?)
 				}
 			)
 		} else {
-			Ok(Factor::Primary(left))
+			Ok(Self::Primary(left))
 		}
 	}
 }

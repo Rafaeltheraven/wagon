@@ -5,11 +5,11 @@ use quote::quote;
 
 use crate::parser::rhs::Rhs;
 
-use super::{CodeGenState, Rc};
+use super::{CodeGenState, Rc, SpannableIdent, ToTokensState};
 
 
 impl Rhs {
-    pub(crate) fn gen(mut self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, args: &mut IndexSet<wagon_gll::ident::Ident>) {
+    pub(crate) fn gen(mut self, state: &mut CodeGenState, ident: Rc<Ident>, alt: usize, args: &mut IndexSet<SpannableIdent>) {
         let mut firsts = Vec::with_capacity(self.chunks.len());
         let weight = std::mem::take(&mut self.weight);
         let blocks = self.blocks();
@@ -27,7 +27,7 @@ impl Rhs {
             } 
             let mut counter: usize = 0;
             for (k, arg) in args.iter().enumerate() {
-                let proc_ident = arg.to_ident();
+                let proc_ident = arg.to_inner().to_ident();
                 if j == 0 { // We have no context, only parameters
                     state.add_attribute_mapping(label.clone(), arg, quote!( 
                         let #proc_ident = state.get_attribute(#k).to_owned();
@@ -64,9 +64,9 @@ impl Rhs {
             if j == blocks_count - 1 {
                 let mut ret_vals = Vec::new();
                 for arg in args.iter() {
-                    match arg {
+                    match arg.to_inner() {
                         wagon_gll::ident::Ident::Synth(_) => {
-                            let arg_ident = arg.to_ident();
+                            let arg_ident = arg.to_inner().to_ident();
                             ret_vals.push(quote!(Some(#arg_ident)));
                             state.add_req_code_attr(label.clone(), arg.clone());
                         },
@@ -96,7 +96,7 @@ impl Rhs {
                     }
                 ));
             }
-            firsts.push(wagon_gll::ident::Ident::Unknown(label_str));
+            firsts.push(wagon_gll::ident::Ident::Unknown(label_str).into());
 		}
         state.first_queue.get_mut(&ident).unwrap().push((firsts, None))
     }

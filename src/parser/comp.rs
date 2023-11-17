@@ -2,24 +2,30 @@ use std::fmt::Display;
 use std::write;
 
 use super::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
+use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens, SpannableNode};
 
 use super::helpers::TokenMapper;
+
 use crate::lexer::{math::Math, UnsafePeek};
 
 use super::sum::Sum;
 use wagon_macros::TokenMapper;
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Comparison {
-	pub(crate) sum: Sum,
+	pub(crate) sum: SpannableNode<Sum>,
 	pub(crate) comp: Option<Comp>
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Comp {
 	pub(crate) op: CompOp,
-	pub(crate) right: Sum
+	pub(crate) right: SpannableNode<Sum>
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
@@ -36,7 +42,7 @@ pub(crate) enum CompOp {
 impl Parse for Comparison {
 
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
-        Ok(Self { sum: Sum::parse(lexer)?, comp: Comp::parse_option(lexer)? })
+        Ok(Self { sum: SpannableNode::parse(lexer)?, comp: Comp::parse_option(lexer)? })
     }
 
 }
@@ -46,7 +52,7 @@ impl ParseOption for Comp {
     fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
         if let Some(op) = CompOp::token_to_enum(lexer.peek_unwrap()) {
         	lexer.next();
-        	Ok(Some(Self { op, right: Sum::parse(lexer)?}))
+        	Ok(Some(Self { op, right: SpannableNode::parse(lexer)?}))
         } else {
         	Ok(None)
         }

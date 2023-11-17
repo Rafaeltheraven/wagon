@@ -1,20 +1,24 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ast::ToAst, SpannableNode};
 use crate::lexer::{math::Math, UnsafeNext, UnsafePeek};
 
 use wagon_macros::match_error;
 use super::disjunct::Disjunct;
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) enum Expression {
-	Subproc(String),
+	Subproc(SpannableNode<String>),
 	If {
-		this: Disjunct,
-		then: Disjunct,
-		r#else: Option<Box<Expression>>
+		this: SpannableNode<Disjunct>,
+		then: SpannableNode<Disjunct>,
+		r#else: Option<Box<SpannableNode<Expression>>>
 	},
-	Disjunct(Disjunct),
+	Disjunct(SpannableNode<Disjunct>),
 }
 
 impl Parse for Expression {
@@ -22,8 +26,8 @@ impl Parse for Expression {
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> { 
 		match lexer.peek_unwrap() {
 			Tokens::MathToken(Math::If) => {lexer.next(); Self::parse_if(lexer)},
-			Tokens::MathToken(Math::Bash(expr)) => {let resp = Ok(Self::Subproc(expr.to_string())); lexer.next(); resp},
-			_ => Ok(Self::Disjunct(Disjunct::parse(lexer)?))
+			Tokens::MathToken(Math::Bash(_)) => Ok(Self::Subproc(SpannableNode::parse(lexer)?)),
+			_ => Ok(Self::Disjunct(SpannableNode::parse(lexer)?))
 		}
 	}
 }
@@ -31,12 +35,12 @@ impl Parse for Expression {
 impl Expression {
 
 	fn parse_if(lexer: &mut PeekLexer) -> ParseResult<Self> {
-		let this = Disjunct::parse(lexer)?;
+		let this = SpannableNode::parse(lexer)?;
 		let then = match_error!(match lexer.next_unwrap() {
-			Tokens::MathToken(Math::Then) => Disjunct::parse(lexer)
+			Tokens::MathToken(Math::Then) => SpannableNode::parse(lexer)
 		})?;
 		let r#else = match lexer.peek_unwrap() {
-		    Tokens::MathToken(Math::Else) => {lexer.next(); Some(Box::new(Expression::parse(lexer)?))},
+		    Tokens::MathToken(Math::Else) => {lexer.next(); Some(Box::new(SpannableNode::parse(lexer)?))},
 		    _ => None
 		};
 		Ok(Self::If { this, then, r#else })
@@ -46,7 +50,7 @@ impl Expression {
 impl ToAst for Expression {
     fn to_ast(self, ast: &mut super::ast::WagTree) -> super::ast::WagIx {
         match self {
-            Expression::Subproc(s) => ast.add_node(super::ast::WagNode::SubProc(s)),
+            Expression::Subproc(s) => ast.add_node(super::ast::WagNode::SubProc(s.into_inner())),
             Expression::If { this, then, r#else } => {
             	let node = ast.add_node(super::ast::WagNode::If);
             	if let Some(expr) = r#else {

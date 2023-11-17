@@ -23,11 +23,12 @@ mod ident;
 
 use std::{error::Error, fmt::Display, write};
 use logos::Span;
+use quote::ToTokens;
 use crate::{lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable}, helpers::comma_separated_with_or, firstpass::{Rewrite, WagCheckError}};
 use crate::string_vec;
 use crate::helpers::peekable::Peekable;
-use wagon_gll::ident::Ident;
-use self::wag::Wag;
+use self::{wag::Wag, ast::ToAst};
+use wagon_gll::{ident::Ident};
 
 pub struct Parser<'source> {
 	lexer: PeekLexer<'source>
@@ -67,15 +68,37 @@ impl From<WagCheckError> for WagParseError {
 impl Error for WagParseError {}
 impl Display for WagParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    	match self {
-	        WagParseError::Unexpected { span, offender, expected } => write!{f, "unexpected token {:?} at position {:?}, expected {:#?}", offender, span, comma_separated_with_or(expected)},
-	        WagParseError::Fatal((_, msg)) => write!(f, "Fatal exception: {:?}", msg),
-	        WagParseError::CheckError(err) => write!(f, "{:?}", err)
-    	}
+    	let (head, msg) = self.msg();
+    	write!(f, "{}: {}", head, msg)
     }
 }
 
-trait Parse {
+impl WagParseError {
+	pub(crate) fn msg_and_span(self) -> ((String, String), Span) {
+		let msg = self.msg();
+		let span = self.span();
+		(msg, span)
+	}
+
+	fn span(self) -> Span {
+		match self {
+		    WagParseError::Unexpected { span, .. } => span,
+		    WagParseError::Fatal((span, _)) => span,
+		    WagParseError::CheckError(check) => check.span()
+		}
+	}
+
+	fn msg(&self) -> (String, String) {
+		match self {
+		    WagParseError::Unexpected { span, offender, expected } => ("Unexpected Token".to_string(), 
+		    	format!{"Encountered token {:?} at position {:?}. Expected {:#?}", offender, span, comma_separated_with_or(expected)}),
+	        WagParseError::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
+	        WagParseError::CheckError(err) => err.msg()
+		}
+	}
+}
+
+pub(crate) trait Parse {
 
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized;
 
@@ -109,6 +132,143 @@ trait Parse {
 	}
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct SpannableNode<T: Parse> {
+	node: T,
+	span: Span
+}
+
+impl<T: Parse + PartialEq> PartialEq for SpannableNode<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.node.eq(&other.node)
+    }
+}
+
+impl<T: Parse + Eq> Eq for SpannableNode<T> {}
+
+impl<T: Parse + std::hash::Hash> std::hash::Hash for SpannableNode<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.node.hash(state)
+    }
+}
+
+impl<T: Parse + Display> Display for SpannableNode<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.node.fmt(f)
+    }
+}
+
+impl<T: Parse> From<T> for SpannableNode<T> {
+    fn from(value: T) -> Self {
+        Self::new(value, Default::default())
+    }
+}
+
+impl<T: Parse> SpannableNode<T> {
+	pub fn into_inner(self) -> T {
+		self.node
+	}
+
+	pub fn to_inner(&self) -> &T {
+		&self.node
+	}
+
+	fn new(node: T, span: Span) -> Self {
+		Self {node, span}
+	}
+
+	pub fn deconstruct(&mut self) -> (&mut T, &mut Span) {
+		(&mut self.node, &mut self.span)
+	}
+}
+
+trait WrapSpannable<T: Parse, U> {
+	fn wrap_spannable(self) -> U;
+
+	fn into_spanned(self, _span: Span) -> U where Self: Sized {
+		unimplemented!()
+	}
+}
+
+impl<T: Parse, U: IntoIterator<Item = SpannableNode<T>> + FromIterator<SpannableNode<T>>, Y: IntoIterator<Item = T>> WrapSpannable<T, U> for Y {
+	fn wrap_spannable(self) -> U {
+		self.into_iter().map(|x| x.wrap_spannable()).collect()
+	}
+} 
+
+impl<T: Parse> WrapSpannable<T, Option<SpannableNode<T>>> for Option<T> {
+    fn wrap_spannable(self) -> Option<SpannableNode<T>> {
+		self.map(|x| x.wrap_spannable())
+	}
+}
+
+impl<T: Parse> WrapSpannable<T, Option<Box<SpannableNode<T>>>> for Option<Box<T>> {
+    fn wrap_spannable(self) -> Option<Box<SpannableNode<T>>> {
+        self.map(|x| x.wrap_spannable())
+    }
+}
+
+impl<T: Parse> WrapSpannable<T, Box<SpannableNode<T>>> for Box<T> {
+    fn wrap_spannable(self) -> Box<SpannableNode<T>> {
+        Box::new(SpannableNode::from(*self))
+    }
+}
+
+impl<T: Parse> WrapSpannable<T, SpannableNode<T>> for T {
+    fn wrap_spannable(self) -> SpannableNode<T> {
+        SpannableNode::from(self)
+    }
+
+    fn into_spanned(self, span: Span) -> SpannableNode<T> {
+        SpannableNode::new(self, span)
+    }
+}
+
+// impl<T: Parse> Deref for SpannableNode<T> {
+//     type Target = T;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.node
+//     }
+// }
+
+impl<T: Parse> Spannable for SpannableNode<T> {
+    fn span(&mut self) -> Span {
+        self.span.to_owned()
+    }
+
+    fn set_span(&mut self, span: Span) {
+    	self.span = span;
+    }
+}
+
+impl<T: Parse> Parse for SpannableNode<T> {
+    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    	let start = lexer.span().start;
+    	let node = T::parse(lexer)?;
+    	let span = start..lexer.span().end;
+        Ok(Self::new(node, span))
+    }
+}
+
+impl<T: Parse + ToAst> ToAst for SpannableNode<T> {
+    fn to_ast(self, ast: &mut ast::WagTree) -> ast::WagIx {
+        self.node.to_ast(ast)
+    }
+}
+
+impl<U, T: Parse + Rewrite<U>> Rewrite<U> for SpannableNode<T> {
+    fn rewrite(&mut self, depth: usize, state: &mut crate::firstpass::FirstPassState) -> crate::firstpass::FirstPassResult<U> {
+        self.node.rewrite(depth, state)
+    }
+}
+
+impl<T: Parse + ToTokens> ToTokens for SpannableNode<T> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.node.to_tokens(tokens);
+    }
+}
+
 trait ParseOption {
 
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized;
@@ -123,6 +283,7 @@ mod tests {
 	use crate::parser::LexerBridge;
 	use crate::parser::sum::SumP;
 	use ordered_float::NotNan;
+	use wagon_macros::unspanned_tree;
 	use crate::firstpass::Rewrite;
 	use super::assignment::Assignment;
     use super::atom::Atom;
@@ -159,7 +320,7 @@ mod tests {
 		"#;
 		let mut lexer = Peekable::new(LexerBridge::new(input));
 		let output = Wag::parse(&mut lexer);
-		let expected = Wag { 
+		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata {
 				includes: vec!["activities::other".to_string()],
 				spec: Some(GrammarType::Conversational)
@@ -293,7 +454,7 @@ mod tests {
 					Rhs::empty()
 				])
 			]
-		};
+		});
 		assert_eq!(Ok(expected), output);
 	}
 
@@ -306,7 +467,7 @@ mod tests {
 		"#;
 		let mut lexer = Peekable::new(LexerBridge::new(input));
 		let output = Wag::parse(&mut lexer);
-		let expected = Wag {
+		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: vec![], spec: None },
 			grammar: vec![
 				Rule::Analytic("S".to_string(), Vec::new(), vec![
@@ -314,7 +475,6 @@ mod tests {
 						weight: None,
 						chunks: vec![
 							Chunk { 
-								ebnf: None,
 								chunk: ChunkP::Unit(Symbol::Assignment(vec![
 									Assignment { 
 										ident: Ident::Local("x".to_string()), 
@@ -362,11 +522,12 @@ mod tests {
 											])
 										)
 									}
-								])), 
+								])),
+								ebnf: None, 
 							},
 							Chunk {
+								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("X".to_string()), vec![Ident::Local("x".to_string()), Ident::Local("y".to_string())])),
 								ebnf: None,
-								chunk: ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown("X".to_string()), vec![Ident::Local("x".to_string()), Ident::Local("y".to_string())]))
 							}
 						]
 					}
@@ -377,7 +538,6 @@ mod tests {
 						chunks: vec![
 							Chunk::simple_terminal("a"),
 							Chunk { 
-								ebnf: None,
 								chunk: ChunkP::Unit(Symbol::Assignment(vec![
 									Assignment { 
 										ident: Ident::Inherit("y".to_string()), 
@@ -443,7 +603,8 @@ mod tests {
 											])
 										)
 									}
-								])), 
+								])),
+								ebnf: None, 
 							},
 							Chunk::simple_ident("B")
 						] 
@@ -453,7 +614,7 @@ mod tests {
 					Rhs::simple_terminal("b")
 				])
 			]
-		};
+		});
 		assert_eq!(Ok(expected), output);
 	}
 
@@ -462,7 +623,7 @@ mod tests {
 		let input = "S -> 'a' | ;";
 		let mut lexer = Peekable::new(LexerBridge::new(input));
 		let output = Wag::parse(&mut lexer);
-		let expected = Wag {
+		let expected = unspanned_tree!(Wag {
 		    metadata: Metadata { includes: vec![], spec: None },
 		    grammar: vec![
 		    	Rule::Analytic("S".to_string(), Vec::new(), vec![
@@ -473,7 +634,7 @@ mod tests {
 		    		Rhs::empty()
 		    	])
 		    ],
-		};
+		});
 		assert_eq!(Ok(expected), output);
 	}
 
@@ -509,8 +670,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag { 
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
@@ -530,7 +691,7 @@ mod tests {
 					}
 				]),
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -541,8 +702,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag { 
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
@@ -565,7 +726,7 @@ mod tests {
 					}
 				]),
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -576,8 +737,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag { 
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1·p".to_string(), Vec::new(), vec![
@@ -609,7 +770,7 @@ mod tests {
 					}
 				]),
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -620,8 +781,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag {
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
@@ -666,7 +827,7 @@ mod tests {
 					}
 				])
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -677,8 +838,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag {
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A·0·0_0·0·0_1".to_string(), Vec::new(), vec![
@@ -755,7 +916,7 @@ mod tests {
 	                },
 	            ]),
 		    ]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -766,23 +927,26 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag {
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk {ebnf: None, chunk: ChunkP::Group(vec![
-								Chunk::simple_ident("B"),
-								Chunk::simple_ident("C")
-							])}
+							Chunk {
+								chunk: ChunkP::Group(vec![
+									Chunk::simple_ident("B"),
+									Chunk::simple_ident("C")
+								]),
+								ebnf: None
+							}
 						]
 					}
 				])
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 
@@ -795,8 +959,8 @@ mod tests {
 		"#;
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default());
-		let expected = Wag {
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), spec: None }, 
 			grammar: vec![
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
@@ -805,7 +969,7 @@ mod tests {
 					Rhs::empty()
 				])
 			]
-		};
+		});
 		assert_eq!(expected, output);
 	}
 

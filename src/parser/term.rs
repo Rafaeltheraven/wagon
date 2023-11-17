@@ -1,14 +1,17 @@
+use wagon_macros::TokenMapper;
 use std::{fmt::Display, write};
 
 use crate::parser::ast::ToAst;
-use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens};
+use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens, SpannableNode};
 
 
 use crate::lexer::{math::Math, UnsafePeek};
 
 use super::helpers::TokenMapper;
-use wagon_macros::TokenMapper;
 use super::factor::Factor;
+
+#[cfg(test)]
+use wagon_macros::new_unspanned;
 
 /*
 Term -> Term Op Factor | Factor
@@ -19,15 +22,17 @@ Term' -> Op Factor Term' | epsilon
 */
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Term {
-	pub(crate) left: Factor,
+	pub(crate) left: SpannableNode<Factor>,
 	pub(crate) cont: Option<TermP>
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct TermP {
 	pub(crate) op: Op2,
-	pub(crate) right: Factor,
+	pub(crate) right: SpannableNode<Factor>,
 	pub(crate) cont: Option<Box<TermP>>
 }
 
@@ -35,7 +40,7 @@ impl Parse for Term {
 
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
 		Ok(Self {
-			left: Factor::parse(lexer)?,
+			left: SpannableNode::parse(lexer)?,
 			cont: TermP::parse_option(lexer)?
 		})
 	}
@@ -46,7 +51,7 @@ impl ParseOption for TermP {
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op2::token_to_enum(lexer.peek_unwrap()) {
 	    	lexer.next();
-	    	Ok(Some(TermP { op, right: Factor::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(|x| Box::new(x)) }))
+	    	Ok(Some(TermP { op, right: SpannableNode::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(|x| Box::new(x)) }))
 	    } else {
 	    	Ok(None)
 	    }

@@ -1,4 +1,3 @@
-
 use crate::lexer::Spannable;
 use crate::lexer::productions::Productions;
 use crate::parser::Tokens;
@@ -9,8 +8,7 @@ use wagon_macros::match_error;
 use crate::{either_token};
 use crate::lexer::UnsafePeek;
 
-use super::Parse;
-use super::Ident;
+use super::{Parse, Ident};
 
 impl Parse for Ident {
     fn parse(lexer: &mut crate::lexer::PeekLexer) -> super::ParseResult<Self> {

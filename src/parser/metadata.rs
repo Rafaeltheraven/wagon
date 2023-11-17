@@ -4,7 +4,11 @@ use crate::{lexer::{UnsafeNext, UnsafePeek, Spannable}};
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, helpers::check_semi};
 use crate::lexer::productions::{Productions, GrammarType};
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Metadata {
 	pub(crate) includes: Vec<String>,
 	pub(crate) spec: Option<GrammarType>

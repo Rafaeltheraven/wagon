@@ -1,108 +1,123 @@
 
+use logos::Span;
+
 use crate::{lexer::{UnsafePeek, UnsafeNext, productions::{Productions, EbnfType}}, firstpass::{FirstPassResult, FirstPassState}};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ast::ToAst, rule::Rule, rhs::Rhs, symbol::Symbol};
+use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ast::ToAst, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, WrapSpannable};
+
+#[cfg(test)]
+use wagon_macros::new_unspanned;
 
 /*
  Chunks are symbols in () with optionally an EBNF token following it.
  If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
 */
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) struct Chunk {
 	pub(crate) chunk: ChunkP,
-	pub(crate) ebnf: Option<EbnfType>
+	pub(crate) ebnf: Option<EbnfType>,
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) enum ChunkP {
-	Unit(Symbol),
-	Group(Vec<Chunk>)
+	Unit(SpannableNode<Symbol>),
+	Group(Vec<SpannableNode<Chunk>>)
 }
 
 impl Chunk {
 
-	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<Ident>, symbol: Symbol, rule_func: fn(String, Vec<Ident>, Vec<Rhs>) -> Rule, rules: &mut Vec<Rule>) {
-		let chunks = match ebnf {
+	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule, rules: &mut Vec<SpannableNode<Rule>>) {
+		let chunks: Vec<SpannableNode<Rhs>> = match ebnf {
             crate::lexer::productions::EbnfType::Some => {
                 let helper_ident = format!("{}·p", ident);
-                rules.push(rule_func(helper_ident.clone(), args.clone(),
+                rules.push(SpannableNode::new(rule_func(helper_ident.clone(), args.clone(),
                     vec![
-                        Rhs {
+                        SpannableNode::new(Rhs {
                             weight: None,
                             chunks: vec![
-                                Self {
+                                SpannableNode::new(Self {
                                     ebnf: None,
                                     chunk: ChunkP::Unit(symbol.clone())
-                                },
-                                Self::simple_ident(&helper_ident)
+                                }, span.clone()),
+                                Self::simple_ident_spanned(&helper_ident, span.clone())
                             ]
-                        },
-                        Rhs::empty()
+                        }, span.clone()),
+                        Rhs::empty_spanned(span.clone())
                     ]
-                ));
+                ), span.to_owned()));
                 vec![
-                    Rhs {
+                    SpannableNode::new(Rhs {
                         weight: None,
                         chunks: vec![
-                            Self {
+                            SpannableNode::new(Self {
                                 ebnf: None,
                                 chunk: ChunkP::Unit(symbol)
-                            },
-                            Self::simple_ident(&helper_ident)
+                            }, span.clone()),
+                            Self::simple_ident_spanned(&helper_ident, span.clone())
                         ]
-                    }
+                    }, span.clone())
                 ]
             },
             crate::lexer::productions::EbnfType::Many => {
                 vec![
-                    Rhs {
+                    SpannableNode::new(Rhs {
                         weight: None,
                         chunks: vec![
-                            Self {
+                            SpannableNode::new(Self {
                                 ebnf: None,
                                 chunk: ChunkP::Unit(symbol)
-                            },
-                            Self::simple_ident(&ident)
+                            }, span.clone()),
+                            Self::simple_ident_spanned(&ident, span.clone())
                         ]
-                    },
-                    Rhs::empty()
+                    }, span.clone()),
+                    Rhs::empty_spanned(span.clone())
                 ]
             },
             crate::lexer::productions::EbnfType::Maybe => {
                 vec![
-                    Rhs {
+                    SpannableNode::new(Rhs {
                         weight: None,
                         chunks: vec![
-                            Self {
+                            SpannableNode::new(Self {
                                 ebnf: None,
                                 chunk: ChunkP::Unit(symbol)
-                            }
+                            }, span.clone())
                         ]
-                    },
-                    Rhs::empty()
+                    }, span.clone()),
+                    Rhs::empty_spanned(span.clone())
                 ]
             },
         };
-        rules.push(rule_func(ident, args, chunks));
+        rules.push(SpannableNode::new(rule_func(ident, args, chunks), span.to_owned()));
 	}
 
-	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<Ident>, rule_func: fn(String, Vec<Ident>, Vec<Rhs>) -> Rule, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<Rule>> {
+	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<SpannableNode<Ident>>, span: &Span, rule_func: fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
 		let mut rules = Vec::new();
 		match self {
             Self { ebnf: None, .. } => {}
             Self { ebnf: Some(e), chunk: ChunkP::Unit(u)} => {
-                let yanked = std::mem::replace(u, Symbol::NonTerminal(Ident::Unknown(ident.clone()), args.clone()));
-                Self::rewrite_ebnf(e, ident, args, yanked, rule_func, &mut rules);
+                let yanked = std::mem::replace(u, 
+                    SpannableNode::new(
+                        Symbol::NonTerminal(
+                            SpannableNode::new(Ident::Unknown(ident.clone()), span.clone()), 
+                            args.clone()
+                        ), 
+                        span.clone()
+                    )
+                );
+                Self::rewrite_ebnf(e, ident, args, yanked, span, rule_func, &mut rules);
                 self.ebnf = None;
             },
             Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
                 let new_ident = format!("{}_{}", ident, depth);
-                let mut new_rule = rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }]);
+                let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
                 rules.extend(new_rule.rewrite(depth+1, state)?);
                 rules.push(new_rule);
-            	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident), args.clone());
-            	Self::rewrite_ebnf(e, ident.clone(), args.clone(), symbol, rule_func, &mut rules);
+            	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident).into_spanned(span.clone()), args.clone()).into_spanned(span.clone());
+            	Self::rewrite_ebnf(e, ident.clone(), args.clone(), symbol, span, rule_func, &mut rules);
             	self.ebnf = None;
-            	self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident), args));
+            	self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident).into_spanned(span.clone()), args).into_spanned(span.clone()));
             }
         };
         Ok(rules)
@@ -110,7 +125,7 @@ impl Chunk {
 
     pub(crate) fn is_terminal(&self) -> bool {
         match &self.chunk {
-            ChunkP::Unit(s) => s.is_terminal(),
+            ChunkP::Unit(s) => s.node.is_terminal(),
             ChunkP::Group(_) => false,
         }
     }
@@ -118,31 +133,47 @@ impl Chunk {
     pub(crate) fn simple_terminal(term: &str) -> Self {
         Self { 
             ebnf: None, 
-            chunk: ChunkP::Unit(Symbol::simple_terminal(term)) 
+            chunk: ChunkP::Unit(Symbol::simple_terminal(term).into()) 
         }
     }
 
     pub(crate) fn simple_ident(ident: &str) -> Self {
         Self {
             ebnf: None,
-            chunk: ChunkP::Unit(Symbol::simple_ident(ident))
+            chunk: ChunkP::Unit(Symbol::simple_ident(ident).into())
         }
+    }
+
+    pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
+        SpannableNode::new(Self {
+            ebnf: None,
+            chunk: ChunkP::Unit(Symbol::simple_ident_spanned(ident, span.clone()))
+        }, span)
     }
 
     pub(crate) fn empty() -> Self {
         Self {
             ebnf: None,
-            chunk: ChunkP::Unit(Symbol::Epsilon)
+            chunk: ChunkP::Unit(Symbol::Epsilon.into())
         }
+    }
+
+    pub(crate) fn empty_spanned(span: Span) -> SpannableNode<Self> {
+        SpannableNode::new(
+            Self {
+                ebnf: None,
+                chunk: ChunkP::Unit(SpannableNode::new(Symbol::Epsilon, span.clone()))
+            }, span.clone()
+        )
     }
 
     pub(crate) fn extract_symbols(self) -> Vec<Symbol> {
         match self {
-            Self {chunk: ChunkP::Unit(s), ..} => vec![s],
+            Self {chunk: ChunkP::Unit(s), ..} => vec![s.into_inner()],
             Self {chunk: ChunkP::Group(g), ..} => {
                 let mut ret = Vec::with_capacity(g.len());
                 for chunk in g {
-                    ret.extend(chunk.extract_symbols())
+                    ret.extend(chunk.into_inner().extract_symbols())
                 }
                 ret
             }
@@ -157,16 +188,16 @@ impl Parse for Chunk {
 				let mut ret = Vec::new();
 				lexer.next();
 				while lexer.peek_unwrap() != &Tokens::ProductionToken(Productions::RPar) {
-					ret.push(Chunk::parse(lexer)?);
+					ret.push(SpannableNode::parse(lexer)?);
 				}
 				lexer.next();
 				ChunkP::Group(ret)
 			},
 			Tokens::ProductionToken(Productions::Semi) => { // Empty rule
-				return Ok(Self { chunk: ChunkP::Unit(Symbol::Epsilon), ebnf: None })
+				return Ok(Self::empty())
 			}
 			_ => {
-				ChunkP::Unit(Symbol::parse(lexer)?)
+				ChunkP::Unit(SpannableNode::parse(lexer)?)
 			}
 		};
 		if let Tokens::ProductionToken(Productions::Ebnf(_)) = lexer.peek_unwrap() {

@@ -1,15 +1,19 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, ast::{ToAst, WagNode}};
+use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ast::{ToAst, WagNode}};
 
 use crate::lexer::{math::Math};
 
 use super::comp::Comparison;
 
+#[cfg(test)]
+use wagon_macros::new_unspanned;
+
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+#[cfg_attr(test, new_unspanned)]
 pub(crate) enum Inverse {
-	Not(Box<Inverse>),
-	Comparison(Comparison)
+	Not(Box<SpannableNode<Inverse>>),
+	Comparison(SpannableNode<Comparison>)
 }
 
 pub(crate) enum InverseNode {
@@ -21,9 +25,9 @@ impl Parse for Inverse {
 
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
         if lexer.next_if_eq(&Ok(Tokens::MathToken(Math::Not))).is_some() {
-            Ok(Self::Not(Box::new(Self::parse(lexer)?)))
+            Ok(Self::Not(Box::new(SpannableNode::parse(lexer)?)))
         } else {
-            Ok(Self::Comparison(Comparison::parse(lexer)?))
+            Ok(Self::Comparison(SpannableNode::parse(lexer)?))
         }
     }
 
