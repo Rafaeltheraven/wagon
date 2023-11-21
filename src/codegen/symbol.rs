@@ -104,7 +104,7 @@ impl Symbol {
 								#pos,
 								#rule_uuid
 							);
-							state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node);
+							state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer);
 						);
 						if !first_symbol {
 							stream.extend(quote!(
@@ -133,7 +133,7 @@ impl Symbol {
 						0,
 						#rule_uuid
 					);
-					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr);
+					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer);
 				));
 				state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Epsilon);
 				(true, Vec::new())

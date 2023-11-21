@@ -28,8 +28,8 @@ impl Rule {
             		alt.into_inner().gen(state, pointer.clone(), i, &mut as_set);
             	}
                 state.add_code(pointer.clone(), quote!(
-                    if !candidates.is_empty() {
-                        if candidates[0].is_probabilistic(state) {
+                    if let Some(check) = candidates.get(0) {
+                        if check.is_probabilistic(state) {
                             let mut rng = <rand::rngs::SmallRng as rand::SeedableRng>::from_entropy();
                             let weights = candidates.iter().map(|x| x.yank_probability(state));
                             let dist = rand::distributions::WeightedIndex::new(weights).unwrap();
