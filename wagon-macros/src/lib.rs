@@ -1,9 +1,10 @@
-
+use proc_macro::TokenStream;
 use proc_macro2::{Span};
+use proc_macro2::TokenStream as TokenStream2;
 use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput, punctuated::Punctuated, ExprStruct, ExprCall, Expr, Token};
-use extendable_data::extendable_data;
-use quote::{ToTokens, format_ident};
+use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
+use extendable_data::extendable_data;
 
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
@@ -124,7 +125,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
                         if known_iter {
-                            args.push(quote!(#name: crate::parser::WrapSpannable::wrap_spannable(#name)));
+                            args.push(quote!(#name: crate::WrapSpannable::wrap_spannable(#name)));
                         } else {
                             args.push(quote!(#name: #name.into()));
                         }
@@ -147,7 +148,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
                         if known_iter {
-                            args.push(quote!(crate::parser::WrapSpannable::wrap_spannable(#name)));
+                            args.push(quote!(crate::WrapSpannable::wrap_spannable(#name)));
                         } else {
                             args.push(quote!(#name.into()));
                         }
@@ -185,7 +186,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
                         if known_iter {
-                            args.push(quote!(#name: crate::parser::WrapSpannable::wrap_spannable(#name)));
+                            args.push(quote!(#name: crate::WrapSpannable::wrap_spannable(#name)));
                         } else {
                             args.push(quote!(#name: #name.into()));
                         }
@@ -208,7 +209,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
                         if known_iter {
-                            args.push(quote!(crate::parser::WrapSpannable::wrap_spannable(#name)));
+                            args.push(quote!(crate::WrapSpannable::wrap_spannable(#name)));
                         } else {
                             args.push(quote!(#name.into()));
                         }
@@ -242,40 +243,31 @@ fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::T
             let mut has_changed = false;
             for segment in p.path.segments.iter_mut() {
                 let ident = segment.ident.to_string();
-                if ident == "SpannableNode".to_string() {
-                    match &segment.arguments {
-                        syn::PathArguments::AngleBracketed(b) => {
-                            for arg in b.args.iter() {
-                                match arg {
-                                    syn::GenericArgument::Type(t) => return (t.clone(), known_custom, true),
-                                    _ => {},
-                                }
+                if ident == "SpannableNode" {
+                    if let syn::PathArguments::AngleBracketed(b) = &segment.arguments {
+                        for arg in b.args.iter() {
+                            if let syn::GenericArgument::Type(t) = arg {
+                                return (t.clone(), known_custom, true)
                             }
-                        },
-                        _ => {}
+                        }
                     }
-                } else {
-                    match &mut segment.arguments {
-                        syn::PathArguments::AngleBracketed(b) => {
-                            let mut new_args = Punctuated::new();
-                            for arg in &b.args {
-                                match arg {
-                                    syn::GenericArgument::Type(t) => {
-                                        let (new_type, new_known, new_changed) = extract_spanned_node_type(t.clone(), CUSTOM_INTO.contains(&ident.as_str()));
-                                        (known_custom, has_changed) = (new_known, new_changed);
-                                        new_args.push(
-                                            syn::GenericArgument::Type(
-                                                new_type
-                                            )
-                                        );
-                                    },
-                                    other => new_args.push(other.clone()),
-                                }
-                            }
-                            b.args = new_args;
-                        },
-                        _ => {}
+                } else if let syn::PathArguments::AngleBracketed(b) = &mut segment.arguments {
+                    let mut new_args = Punctuated::new();
+                    for arg in &b.args {
+                        match arg {
+                            syn::GenericArgument::Type(t) => {
+                                let (new_type, new_known, new_changed) = extract_spanned_node_type(t.clone(), CUSTOM_INTO.contains(&ident.as_str()));
+                                (known_custom, has_changed) = (new_known, new_changed);
+                                new_args.push(
+                                    syn::GenericArgument::Type(
+                                        new_type
+                                    )
+                                );
+                            },
+                            other => new_args.push(other.clone()),
+                        }
                     }
+                    b.args = new_args;
                 }
             }
             (syn::Type::Path(p), known_custom, has_changed)
@@ -423,18 +415,18 @@ fn pat_to_str(pat: &Pat, span: Span) -> Result<TokenStream2> {
         Pat::Ident(p) => Ok(p.ident.to_token_stream()),
         Pat::Lit(l) => Ok(l.lit.to_token_stream()),
         Pat::Macro(m) => handle_macro(m, span),
-        Pat::Or(o) => o.cases.iter().map(|x| pat_to_str(&x, span)).collect(),
+        Pat::Or(o) => o.cases.iter().map(|x| pat_to_str(x, span)).collect(),
         Pat::Paren(p) => pat_to_str(&p.pat, span),
         Pat::Path(p) => Ok(p.path.to_token_stream()),
         Pat::Reference(r) => pat_to_str(&r.pat, span),
-        Pat::Tuple(t) => t.elems.iter().map(|x| pat_to_str(&x, span)).collect(),
+        Pat::Tuple(t) => t.elems.iter().map(|x| pat_to_str(x, span)).collect(),
         Pat::TupleStruct(t) => {
             let mut sub_list: Vec<TokenStream2> = Vec::new();
             for elem in t.elems.iter() {
                 if let Pat::Ident(_) = elem {
                     sub_list.push(quote!(Default::default()))
                 } else {
-                    sub_list.push(pat_to_str(&elem, span)?);
+                    sub_list.push(pat_to_str(elem, span)?);
                 }
             };
             let main = &t.path;

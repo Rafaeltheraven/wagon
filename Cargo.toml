@@ -1,26 +1,43 @@
-[package]
-name = "wagon"
+[workspace]
+members = [
+	"wagon-bin",
+	"wagon-codegen",
+	"wagon-gll",
+	"wagon-ident",
+	"wagon-lexer",
+	"wagon-macros",
+	"wagon-parser",
+	"wagon-utils",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
+authors = ["Rafael Dulfer"]
+repository = "https://gitlab.utwente.nl/s1945785/wagon"
+license = "MIT"
 edition = "2021"
+keywords = ["parsing", "gll", "weighted attribute grammar"]
+categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-logos = "0.13.0"
-logos-derive = "0.13.0"
-petgraph = {version = "0.6.3", default-features = false}
-wagon-macros = { path = "./wagon-macros"}
-logos-display = "0.1.2"
-ordered-float = "3.9.1"
+[workspace.dependencies]
+# common dependencies
+syn = "2.0.38"
 quote = "1.0.33"
 proc-macro2 = "1.0.67"
-cached = "0.46.0"
-prettyplease = "0.2.15"
-syn = "2.0.38"
-wagon-gll = { version = "0.1.0", path = "../wagon_gll" }
+petgraph = {version = "0.6.3", default-features = false}
 indexmap = "2.0.2"
-subprocess = "0.2.9"
-ariadne = {version = "0.3.0", features = ["auto-color"]}
+ordered-float = "3.9.1"
 
-[dev-dependencies]
+# local crates
+wagon-codegen = {path = "./wagon-codegen"}
+wagon-gll = {path = "./wagon-gll"}
+wagon-ident = {path = "./wagon-ident"}
+wagon-lexer = {path = "./wagon-lexer"}
+wagon-macros = {path = "./wagon-macros"}
+wagon-parser = {path = "./wagon-parser"}
+wagon-utils = {path = "./wagon-utils"}
+
+# For tests
 pretty_assertions = "1.4.0"
+assert-tokenstreams-eq = "0.1.0"

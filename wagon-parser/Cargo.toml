@@ -1,0 +1,25 @@
+[package]
+name = "wagon-parser"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+edition.workspace = true
+description = "Parser for the WAGon DSL."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wagon-lexer = {workspace = true}
+wagon-ident = {workspace = true}
+wagon-utils = {workspace = true}
+wagon-macros = {workspace = true}
+ordered-float = {workspace = true}
+petgraph = {workspace = true}
+indexmap = {workspace = true}
+quote = {workspace = true}
+
+[dev-dependencies]
+pretty_assertions = {workspace = true}

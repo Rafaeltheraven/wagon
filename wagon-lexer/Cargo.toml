@@ -1,5 +1,5 @@
 [package]
-name = "wagon-macros"
+name = "wagon-lexer"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -7,16 +7,14 @@ categories.workspace = true
 keywords.workspace = true
 repository.workspace = true
 edition.workspace = true
-description = "Procedural macros for WAGon."
+description = "Lexer for the wagon DSL."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-syn = {workspace = true, features = ["extra-traits", "full"]}
-quote = {workspace = true}
-proc-macro2 = {workspace = true}
-extendable-data = "0.1.4"
-
-[lib]
-proc-macro = true
-
+logos = "0.13.0"
+logos-derive = "0.13.0"
+logos-display = "0.1.2"
+wagon-ident = {workspace = true}
+wagon-utils = {workspace = true}
+wagon-macros = {workspace = true}
