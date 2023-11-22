@@ -38,7 +38,7 @@ impl CodeGen for Rhs {
                     ));
                     gen_args.state.add_ret_attr(label.clone(), arg.to_string());
                 } else {
-                    let skipped_k = k + args.len(); // The first n arguments on the stack were call parameters. The next m are our context
+                    let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
                     if prev_args.contains(arg) {
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = if let Some(v) = state.get_ret_val(#counter) {
