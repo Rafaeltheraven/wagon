@@ -33,10 +33,10 @@ impl CodeGen for Rule {
                 gen_args.state.add_code(pointer.clone(), quote!(
                     if let Some(check) = candidates.get(0) {
                         if check.is_probabilistic(state) {
-                            let mut rng = <rand::rngs::SmallRng as rand::SeedableRng>::from_entropy();
                             let weights = candidates.iter().map(|x| x.yank_probability(state));
                             let dist = rand::distributions::WeightedIndex::new(weights).unwrap();
-                            state.add(candidates.swap_remove(rand::distributions::Distribution::sample(&dist, &mut rng)), state.gss_pointer, state.input_pointer, state.sppf_root);
+                            let index = rand::distributions::Distribution::sample(&dist, &mut state.rng);
+                            state.add(candidates.swap_remove(index), state.gss_pointer, state.input_pointer, state.sppf_root);
                         } else {
                             let to_add = itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state));
                             for slot in to_add {

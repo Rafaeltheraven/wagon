@@ -1,7 +1,9 @@
+use rand::RngCore;
 use std::{collections::{HashSet, HashMap}, rc::Rc, format};
 
 use indexmap::IndexSet;
 use petgraph::{Direction::{Outgoing, Incoming}, visit::{EdgeRef}};
+use colourado_iter::{ColorPalette, PaletteType};
 
 use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 
@@ -9,29 +11,32 @@ use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, 
 
 pub struct GLLState<'a> {
 	// Main structures
-	pub input: &'a [u8],
-	pub gss: GSS<'a>,
-	pub sppf: SPPFGraph<'a>,
+	input: &'a [u8],
+	gss: GSS<'a>,
+	sppf: SPPFGraph<'a>,
 	// Pointers
 	pub input_pointer: usize, //C_i
 	pub gss_pointer: GSSNodeIndex, // C_u
-	pub gss_root: GSSNodeIndex, // Points to <⊥, 0>
-	pub context_pointer: GSSNodeIndex, // Points to where the current context is stored
+	gss_root: GSSNodeIndex, // Points to <⊥, 0>
+	context_pointer: GSSNodeIndex, // Points to where the current context is stored
 	pub sppf_pointer: SPPFNodeIndex, // C_n
 	pub sppf_root: SPPFNodeIndex, // Points to $
 	// Memoization
-	pub todo: IndexSet<Descriptor<'a>>, // R
-	pub visited: HashSet<Descriptor<'a>>, // U
-	pub pop: HashMap<GSSNodeIndex, Vec<SPPFNodeIndex>>, // P
+	todo: IndexSet<Descriptor<'a>>, // R
+	visited: HashSet<Descriptor<'a>>, // U
+	pop: HashMap<GSSNodeIndex, Vec<SPPFNodeIndex>>, // P
 	// Easy Maps
-	pub gss_map: HashMap<Rc<GSSNode<'a>>, GSSNodeIndex>,
-	pub sppf_map: HashMap<SPPFNode<'a>, SPPFNodeIndex>,
-	pub label_map: HashMap<&'a str, GLLBlockLabel<'a>>,
-	pub rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
+	gss_map: HashMap<Rc<GSSNode<'a>>, GSSNodeIndex>,
+	sppf_map: HashMap<SPPFNode<'a>, SPPFNodeIndex>,
+	label_map: HashMap<&'a str, GLLBlockLabel<'a>>,
+	rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
+	// Infinite Iterators
+	pub rng: Box<dyn RngCore>,
+	colors: ColorPalette
 }
 
 impl<'a> GLLState<'a> {
-	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
+	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>, mut rng: Box<dyn RngCore>) -> Self {
 		let mut sppf = SPPFGraph::new();
 		let mut gss = GSS::new();
 		let mut sppf_map = HashMap::new();
@@ -42,6 +47,7 @@ impl<'a> GLLState<'a> {
 		let gss_root = gss.add_node(gss_root_node.clone());
 		sppf_map.insert(SPPFNode::Dummy, sppf_root);
 		gss_map.insert(gss_root_node, gss_root);
+		let colors = ColorPalette::new(PaletteType::Random, false, &mut rng);
 		let mut state = GLLState { 
 			input, 
 			gss, 
@@ -58,7 +64,9 @@ impl<'a> GLLState<'a> {
 			gss_map: Default::default(), 
 			sppf_map: Default::default(), 
 			rule_map,
-			label_map 
+			label_map,
+			rng,
+			colors
 		};
 		state.add(root_slot, gss_root, 0, sppf_root);
 		state
