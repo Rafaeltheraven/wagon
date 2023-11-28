@@ -45,9 +45,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "colourado-iter"
-version = "1.0.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f768b7d749981d21e260d433d941eda097fb27a0f884f1af814bb9e0055fb3a0"
+checksum = "f95c8b57517d1d79385b33f3b5495cd331c7865a5b587092b1f1954a8b4632e7"
 dependencies = [
  "rand",
 ]
@@ -427,7 +427,7 @@ dependencies = [
  "indexmap",
  "ordered-float",
  "petgraph",
- "rand",
+ "rand_core",
  "wagon-ident",
 ]
 
