@@ -32,7 +32,7 @@ impl CodeGen for Rule {
             	}
                 gen_args.state.add_code(pointer.clone(), quote!(
                     if let Some(check) = candidates.get(0) {
-                        if check.is_probabilistic(state) {
+                        if check.is_probabilistic() {
                             let weights = candidates.iter().map(|x| x.yank_probability(state));
                             let dist = rand::distributions::WeightedIndex::new(weights).unwrap();
                             let index = rand::distributions::Distribution::sample(&dist, &mut state.rng);

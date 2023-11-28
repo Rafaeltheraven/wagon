@@ -100,7 +100,8 @@ impl CodeGen for Rhs {
                     if state.test_next(fst) {
                         let root = state.get_label_by_uuid(#root_str);
                         let rules = state.get_rule(#rule_str);
-                        let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
+                        let probabilistic = matches!(state.get_label_by_uuid(#label_str).weight(state), wagon_gll::value::Value::Float(_));
+                        let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str, probabilistic);
                         candidates.push(std::rc::Rc::new(slot));
                     }
                 ));

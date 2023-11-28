@@ -31,6 +31,11 @@ impl CodeGen for Symbol {
 					state.add_req_code_attr(label.clone(), arg.clone());
 					full_args_idents.push(arg.to_inner().to_ident());
 				}
+				let prob = if block == 0 {
+					quote!(matches!(self.weight(state), wagon_gll::value::Value::Float(_)))
+				} else {
+					quote!(state.get_current_gss_node().get_slot().is_probabilistic())
+				};
 				let base = quote!(
 					state.gss_pointer = state.create(
 						std::rc::Rc::new(wagon_gll::GrammarSlot::new(
@@ -38,7 +43,8 @@ impl CodeGen for Symbol {
 							state.get_rule(#rule_uuid),
 							#next_block,
 							0, 
-							#rule_uuid
+							#rule_uuid,
+							#prob
 						)),
 						vec![#(#args_idents.clone(),)*#(#full_args_idents,)*]
 					);
@@ -110,7 +116,8 @@ impl CodeGen for Symbol {
 								state.get_rule(#rule_uuid),
 								#dot, 
 								#pos,
-								#rule_uuid
+								#rule_uuid,
+								false
 							);
 							state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer);
 						);
@@ -140,7 +147,8 @@ impl CodeGen for Symbol {
 						state.get_rule(#rule_uuid),
 						1,
 						0,
-						#rule_uuid
+						#rule_uuid,
+						false
 					);
 					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer);
 				));
