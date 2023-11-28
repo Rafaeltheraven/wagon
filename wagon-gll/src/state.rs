@@ -1,9 +1,10 @@
-use rand::RngCore;
+use ordered_float::NotNan;
+use rand_core::RngCore;
 use std::{collections::{HashSet, HashMap}, rc::Rc, format};
 
 use indexmap::IndexSet;
 use petgraph::{Direction::{Outgoing, Incoming}, visit::{EdgeRef}};
-use colourado_iter::{ColorPalette, PaletteType};
+use colourado_iter::{HsvPalette, PaletteType, Hsv};
 
 use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 
@@ -32,7 +33,7 @@ pub struct GLLState<'a> {
 	rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
 	// Infinite Iterators
 	pub rng: Box<dyn RngCore>,
-	colors: ColorPalette
+	colors: HsvPalette
 }
 
 impl<'a> GLLState<'a> {
@@ -41,13 +42,13 @@ impl<'a> GLLState<'a> {
 		let mut gss = GSS::new();
 		let mut sppf_map = HashMap::new();
 		let mut gss_map = HashMap::new();
-		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, 0, ROOT_UUID));
+		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, 0, ROOT_UUID, false));
 		let gss_root_node = Rc::new(GSSNode::new(root_slot.clone(), 0, Default::default()));
 		let sppf_root = sppf.add_node(SPPFNode::Dummy);
 		let gss_root = gss.add_node(gss_root_node.clone());
 		sppf_map.insert(SPPFNode::Dummy, sppf_root);
 		gss_map.insert(gss_root_node, gss_root);
-		let colors = ColorPalette::new(PaletteType::Random, false, &mut rng);
+		let colors = HsvPalette::new(PaletteType::Random, false, &mut rng);
 		let mut state = GLLState { 
 			input, 
 			gss, 
@@ -120,7 +121,7 @@ impl<'a> GLLState<'a> {
 			let right_node = self.sppf.node_weight(right).unwrap();
 			let j =  right_node.right_extend().unwrap();
 			let t = if slot.is_last(self) {
-				Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid })
+				Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid, probabilistic: slot.is_probabilistic() })
 			} else {
 				slot.clone()
 			};
@@ -128,21 +129,24 @@ impl<'a> GLLState<'a> {
 				let i = right_node.left_extend().unwrap();
 				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
 				if self.get_packed_node(node, slot.clone(), i).is_none() {
+					let hsv = self.get_color(right);
 					let packed = SPPFNode::Packed { slot, split: i, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
-					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, None);
+					self.sppf.add_edge(ix, right, hsv);
+					self.sppf.add_edge(node, ix, hsv);
 				}
 				node
 			} else {
 				let (i, k) = (left_node.left_extend().unwrap(), left_node.right_extend().unwrap());
 				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
 				if self.get_packed_node(node, slot.clone(), k).is_none() {
+					let hsv = self.get_color(right);
+					let l_hsv = self.get_color(left);
 					let packed = SPPFNode::Packed { slot, split: k, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
-					self.sppf.add_edge(ix, left, None);
-					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, None);
+					self.sppf.add_edge(ix, left, l_hsv);
+					self.sppf.add_edge(ix, right, hsv);
+					self.sppf.add_edge(node, ix, hsv);
 				}
 				node
 			}
@@ -155,13 +159,44 @@ impl<'a> GLLState<'a> {
 		self.find_or_create_sppf_symbol(terminal, left, right)
 	}
 
+	pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
+		self.get_gss_node_unchecked(self.gss_pointer)
+	}
+
+	pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
+		self.get_sppf_node_unchecked(self.sppf_pointer)
+	}
+
+	fn get_sppf_node_unchecked(&self, i: SPPFNodeIndex) -> &SPPFNode<'a> {
+		self.sppf.node_weight(i).unwrap()
+	}
+
+	fn get_gss_node_unchecked(&self, i: GSSNodeIndex) -> &Rc<GSSNode<'a>> {
+		self.gss.node_weight(i).unwrap()
+	}
+
+	fn get_color(&mut self, node: SPPFNodeIndex) -> Option<Hsv> {
+		if let Some(child) = self.sppf.edges_directed(node, Outgoing).next() {
+			*child.weight()
+		} else {
+			self.colors.next()
+		}
+
+	}
+
 	fn find_or_create_sppf_symbol(&mut self, terminal: &'a [u8], left: usize, right: usize) -> SPPFNodeIndex {
 		let candidate = SPPFNode::Symbol { terminal, left, right };
 		self.find_or_create_sppf(candidate)
 	}
 
 	fn find_or_create_sppf_intermediate(&mut self, slot: Rc<GrammarSlot<'a>>, left: usize, right: usize, context_pointer: GSSNodeIndex) -> SPPFNodeIndex {
-		let candidate = SPPFNode::Intermediate { slot: slot.clone(), left, right, ret: Default::default(), context: self.gss.node_weight(context_pointer).unwrap().clone()};
+		let candidate = SPPFNode::Intermediate { 
+			slot: slot.clone(), 
+			left, 
+			right, 
+			ret: Default::default(), 
+			context: self.get_gss_node_unchecked(context_pointer).clone(),
+		};
 		self.find_or_create_sppf(candidate)
 	}
 
@@ -318,8 +353,8 @@ impl<'a> GLLState<'a> {
         	for edge in self.sppf.edges_directed(ix, Outgoing) {
         		let child = edge.target();
         		res.push_str(&format!("{} -> {}", ix.index(), child.index()));
-        		if let Some(prob) = edge.weight() {
-        			res.push_str(&format!(" [label = \"{}\"]", prob));
+        		if let Some((h, s, v)) = edge.weight() {
+        			res.push_str(&format!(" [color = \"{} {} {}\"]", h / 360.0, s, v));
         		}
         		res.push('\n');
         	}

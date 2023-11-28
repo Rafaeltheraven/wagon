@@ -32,6 +32,10 @@ impl<'a> GSSNode<'a> {
 		self.attributes.get(i)
 	}
 
+	pub fn get_slot(&self) -> &Rc<GrammarSlot<'a>> {
+		&self.slot
+	}
+
 	pub(crate) fn cmp_attributes(orig: &Self, other: &Self) -> bool {
 		orig.attributes == other.attributes
 	}
