@@ -31,17 +31,10 @@ impl CodeGen for Rule {
             		alt.into_inner().gen(gen_args);
             	}
                 gen_args.state.add_code(pointer.clone(), quote!(
-                    if let Some(check) = candidates.get(0) {
-                        if check.is_probabilistic() {
-                            let weights = candidates.iter().map(|x| x.yank_probability(state));
-                            let dist = rand::distributions::WeightedIndex::new(weights).unwrap();
-                            let index = rand::distributions::Distribution::sample(&dist, &mut state.rng);
-                            state.add(candidates.swap_remove(index), state.gss_pointer, state.input_pointer, state.sppf_root);
-                        } else {
-                            let to_add = itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state));
-                            for slot in to_add {
-                                state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root);
-                            }
+                    if !candidates.is_empty() {
+                        let to_add = itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state));
+                        for slot in to_add {
+                            state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root);
                         }
                     }
                 ));
