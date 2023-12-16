@@ -3,7 +3,6 @@ use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}};
 use derivative::Derivative;
 
 use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}};
-use colourado_iter::Hsv;
 
 use super::{GrammarSlot, Terminal};
 
@@ -12,7 +11,7 @@ pub type SPPFNodeIndex = NodeIndex<SPPFIx>;
 
 type SPPFIx = DefaultIx;
 
-pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<Hsv>, Directed, SPPFIx>;
+pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<f32>, Directed, SPPFIx>;
 
 #[derive(Debug, Eq, Clone, Derivative)]
 #[derivative(PartialEq, Hash)]

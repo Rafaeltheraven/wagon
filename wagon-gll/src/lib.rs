@@ -1,4 +1,4 @@
-use std::{hash::{Hash, Hasher}, fmt::{Debug}, rc::Rc, str::from_utf8, collections::{HashSet}, matches};
+use std::{hash::{Hash, Hasher}, fmt::{Debug}, rc::Rc, str::from_utf8, collections::{HashSet}};
 
 use self::{state::GLLState, value::Value};
 use wagon_ident::Ident;
