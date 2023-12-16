@@ -42,6 +42,9 @@ enum Base {
     #[token(";")]
     Semi,
 
+    #[token(":")]
+    Colon,
+
     #[token(",")]
     Comma,
 }

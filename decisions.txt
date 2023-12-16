@@ -21,3 +21,6 @@ On the SPPF, this is essentially the same as putting the date on the correspondi
 & => by reference => synthesizd
 * => dereferenced/by value => inherited
 $ => local
+
+X -> [$x] <$y> A
+   | [$z] <$y> B
