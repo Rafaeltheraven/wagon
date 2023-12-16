@@ -142,15 +142,14 @@ pub struct GrammarSlot<'a> {
 	rule: Rc<Vec<Ident>>,
 	dot: usize,
 	pos: usize,
-	uuid: &'a str,
-	probabilistic: bool
+	uuid: &'a str
 }
 
 impl<'a> Eq for GrammarSlot<'a> {}
 
 impl<'a> PartialEq for GrammarSlot<'a> {
     fn eq(&self, other: &Self) -> bool {
-    	if !self.is_probabilistic() && !other.is_probabilistic() && self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same except when probabilistic
+    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same except when probabilistic
     		self.label.to_string() == other.label.to_string()
     	} else {
     		self.uuid == other.uuid && self.dot == other.dot && self.pos == other.pos
@@ -160,7 +159,7 @@ impl<'a> PartialEq for GrammarSlot<'a> {
 
 impl<'a> Hash for GrammarSlot<'a> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-    	if !self.is_probabilistic() && self.is_complete() {
+    	if self.is_complete() {
     		self.label.to_string().hash(state);
     	} else {
     		self.uuid.hash(state);
@@ -171,8 +170,8 @@ impl<'a> Hash for GrammarSlot<'a> {
 }
 
 impl<'a> GrammarSlot<'a> {
-	pub fn new(label: GLLBlockLabel<'a>, rule: Rc<Vec<Ident>>, dot: usize, pos: usize, uuid: &'a str, probabilistic: bool) -> Self {
-		Self {label, rule, dot, pos, uuid, probabilistic}
+	pub fn new(label: GLLBlockLabel<'a>, rule: Rc<Vec<Ident>>, dot: usize, pos: usize, uuid: &'a str) -> Self {
+		Self {label, rule, dot, pos, uuid}
 	}
 
 	pub fn is_eps(&self) -> bool {
@@ -232,25 +231,6 @@ impl<'a> GrammarSlot<'a> {
 
 	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other, state))
-    }
-
-    pub fn is_probabilistic(&self) -> bool {
-    	self.probabilistic
-    }
-
-    pub fn yank_probability(&self, state: &GLLState<'a>) -> f32 {
-    	match self.curr_block(state).weight(state) {
-	        Value::Float(f) => *f,
-	        other => panic!("Associated slot has non-float value {:?}", other)
-	    }
-    }
-
-    pub fn get_probability(&self, state: &GLLState<'a>) -> Option<f32> {
-    	let ident = &self.rule[0];
-    	match state.get_label(ident).weight(state) {
-	        Value::Float(f) => Some(*f),
-	        _ => None
-	    }
     }
 }
 

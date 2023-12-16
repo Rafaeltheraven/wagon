@@ -36,7 +36,7 @@ impl<'a> GLLState<'a> {
 		let mut gss = GSS::new();
 		let mut sppf_map = HashMap::new();
 		let mut gss_map = HashMap::new();
-		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, 0, ROOT_UUID, false));
+		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, 0, ROOT_UUID));
 		let gss_root_node = Rc::new(GSSNode::new(root_slot.clone(), 0, Default::default()));
 		let sppf_root = sppf.add_node(SPPFNode::Dummy);
 		let gss_root = gss.add_node(gss_root_node.clone());
@@ -112,7 +112,7 @@ impl<'a> GLLState<'a> {
 			let right_node = self.sppf.node_weight(right).unwrap();
 			let j =  right_node.right_extend().unwrap();
 			let t = if slot.is_last(self) {
-				Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid, probabilistic: slot.is_probabilistic() })
+				Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid})
 			} else {
 				slot.clone()
 			};
