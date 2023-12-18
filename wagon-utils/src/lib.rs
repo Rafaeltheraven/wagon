@@ -56,6 +56,16 @@ pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
     }
 }
 
+pub fn normalize_to_probabilities<T: std::ops::Div<Output = T> + for<'a> std::iter::Sum<&'a T>>(input: &Vec<T>) -> Vec<T> where for<'a> &'a T: std::ops::Div<Output = T> {
+    let mut output = Vec::with_capacity(input.len());
+    let sum: T = input.iter().sum();
+
+    for val in input {
+        output.push(val / &sum);
+    }
+    output
+}
+
 #[macro_export]
 macro_rules! string_vec {
     ( $( $x:expr ),* ) => {
