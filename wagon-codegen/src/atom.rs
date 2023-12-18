@@ -1,19 +1,17 @@
 use quote::quote;
 
 use wagon_parser::parser::atom::Atom;
-use super::{CodeGenState, Rc, ToTokensState};
+use crate::SpannableIdent;
+
+use super::{Rc, ToTokensState};
 use proc_macro2::{TokenStream, Ident};
 
-impl ToTokensState for Atom {
-    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+impl<U> ToTokensState<U> for Atom {
+    fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
         match self {
             Atom::Ident(i) => {
                 let proc_ident = i.to_ident();
-                if is_weight_expr {
-                    state.add_req_weight_attr(label, i.clone().into());
-                } else {
-                    state.add_req_code_attr(label, i.clone().into());
-                };
+                attr_fun(state, label, i.clone().into());
                 quote!(#proc_ident)
             },
             Atom::LitBool(b) => quote!(#b.into()),
@@ -24,18 +22,14 @@ impl ToTokensState for Atom {
             },
             Atom::LitString(s) => quote!(#s.into()),
             Atom::Group(g) => {
-                let g_stream = g.to_tokens(state, label, is_weight_expr);
+                let g_stream = g.to_tokens(state, label, attr_fun);
                 quote!((#g_stream))
             },
             Atom::Dict(d) => {
                 let (i, e) = d.deconstruct();
-                let e_stream = e.to_tokens(state, label.clone(), is_weight_expr);
+                let e_stream = e.to_tokens(state, label.clone(), attr_fun);
                 let ident = i.to_ident();
-                if is_weight_expr {
-                    state.add_req_weight_attr(label, i.clone().into());
-                } else {
-                    state.add_req_code_attr(label, i.clone().into());
-                };
+                attr_fun(state, label, i.clone().into());
                 quote!(#ident[#e_stream])
             },
         }

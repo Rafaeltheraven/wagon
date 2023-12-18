@@ -14,10 +14,9 @@ mod term;
 mod factor;
 mod atom;
 
-use std::{rc::Rc, collections::HashSet};
+use std::{rc::Rc, collections::{HashSet, HashMap}};
 use proc_macro2::{TokenStream, Ident, Literal};
 use quote::{quote, format_ident};
-use std::{collections::{HashMap}};
 use indexmap::IndexSet;
 
 use wagon_parser::{parser::{Parse, wag::Wag}, SpannableNode};
@@ -67,17 +66,17 @@ pub(crate) struct CodeGenState {
 	req_attribute_map: HashMap<Rc<Ident>, (ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs)>
 }
 
-trait ToTokensState {
-	fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream;
+trait ToTokensState<U> {
+	fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream;
 }
 
 trait CodeGen {
 	fn gen(self, gen_args: &mut CodeGenArgs);
 }
 
-impl<T: Parse + ToTokensState> ToTokensState for SpannableNode<T> {
-    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
-        self.to_inner().to_tokens(state, label, is_weight_expr)
+impl<U, T: Parse + ToTokensState<U>> ToTokensState<U> for SpannableNode<T> {
+    fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
+        self.to_inner().to_tokens(state, label, attr_fun)
     }
 }
 
@@ -278,7 +277,6 @@ impl CodeGenState {
     				fn weight(&self, state: &wagon_gll::state::GLLState<'a>) -> wagon_gll::value::Value<'a> {
     					#weight_stream
     				}
-
     			}
     		));
     		if Some(id) == self.top.as_ref() {

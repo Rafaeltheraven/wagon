@@ -22,6 +22,7 @@ impl CodeGen for Rule {
                 let alt_count = rhs.len();
                 gen_args.state.add_code(pointer.clone(), quote!(
                     let mut candidates = Vec::with_capacity(#alt_count);
+                    let mut probabilities = Vec::with_capacity(#alt_count);
                 ));
                 let as_set = IndexSet::from_iter(args);
                 gen_args.full_args = Some(as_set);

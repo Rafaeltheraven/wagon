@@ -4,6 +4,8 @@ use quote::quote;
 
 use wagon_parser::parser::rhs::Rhs;
 
+use crate::CodeGenState;
+
 use super::{CodeGenArgs, CodeGen, Rc, ToTokensState};
 
 
@@ -88,7 +90,7 @@ impl CodeGen for Rhs {
             }
             if j == 0 {
                 let weight_stream = if let Some(ref expr) = weight {
-                    expr.to_tokens(&mut gen_args.state, label.clone(), true)
+                    expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr)
                 } else {
                     quote!(wagon_gll::value::Value::Natural(1))
                 };

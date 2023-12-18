@@ -1,10 +1,12 @@
 use wagon_parser::parser::expression::Expression;
 use proc_macro2::{TokenStream, Ident};
 use quote::quote;
-use super::{CodeGenState, Rc, ToTokensState};
+use crate::SpannableIdent;
 
-impl ToTokensState for Expression {
-    fn to_tokens(&self, state: &mut CodeGenState, label: Rc<Ident>, is_weight_expr: bool) -> TokenStream {
+use super::{Rc, ToTokensState};
+
+impl<U> ToTokensState<U> for Expression {
+    fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
         match self {
             Expression::Subproc(s) => {
                 quote!(
@@ -16,15 +18,15 @@ impl ToTokensState for Expression {
                 )
             },
             Expression::If { this, then, r#else } => {
-                let this_stream = this.to_tokens(state, label.clone(), is_weight_expr);
-                let then_stream = then.to_tokens(state, label.clone(), is_weight_expr);
+                let this_stream = this.to_tokens(state, label.clone(), attr_fun);
+                let then_stream = then.to_tokens(state, label.clone(), attr_fun);
                 let if_stream = quote!(
                     if #this_stream {
                         #then_stream
                     }
                 );
                 if let Some(e) = r#else {
-                    let e_stream = e.to_tokens(state, label, is_weight_expr);
+                    let e_stream = e.to_tokens(state, label, attr_fun);
                     quote!(
                         #if_stream else {
                             #e_stream
@@ -35,7 +37,7 @@ impl ToTokensState for Expression {
                 }
             },
             Expression::Disjunct(d) => {
-                d.to_tokens(state, label, is_weight_expr)
+                d.to_tokens(state, label, attr_fun)
             },
         }
     }
