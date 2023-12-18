@@ -192,7 +192,6 @@ mod tests {
 				Rule::Analytic("start".to_string(), Vec::new(), vec![
 					Rhs { 
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk { 
 								chunk: ChunkP::Unit(Symbol::simple_ident("setup")),
@@ -212,7 +211,6 @@ mod tests {
 				Rule::Analytic("setup".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Unit(Symbol::simple_ident("greet")),
@@ -229,7 +227,6 @@ mod tests {
 				Rule::Analytic("greet".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Group(vec![
@@ -267,7 +264,6 @@ mod tests {
 					},
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("good morning".to_string()))),
@@ -279,7 +275,6 @@ mod tests {
 				Rule::Generate("greet".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("greetings human!".to_string()))),
@@ -310,7 +305,6 @@ mod tests {
 								])
 							)
 						),
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Unit(Symbol::Terminal(Terminal::LitString("What is your name? ".to_string()))),
@@ -342,7 +336,6 @@ mod tests {
 				Rule::Analytic("S".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk { 
 								chunk: ChunkP::Unit(Symbol::Assignment(vec![
@@ -405,7 +398,6 @@ mod tests {
 				Rule::Analytic("X".to_string(), vec![Ident::Inherit("y".to_string()), Ident::Synth("x".to_string())], vec![
 					Rhs { 
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_terminal("a"),
 							Chunk { 
@@ -500,7 +492,6 @@ mod tests {
 		    	Rule::Analytic("S".to_string(), Vec::new(), vec![
 		    		Rhs { 
 		    			weight: None,
-		    			probability: None, 
 		    			chunks: vec![Chunk::simple_terminal("a")] 
 		    		},
 		    		Rhs::empty()
@@ -549,7 +540,6 @@ mod tests {
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![Chunk::simple_ident("Y")]
 					},
 					Rhs::empty()
@@ -557,7 +547,6 @@ mod tests {
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs { 
 						weight: None,
-						probability: None, 
 						chunks: vec![
 							Chunk::simple_ident("X"),
 							Chunk::simple_ident("A·0·1")
@@ -583,7 +572,6 @@ mod tests {
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("Y"),
 							Chunk::simple_ident("A·0·1")
@@ -594,7 +582,6 @@ mod tests {
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs { 
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("X"),
 							Chunk::simple_ident("A·0·1")
@@ -620,7 +607,6 @@ mod tests {
 				Rule::Analytic("A·0·1·p".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("Y"),
 							Chunk::simple_ident("A·0·1·p")
@@ -631,7 +617,6 @@ mod tests {
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("Y"),
 							Chunk::simple_ident("A·0·1·p")
@@ -641,7 +626,6 @@ mod tests {
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs { 
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("X"),
 							Chunk::simple_ident("A·0·1")
@@ -667,7 +651,6 @@ mod tests {
 				Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![Chunk::simple_ident("C")]
 					},
 					Rhs::empty()
@@ -675,7 +658,6 @@ mod tests {
 				Rule::Analytic("A·0·0_0".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("B"),
 							Chunk::simple_ident("A·0·0_0·0·1")
@@ -685,7 +667,6 @@ mod tests {
 				Rule::Analytic("A·0·0·p".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("A·0·0_0"),
 							Chunk::simple_ident("A·0·0·p")
@@ -696,7 +677,6 @@ mod tests {
 				Rule::Analytic("A·0·0".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk::simple_ident("A·0·0_0"),
 							Chunk::simple_ident("A·0·0·p")
@@ -706,7 +686,6 @@ mod tests {
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![Chunk::simple_ident("A·0·0")]
 					}
 				])
@@ -729,7 +708,6 @@ mod tests {
 				Rule::Analytic("A·0·0_0·0·0_1".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("X"),
 	                        Chunk::simple_ident("Y")
@@ -739,7 +717,6 @@ mod tests {
 		        Rule::Analytic("A·0·0_0·0·0·p".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0_0·0·0_1"),
 	                        Chunk::simple_ident("A·0·0_0·0·0·p")
@@ -750,7 +727,6 @@ mod tests {
 		        Rule::Analytic("A·0·0_0·0·0".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0_0·0·0_1"),
 	                        Chunk::simple_ident("A·0·0_0·0·0·p")
@@ -760,7 +736,6 @@ mod tests {
 		        Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("Z")
 	                    ],
@@ -770,7 +745,6 @@ mod tests {
 		        Rule::Analytic("A·0·0_0".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0_0·0·0"),
 	                        Chunk::simple_ident("A·0·0_0·0·1")
@@ -780,7 +754,6 @@ mod tests {
 		        Rule::Analytic("A·0·0·p".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0_0"),
 	                        Chunk::simple_ident("A·0·0·p")
@@ -791,7 +764,6 @@ mod tests {
 		        Rule::Analytic("A·0·0".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0_0"),
 	                        Chunk::simple_ident("A·0·0·p")
@@ -801,7 +773,6 @@ mod tests {
 		        Rule::Analytic("A".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
-	                    probability: None,
 	                    chunks: vec![
 	                        Chunk::simple_ident("A·0·0")
 	                    ],
@@ -826,7 +797,6 @@ mod tests {
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
-						probability: None,
 						chunks: vec![
 							Chunk {
 								chunk: ChunkP::Group(vec![

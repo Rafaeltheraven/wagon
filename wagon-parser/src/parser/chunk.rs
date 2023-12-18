@@ -35,7 +35,6 @@ impl Chunk {
                     vec![
                         SpannableNode::new(Rhs {
                             weight: None,
-                            probability: None,
                             chunks: vec![
                                 SpannableNode::new(Self {
                                     ebnf: None,
@@ -50,7 +49,6 @@ impl Chunk {
                 vec![
                     SpannableNode::new(Rhs {
                         weight: None,
-                        probability: None,
                         chunks: vec![
                             SpannableNode::new(Self {
                                 ebnf: None,
@@ -65,7 +63,6 @@ impl Chunk {
                 vec![
                     SpannableNode::new(Rhs {
                         weight: None,
-                        probability: None,
                         chunks: vec![
                             SpannableNode::new(Self {
                                 ebnf: None,
@@ -81,7 +78,6 @@ impl Chunk {
                 vec![
                     SpannableNode::new(Rhs {
                         weight: None,
-                        probability: None,
                         chunks: vec![
                             SpannableNode::new(Self {
                                 ebnf: None,
@@ -115,7 +111,7 @@ impl Chunk {
             },
             Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
                 let new_ident = format!("{}_{}", ident, depth);
-                let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, probability: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
+                let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
                 rules.extend(new_rule.rewrite(depth+1, state)?);
                 rules.push(new_rule);
             	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident).into_spanned(span.clone()), args.clone()).into_spanned(span.clone());

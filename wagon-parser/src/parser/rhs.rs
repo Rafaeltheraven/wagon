@@ -15,13 +15,12 @@ use wagon_macros::new_unspanned;
 #[cfg_attr(test, new_unspanned)]
 pub struct Rhs {
 	pub weight: Option<SpannableNode<Expression>>,
-	pub probability: Option<SpannableNode<Expression>>,
 	pub chunks: Vec<SpannableNode<Chunk>>,
 }
 
 impl Parse for Rhs {
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
-		Ok(Self {weight: Self::parse_weight(lexer)?, probability: Self::parse_probability(lexer)?, chunks: Self::parse_chunks(lexer)?})
+		Ok(Self {weight: Self::parse_weight(lexer)?, chunks: Self::parse_chunks(lexer)?})
 	}
 }
 
@@ -30,13 +29,6 @@ impl Rhs {
 	fn parse_weight(lexer: &mut PeekLexer) -> ParseResult<Option<SpannableNode<Expression>>> {
 		match lexer.peek() {
 			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
-			_ => Ok(None)
-		}
-	}
-
-	fn parse_probability(lexer: &mut PeekLexer) -> ParseResult<Option<SpannableNode<Expression>>> {
-		match lexer.peek() {
-			Some(Ok(Tokens::ProductionToken(Productions::Colon))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::Colon), Tokens::MathToken(Math::Colon))?)),
 			_ => Ok(None)
 		}
 	}
@@ -62,7 +54,6 @@ impl Rhs {
 	pub(crate) fn empty() -> Self {
 		Self {
             weight: None,
-            probability: None,
             chunks: vec![
                 Chunk::empty().into()
             ]
@@ -72,7 +63,6 @@ impl Rhs {
 	pub(crate) fn empty_spanned(span: Span) -> SpannableNode<Self> {
 		SpannableNode::new(Self {
 			weight: None,
-			probability: None,
 			chunks: vec![
 				Chunk::empty_spanned(span.clone())
 			]
@@ -82,7 +72,6 @@ impl Rhs {
 	pub(crate) fn simple_ident(ident: &str) -> Self {
 		Self {
 			weight: None,
-			probability: None,
 			chunks: vec![
 				Chunk::simple_ident(ident).into()
 			]
@@ -92,7 +81,6 @@ impl Rhs {
 	pub(crate) fn simple_terminal(term: &str) -> Self {
 		Self {
 			weight: None,
-			probability: None,
 			chunks: vec![Chunk::simple_terminal(term).into()],
 		}
 	}
@@ -145,7 +133,6 @@ mod tests {
 	fn test_simple_gll_blocks() {
 		let rhs = unspanned_tree!(Rhs {
 		    weight: None,
-		    probability: None,
 		    chunks: vec![
 		    	Chunk::simple_terminal("a"),
 		    	Chunk::simple_terminal("b"),
