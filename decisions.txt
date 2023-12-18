@@ -18,9 +18,6 @@ TLDR: Instead of S where the left E inherits/synthesizes from/to A, we can do S 
            <p=1>   <p=2>                                                [<p=1>, <p=2>]
 On the SPPF, this is essentially the same as putting the date on the corresponding edge. So we could probably just do that as well
 
-& => by reference => synthesizd
+& => by reference => synthesized
 * => dereferenced/by value => inherited
 $ => local
-
-X -> [$x] <$y> A
-   | [$z] <$y> B
