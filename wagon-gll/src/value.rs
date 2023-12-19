@@ -2,12 +2,15 @@ use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
 
 use crate::GLLBlockLabel;
 pub use wagon_codegen::value::Value as InnerValue;
+use wagon_codegen::value::Valueable;
 
 #[derive(Debug, Eq, Hash, Clone)]
 pub enum Value<'a> {
     Value(InnerValue<Value<'a>>),
 	Label(GLLBlockLabel<'a>),
 }
+
+impl<'a> Valueable for Value<'a> {}
 
 impl PartialEq for Value<'_> { // For some reason the derive breaks but just copying it over is fine
     fn eq(&self, other: &Self) -> bool {

@@ -2,8 +2,10 @@ use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, 
 
 use ordered_float::{NotNan, Pow};
 
+pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone {}
+
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
-pub enum Value<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> {
+pub enum Value<T: Valueable> {
 	Bool(bool),
 	String(String),
 	Natural(i32),
@@ -12,7 +14,26 @@ pub enum Value<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> {
 	Array(Vec<T>)
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Display for Value<T> {
+impl Valueable for RecursiveValue {}
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub struct RecursiveValue(Value<RecursiveValue>);
+
+impl std::ops::Deref for RecursiveValue {
+    type Target = Value<RecursiveValue>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for RecursiveValue {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<T: Valueable> Display for Value<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Bool(v) => write!(f, "{}", v),
@@ -25,7 +46,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Display for 
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Value<T> {
+impl<T: Valueable> Value<T> {
 	pub fn is_truthy(&self) -> bool {
 		match self {
 		    Value::Bool(b) => *b,
@@ -71,61 +92,61 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Value<T> {
 	}
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<Value<T>> for i32 {
+impl<T: Valueable> From<Value<T>> for i32 {
     fn from(value: Value<T>) -> Self {
         value.to_int()
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<Value<T>> for f32 {
+impl<T: Valueable> From<Value<T>> for f32 {
     fn from(value: Value<T>) -> Self {
         value.to_float()
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<Value<T>> for bool {
+impl<T: Valueable> From<Value<T>> for bool {
     fn from(value: Value<T>) -> Self {
         value.is_truthy()
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<bool> for Value<T> {
+impl<T: Valueable> From<bool> for Value<T> {
     fn from(value: bool) -> Self {
         Self::Bool(value)
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<String> for Value<T> {
+impl<T: Valueable> From<String> for Value<T> {
     fn from(value: String) -> Self {
         Self::String(value)
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<i32> for Value<T> {
+impl<T: Valueable> From<i32> for Value<T> {
 	fn from(value: i32) -> Self {
         Value::Natural(value)
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<f32> for Value<T> {
+impl<T: Valueable> From<f32> for Value<T> {
 	fn from(value: f32) -> Self {
         Value::Float(NotNan::new(value).expect("Got a NaN float"))
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<BTreeMap<String, T>> for Value<T> {
+impl<T: Valueable> From<BTreeMap<String, T>> for Value<T> {
     fn from(value: BTreeMap<String, T>) -> Self {
         Self::Dict(value)
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> From<Vec<T>> for Value<T> {
+impl<T: Valueable> From<Vec<T>> for Value<T> {
     fn from(value: Vec<T>) -> Self {
         Self::Array(value)
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Add for Value<T> {
+impl<T: Valueable> Add for Value<T> {
     type Output = Value<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -144,7 +165,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Add for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Sub for Value<T> {
+impl<T: Valueable> Sub for Value<T> {
     type Output = Value<T>;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -161,7 +182,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Sub for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Mul for Value<T> {
+impl<T: Valueable> Mul for Value<T> {
     type Output = Value<T>;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -177,7 +198,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Mul for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Div for Value<T> {
+impl<T: Valueable> Div for Value<T> {
     type Output = Value<T>;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -198,7 +219,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Div for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Not for Value<T> {
+impl<T: Valueable> Not for Value<T> {
     type Output = Value<T>;
 
     fn not(self) -> Self::Output {
@@ -209,7 +230,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Not for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Ord for Value<T> {
+impl<T: Valueable> Ord for Value<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
             (Value::String(s1), Value::String(s2)) => s1.cmp(s2),
@@ -249,7 +270,7 @@ impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> Ord for Valu
     }
 }
 
-impl<T: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone> PartialOrd for Value<T> {
+impl<T: Valueable> PartialOrd for Value<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
