@@ -349,8 +349,7 @@ impl CodeGenState {
     			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
     			#stream
-    			let rng = <rand::rngs::SmallRng as rand::SeedableRng>::from_entropy();
-    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map, Box::new(rng));
+    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map);
     			state.main();
     			println!("{}", state.print_sppf_dot(crop));
     			assert!(state.accepts());
