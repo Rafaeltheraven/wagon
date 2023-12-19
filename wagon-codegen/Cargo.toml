@@ -16,3 +16,4 @@ wagon-parser = {workspace = true}
 wagon-ident = {workspace = true}
 proc-macro2 = {workspace = true}
 quote = {workspace = true}
+ordered-float = {workspace = true}

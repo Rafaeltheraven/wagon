@@ -347,6 +347,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.38",
+ "wagon-codegen",
  "wagon-codegen-gll",
  "wagon-parser",
 ]
@@ -355,6 +356,7 @@ dependencies = [
 name = "wagon-codegen"
 version = "0.1.0"
 dependencies = [
+ "ordered-float",
  "proc-macro2",
  "quote",
  "wagon-ident",
@@ -382,6 +384,7 @@ dependencies = [
  "ordered-float",
  "petgraph",
  "rand_core",
+ "wagon-codegen",
  "wagon-ident",
 ]
 

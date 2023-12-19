@@ -1,4 +1,5 @@
 pub mod nodes;
+pub mod value;
 
 use std::{rc::Rc, collections::HashMap};
 use proc_macro2::{TokenStream, Ident};

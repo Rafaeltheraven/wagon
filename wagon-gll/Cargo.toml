@@ -18,3 +18,4 @@ ordered-float = {workspace = true}
 petgraph = {workspace = true}
 rand_core = "0.6.4"
 wagon-ident = {workspace = true}
+wagon-codegen = {workspace = true}
