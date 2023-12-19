@@ -1,5 +1,5 @@
 [package]
-name = "wagon-codegen"
+name = "wagon-codegen-gll"
 version.workspace = true
 authors.workspace = true
 license.workspace = true

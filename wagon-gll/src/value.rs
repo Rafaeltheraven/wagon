@@ -1,8 +1,8 @@
-use std::{collections::{BTreeMap}, fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
+use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
 
 use ordered_float::{NotNan, Pow};
 
-use crate::{GLLBlockLabel};
+use crate::GLLBlockLabel;
 
 #[derive(Debug, Eq, Hash, Clone)]
 pub enum Value<'a> {
