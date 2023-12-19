@@ -6,7 +6,8 @@ use proc_macro2::{Ident, Span};
 
 use wagon_parser::parser::rule::Rule;
 
-use super::{CodeGenArgs, CodeGen, Rc};
+use crate::{CodeGenArgs, CodeGen};
+use std::rc::Rc;
 
 
 impl CodeGen for Rule {

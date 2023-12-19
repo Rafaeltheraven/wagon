@@ -3,7 +3,8 @@ use wagon_parser::parser::assignment::Assignment;
 
 use quote::quote;
 
-use super::{CodeGenState, CodeGenArgs, CodeGen, ToTokensState};
+use wagon_codegen::ToTokensState;
+use crate::{CodeGenState, CodeGenArgs, CodeGen};
 
 impl CodeGen for Assignment {
 	fn gen(self, gen_args: &mut CodeGenArgs) {

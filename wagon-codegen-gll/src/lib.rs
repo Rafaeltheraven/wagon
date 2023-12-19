@@ -1,25 +1,12 @@
-mod metadata;
-mod wag;
-mod rule;
-mod rhs;
-mod symbol;
-mod assignment;
-mod expression;
-mod disjunct;
-mod conjunct;
-mod inverse;
-mod comp;
-mod sum;
-mod term;
-mod factor;
-mod atom;
+mod nodes;
 
 use std::{rc::Rc, collections::{HashSet, HashMap}};
 use proc_macro2::{TokenStream, Ident, Literal};
 use quote::{quote, format_ident};
 use indexmap::IndexSet;
 
-use wagon_parser::{parser::{Parse, wag::Wag}, SpannableNode};
+use wagon_parser::parser::wag::Wag;
+use wagon_codegen::{SpannableIdent, CodeMap};
 
 #[derive(Debug)]
 pub(crate) enum CharBytes {
@@ -28,14 +15,11 @@ pub(crate) enum CharBytes {
 }
 
 type FirstSet = (Vec<SpannableIdent>, Option<CharBytes>);
-type SpannableIdent = SpannableNode<wagon_ident::Ident>;
 
 type AttrSet = HashSet<SpannableIdent>;
 type ReqCodeAttrs = AttrSet;
 type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
-
-pub type CodeMap = (HashMap<String, Vec<(String, TokenStream)>>, TokenStream);
 
 #[derive(Default)]
 pub(crate) struct CodeGenArgs {
@@ -66,18 +50,8 @@ pub(crate) struct CodeGenState {
 	req_attribute_map: HashMap<Rc<Ident>, (ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs)>
 }
 
-trait ToTokensState<U> {
-	fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream;
-}
-
 trait CodeGen {
 	fn gen(self, gen_args: &mut CodeGenArgs);
-}
-
-impl<U, T: Parse + ToTokensState<U>> ToTokensState<U> for SpannableNode<T> {
-    fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
-        self.to_inner().to_tokens(state, label, attr_fun)
-    }
 }
 
 impl CodeGenState {

@@ -4,9 +4,9 @@ use quote::quote;
 
 use wagon_parser::parser::rhs::Rhs;
 
-use crate::CodeGenState;
-
-use super::{CodeGenArgs, CodeGen, Rc, ToTokensState};
+use wagon_codegen::ToTokensState;
+use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes};
+use std::rc::Rc;
 
 
 impl CodeGen for Rhs {
@@ -29,7 +29,7 @@ impl CodeGen for Rhs {
             let block_size = block.len();
             let mut str_repr = Vec::with_capacity(block_size);
             if block_size == 0 {
-                gen_args.state.first_queue.get_mut(&label).unwrap()[0].1 = Some(super::CharBytes::Epsilon);
+                gen_args.state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Epsilon);
             } 
             let mut counter: usize = 0;
             for (k, arg) in args.iter().enumerate() {

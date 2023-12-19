@@ -5,7 +5,8 @@ use quote::quote;
 
 use wagon_parser::parser::{symbol::Symbol, terminal::Terminal};
 use proc_macro2::{Literal, TokenStream};
-use super::{CodeGenArgs, CodeGen, CharBytes};
+
+use crate::{CodeGenArgs, CodeGen, CharBytes};
 
 impl CodeGen for Symbol {
 	fn gen(self, gen_args: &mut CodeGenArgs) {

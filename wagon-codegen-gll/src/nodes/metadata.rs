@@ -1,6 +1,6 @@
 use wagon_parser::parser::metadata::Metadata;
 
-use super::{CodeGenArgs, CodeGen};
+use crate::{CodeGenArgs, CodeGen};
 
 
 impl CodeGen for Metadata {
