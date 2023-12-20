@@ -248,7 +248,7 @@ impl CodeGenState {
     					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
     				}
     				#[allow(unused_variables)]
-    				fn _weight(&self, state: &wagon_gll::state::GLLState<'a>) -> wagon_gll::value::Value<'a> {
+    				fn _weight(&self, state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
     					#weight_stream
     				}
     			}
@@ -280,7 +280,7 @@ impl CodeGenState {
 						fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 							(Vec::new(), Vec::new())
 						}
-						fn _weight(&self, _state: &wagon_gll::state::GLLState<'a>) -> wagon_gll::value::Value<'a> {
+						fn _weight(&self, _state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
 							unreachable!("This should never be called");
 						}
 		    		}
