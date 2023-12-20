@@ -11,7 +11,7 @@ pub type SPPFNodeIndex = NodeIndex<SPPFIx>;
 
 type SPPFIx = DefaultIx;
 
-pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<f32>, Directed, SPPFIx>;
+pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<Value<'a>>, Directed, SPPFIx>;
 
 #[derive(Debug, Eq, Clone, Derivative)]
 #[derivative(PartialEq, Hash)]
@@ -68,7 +68,7 @@ impl<'a> SPPFNode<'a> {
                 };
                 format!("({},{},{})", term, left, right)
             },
-            SPPFNode::Intermediate { slot, left, right, ret, context, .. } => {
+            SPPFNode::Intermediate { slot, left, right, ret, context } => {
                 let mut attr_map: HashMap<&str, &Value> = HashMap::new();
                 let label = state.get_label(&slot.rule[slot.dot-2]);
                 let (from_ret, from_ctx) = label.attr_rep_map();

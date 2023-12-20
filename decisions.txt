@@ -21,3 +21,9 @@ On the SPPF, this is essentially the same as putting the date on the correspondi
 & => by reference => synthesized
 * => dereferenced/by value => inherited
 $ => local
+
+# What to do with weights
+1. Just annotate and return full tree as normal
+2. Attempt highest value, given accepting first set
+3. Attempt highest value, regardless of first set (thus allowing it to fail)
+4. 2/3 but with lowest value

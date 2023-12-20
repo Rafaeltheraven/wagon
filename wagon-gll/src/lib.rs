@@ -1,4 +1,4 @@
-use std::{hash::{Hash, Hasher}, fmt::{Debug}, rc::Rc, str::from_utf8, collections::{HashSet}};
+use std::{hash::{Hash, Hasher}, fmt::Debug, rc::Rc, str::from_utf8, collections::HashSet};
 
 use self::{state::GLLState, value::Value};
 use wagon_ident::Ident;
@@ -68,7 +68,14 @@ pub trait Label<'a>: Debug {
 			false
 		}
 	}
-	fn weight(&self, state: &GLLState<'a>) -> Value<'a>;
+	fn _weight(&self, state: &GLLState<'a>) -> Option<Value<'a>>;
+	fn weight(&self, state: &GLLState<'a>) -> Value<'a> {
+		if let Some(weight) = self._weight(state) {
+			weight
+		} else {
+			1.into()
+		}
+	}
 	fn str_parts(&self) -> Vec<&str>;
 	fn to_string(&self) -> &str;
 	fn uuid(&self) -> &str;
@@ -116,7 +123,7 @@ impl<'a> Label<'a> for Terminal<'a> {
 		(Vec::new(), Vec::new())
 	}
 
-	fn weight(&self, _state: &GLLState<'a>) -> Value<'a> {
+	fn _weight(&self, _state: &GLLState<'a>) -> Option<Value<'a>> {
 		unreachable!("Should never run this method on terminals");
 	}
 }

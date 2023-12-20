@@ -1,7 +1,7 @@
 use std::{collections::{HashSet, HashMap}, rc::Rc, format};
 
 use indexmap::IndexSet;
-use petgraph::{Direction::{Outgoing, Incoming}, visit::{EdgeRef}};
+use petgraph::{Direction::{Outgoing, Incoming}, visit::EdgeRef};
 
 use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 
@@ -111,10 +111,10 @@ impl<'a> GLLState<'a> {
 			let left_node = self.sppf.node_weight(left).unwrap();
 			let right_node = self.sppf.node_weight(right).unwrap();
 			let j =  right_node.right_extend().unwrap();
-			let t = if slot.is_last(self) {
-				Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid})
+			let (t, weight) = if slot.is_last(self) {
+				(Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid}), None)
 			} else {
-				slot.clone()
+				(slot.clone(), None)
 			};
 			if let SPPFNode::Dummy = left_node {
 				let i = right_node.left_extend().unwrap();
@@ -123,7 +123,7 @@ impl<'a> GLLState<'a> {
 					let packed = SPPFNode::Packed { slot, split: i, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, None);
+					self.sppf.add_edge(node, ix, weight);
 				}
 				node
 			} else {
@@ -134,7 +134,7 @@ impl<'a> GLLState<'a> {
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, left, None);
 					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, None);
+					self.sppf.add_edge(node, ix, weight);
 				}
 				node
 			}
@@ -332,6 +332,9 @@ impl<'a> GLLState<'a> {
         	for edge in self.sppf.edges_directed(ix, Outgoing) {
         		let child = edge.target();
         		res.push_str(&format!("{} -> {}", ix.index(), child.index()));
+        		if let Some(value) = edge.weight() {
+        			res.push_str(&format!(" [label=\"{}\"]", value))
+        		}
         		res.push('\n');
         	}
         }
