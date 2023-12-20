@@ -2,7 +2,13 @@ use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, 
 
 use ordered_float::{NotNan, Pow};
 
-pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone {}
+pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone {
+    fn is_truthy(&self) -> bool;
+    fn to_int(&self) -> i32;
+    fn to_float(&self) -> f32;
+    fn pow(&self, rhs: &Self) -> Self;
+    fn display_numerical(&self) -> String;
+}
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum Value<T: Valueable> {
@@ -14,7 +20,80 @@ pub enum Value<T: Valueable> {
 	Array(Vec<T>)
 }
 
-impl Valueable for RecursiveValue {}
+impl<T: Valueable> Valueable for Value<T> {
+    fn is_truthy(&self) -> bool {
+        match self {
+            Value::Bool(b) => *b,
+            Value::String(s) => !s.is_empty(),
+            Value::Natural(n) => n > &0,
+            Value::Float(f) => !f.eq(&0.0),
+            Value::Dict(m) => !m.is_empty(),
+            Value::Array(a) => !a.is_empty(),
+        }
+    }
+
+    fn to_int(&self) -> i32 {
+        match self {
+            Value::Natural(n) => *n,
+            Value::Float(f) => f.round() as i32,
+            o => if o.is_truthy() { 1 } else { 0 }
+        }
+    }
+
+    fn to_float(&self) -> f32 {
+        match self {
+            Value::Natural(n) => *n as f32,
+            Value::Float(f) => f.into_inner(),
+            o => if o.is_truthy() { 1.0 } else { 0.0 }
+        }
+    }
+
+    fn pow(&self, rhs: &Value<T>) -> Value<T> {
+        match (self, rhs) {
+            (Value::Bool(true), Value::Natural(_)) | (Value::Natural(_), Value::Bool(false)) => Value::Natural(1),
+            (Value::Bool(false), Value::Natural(_)) => Value::Natural(0),
+            (Value::Natural(i), Value::Bool(true)) => Value::Natural(*i),
+            (Value::Bool(true), Value::Float(_)) | (Value::Float(_), Value::Bool(false)) => Value::Float(NotNan::new(1.0).unwrap()),
+            (Value::Bool(false), Value::Float(_)) => Value::Float(NotNan::new(0.0).unwrap()),
+            (Value::Float(f), Value::Bool(true)) => Value::Float(*f),
+            (Value::Natural(i1), Value::Natural(i2)) if i2 >= &0 => Value::Natural((*i1).pow((*i2).try_into().unwrap())),
+            (Value::Natural(i1), Value::Natural(i2)) => Value::Float(NotNan::new(1.0 / (i1.pow((-i2) as u32) as f32)).unwrap()), // Power of negative number is division
+            (Value::Natural(i), Value::Float(f)) => Value::Float(NotNan::new(*i as f32).unwrap().pow(f)),
+            (Value::Float(f), Value::Natural(i)) => Value::Float(f.pow(i)),
+            (Value::Float(f1), Value::Float(f2)) => Value::Float(f1.pow(f2)),
+            (v1, v2) => panic!("Type Error! Can not perform ** on {:?} and {:?}", v1, v2)
+        }
+    }
+
+    fn display_numerical(&self) -> String {
+        match self {
+            Value::Float(f) => f.to_string(),
+            other => other.to_int().to_string()
+        }
+    }
+}
+
+impl Valueable for RecursiveValue {
+    fn is_truthy(&self) -> bool {
+        self.0.is_truthy()
+    }
+
+    fn to_int(&self) -> i32 {
+        self.0.to_int()
+    }
+
+    fn to_float(&self) -> f32 {
+        self.0.to_float()
+    }
+
+    fn pow(&self, rhs: &Self) -> Self {
+        Self(self.0.pow(&rhs.0))
+    }
+
+    fn display_numerical(&self) -> String {
+        self.0.display_numerical()
+    }
+}
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct RecursiveValue(Value<RecursiveValue>);
@@ -44,52 +123,6 @@ impl<T: Valueable> Display for Value<T> {
             Value::Array(v) => write!(f, "{:?}", v),
         }
     }
-}
-
-impl<T: Valueable> Value<T> {
-	pub fn is_truthy(&self) -> bool {
-		match self {
-		    Value::Bool(b) => *b,
-		    Value::String(s) => !s.is_empty(),
-		    Value::Natural(n) => n > &0,
-		    Value::Float(f) => !f.eq(&0.0),
-		    Value::Dict(m) => !m.is_empty(),
-		    Value::Array(a) => !a.is_empty(),
-		}
-	}
-
-	pub fn to_int(&self) -> i32 {
-		match self {
-			Value::Natural(n) => *n,
-			Value::Float(f) => f.round() as i32,
-			o => if o.is_truthy() { 1 } else { 0 }
-		}
-	}
-
-	pub fn to_float(&self) -> f32 {
-		match self {
-			Value::Natural(n) => *n as f32,
-			Value::Float(f) => f.into_inner(),
-			o => if o.is_truthy() { 1.0 } else { 0.0 }
-		}
-	}
-
-	pub fn pow(self, rhs: Value<T>) -> Value<T> {
-		match (self, rhs) {
-            (Value::Bool(true), Value::Natural(_)) | (Value::Natural(_), Value::Bool(false)) => Value::Natural(1),
-            (Value::Bool(false), Value::Natural(_)) => Value::Natural(0),
-            (Value::Natural(i), Value::Bool(true)) => Value::Natural(i),
-            (Value::Bool(true), Value::Float(_)) | (Value::Float(_), Value::Bool(false)) => Value::Float(NotNan::new(1.0).unwrap()),
-            (Value::Bool(false), Value::Float(_)) => Value::Float(NotNan::new(0.0).unwrap()),
-            (Value::Float(f), Value::Bool(true)) => Value::Float(f),
-            (Value::Natural(i1), Value::Natural(i2)) if i2 >= 0 => Value::Natural(i1.pow(i2.try_into().unwrap())),
-            (Value::Natural(i1), Value::Natural(i2)) => Value::Float(NotNan::new(1.0 / (i1.pow((-i2) as u32) as f32)).unwrap()), // Power of negative number is division
-            (Value::Natural(i), Value::Float(f)) => Value::Float(NotNan::new(i as f32).unwrap().pow(f)),
-            (Value::Float(f), Value::Natural(i)) => Value::Float(f.pow(i)),
-            (Value::Float(f1), Value::Float(f2)) => Value::Float(f1.pow(f2)),
-            (v1, v2) => panic!("Type Error! Can not perform ** on {:?} and {:?}", v1, v2)
-        }
-	}
 }
 
 impl<T: Valueable> From<Value<T>> for i32 {
