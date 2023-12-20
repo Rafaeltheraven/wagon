@@ -90,9 +90,10 @@ impl CodeGen for Rhs {
             }
             if j == 0 {
                 let weight_stream = if let Some(ref expr) = weight {
-                    expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr)
+                    let stream = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
+                    quote!(Some(#stream))
                 } else {
-                    quote!(wagon_gll::value::Value::Value(wagon_gll::value::InnerValue::Natural(1)))
+                    quote!(None)
                 };
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
