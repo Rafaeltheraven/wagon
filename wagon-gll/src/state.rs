@@ -1,17 +1,18 @@
 use std::{collections::{HashSet, HashMap}, rc::Rc, format};
 
 use indexmap::IndexSet;
-use petgraph::{Direction::{Outgoing, Incoming}, visit::EdgeRef};
+use petgraph::{Direction::{Outgoing}, visit::EdgeRef};
+use wagon_codegen::value::Valueable;
 
 use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 
-use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPFGraph, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Ident, ROOT_UUID, GLLBlockLabel};
+use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Ident, ROOT_UUID, GLLBlockLabel};
 
 pub struct GLLState<'a> {
 	// Main structures
 	input: &'a [u8],
 	gss: GSS<'a>,
-	sppf: SPPFGraph<'a>,
+	sppf: SPPF<'a>,
 	// Pointers
 	pub input_pointer: usize, //C_i
 	pub gss_pointer: GSSNodeIndex, // C_u
@@ -32,7 +33,7 @@ pub struct GLLState<'a> {
 
 impl<'a> GLLState<'a> {
 	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
-		let mut sppf = SPPFGraph::new();
+		let mut sppf = SPPF::default();
 		let mut gss = GSS::new();
 		let mut sppf_map = HashMap::new();
 		let mut gss_map = HashMap::new();
@@ -112,7 +113,9 @@ impl<'a> GLLState<'a> {
 			let right_node = self.sppf.node_weight(right).unwrap();
 			let j =  right_node.right_extend().unwrap();
 			let (t, weight) = if slot.is_last(self) {
-				(Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid}), None)
+				let new_slot = Rc::new(GrammarSlot { label: slot.label.clone(), rule: slot.rule.clone(), dot: slot.rule.len()+1, pos: 0, uuid: slot.uuid});
+				let weight = self.get_label(&slot.rule[0])._weight(self);
+				(new_slot, weight)
 			} else {
 				(slot.clone(), None)
 			};
@@ -317,30 +320,10 @@ impl<'a> GLLState<'a> {
 
 	/// Print current SPPF graph in graphviz format
     pub fn print_sppf_dot(&mut self, crop: bool) -> String {
-    	let curr_pointer = self.gss_pointer;
     	if crop {
-    		self.crop_sppf().unwrap();
+    		self.sppf.crop(self.find_roots_sppf()).unwrap();
     	}
-    	// if probs {
-    	// 	self.calc_probabilities();
-    	// }
-        let mut res = String::new();
-        res.push_str("digraph {\n");
-        for ix in self.sppf.node_indices() {
-        	let node = self.sppf.node_weight(ix).unwrap();
-        	res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(self), node.dot_shape()));
-        	for edge in self.sppf.edges_directed(ix, Outgoing) {
-        		let child = edge.target();
-        		res.push_str(&format!("{} -> {}", ix.index(), child.index()));
-        		if let Some(value) = edge.weight() {
-        			res.push_str(&format!(" [label=\"{}\"]", value))
-        		}
-        		res.push('\n');
-        	}
-        }
-        res.push('}');
-        self.gss_pointer = curr_pointer;
-        res
+        self.sppf.to_dot(self)
     }
 
 	/// Print current GSS graph in graphviz format
@@ -350,91 +333,10 @@ impl<'a> GLLState<'a> {
  	
  	/// Checks whether the current parser state has accepted the string
     pub fn accepts(&self) -> bool {
-    	!self.find_accepting_root().is_empty()
+    	!self.find_roots_sppf().is_empty()
     }
 
-    fn find_accepting_root(&self) -> Vec<SPPFNodeIndex> {
-    	let mut roots = Vec::new();
-		for ix in self.sppf.node_indices() {
-			let node = self.sppf.node_weight(ix).unwrap();
-			let has_parents = self.sppf.neighbors_directed(ix, Incoming).next().is_some();
-			match node {
-				SPPFNode::Intermediate { slot, left, right, .. } if !has_parents && slot.dot == slot.rule.len()+1 && left == &0 && right == &(self.input.len()) => roots.push(ix),
-				_ => {}
-			}
-		}
-    	roots
+    fn find_roots_sppf(&self) -> Vec<SPPFNodeIndex> {
+    	self.sppf.find_accepting_roots(Some(self.input.len()))
     }
-
-    fn crop_sppf(&mut self) -> Result<(), ()> {
-    	let roots = self.find_accepting_root();
-    	if !roots.is_empty() {
-    		let distances = roots.into_iter().flat_map(|x| petgraph::algo::dijkstra(&self.sppf, x, None, |_| 1).into_keys());
-    		let reachable: HashSet<SPPFNodeIndex> = distances.collect();
-		    self.sppf.retain_nodes(|_, x| reachable.contains(&x));
-		    Ok(())
-    	} else {
-    		Err(())
-    	}
-    }
-
-    fn _find_leafs(&self) -> Vec<SPPFNodeIndex> {
-    	let mut leafs = Vec::new();
-    	for ix in self.sppf.node_indices() {
-			let has_children = self.sppf.neighbors_directed(ix, Outgoing).next().is_some();
-			if !has_children {
-				leafs.push(ix)
-			}
-    	}
-    	leafs
-    }
-
-    // fn calc_probabilities(&mut self) {
-    // 	let roots = self.find_accepting_root();
-    // 	for root in roots {
-    // 		self.calc_probability(root);
-    // 	}
-    	
-    // }
-
-    // fn _calc_probabilities(&mut self, nodes: Vec<SPPFNodeIndex>) {
-    // 	for ix in nodes {
-    // 		let mut parents = self.sppf.neighbors_directed(ix, Incoming);
-    // 		match self.sppf.node_weight(ix) {
-	// 	        Some(SPPFNode::Dummy) | None => {}
-	// 	        Some(SPPFNode::Symbol { .. }) | Some(SPPFNode::Intermediate { .. }) => self._calc_probabilities(parents.collect(), cur_prob),
-	// 	        Some(SPPFNode::Packed { slot, context, .. }) => {
-	// 	        	self.gss_pointer = *context;
-	// 	        	if let Some(prob) = slot.get_probability(self) {
-	// 		    		let mut detached_parents = parents.detach();
-	// 		    		cur_prob *= prob;
-	// 		    		while let Some(parent) = detached_parents.next_node(&self.sppf) {
-	// 		    			self.sppf.update_edge(parent, ix, Some(cur_prob));
-	// 		    		}
-	// 		    		parents = self.sppf.neighbors_directed(ix, Incoming);
-	// 		    	}
-	// 		    	self._calc_probabilities(parents.collect(), cur_prob)
-	// 	        },
-	// 	    }
-    // 	}
-    // }
-
-    // fn calc_probability(&mut self, ix: SPPFNodeIndex) -> (f32, bool) {
-    // 	let children = self.sppf.neighbors_directed(ix, Outgoing);
-    // 	match self.sppf.node_weight(ix) {
-    // 		Some(SPPFNode::Dummy) | None | Some(SPPFNode::Symbol { .. }) => (1.0, false),
-    // 		Some(SPPFNode::Intermediate { .. }) => {
-    			
-    // 		},
-    // 		Some(SPPFNode::Packed { slot, context, .. }) => {
-    // 			self.gss_pointer = *context;
-    // 			let sub_prob = self._calc_probabilities(children).into_iter().fold(1.0, |acc, (x, _)| acc * x);
-    // 			if let Some(prob) = slot.get_probability(self) {
-    // 				(sub_prob *= prob, true)
-    // 			} else {
-    // 				(sub_prob, false)
-    // 			}
-    // 		}
-    // 	}
-    // }
 }

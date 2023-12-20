@@ -3,7 +3,7 @@ use std::{hash::{Hash, Hasher}, fmt::Debug, rc::Rc, str::from_utf8, collections:
 use self::{state::GLLState, value::Value};
 use wagon_ident::Ident;
 
-mod sppf;
+pub mod sppf;
 pub mod state;
 pub mod gss;
 mod descriptor;

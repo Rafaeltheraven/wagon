@@ -10,7 +10,42 @@ pub enum Value<'a> {
 	Label(GLLBlockLabel<'a>),
 }
 
-impl<'a> Valueable for Value<'a> {}
+impl<'a> Valueable for Value<'a> {
+    fn is_truthy(&self) -> bool {
+        match self {
+            Value::Value(v) => v.is_truthy(),
+            Value::Label(l) => l.is_eps(),
+        }
+    }
+
+    fn to_int(&self) -> i32 {
+        match self {
+            Value::Value(v) => v.to_int(),
+            o => if o.is_truthy() { 1 } else { 0 }
+        }
+    }
+
+    fn to_float(&self) -> f32 {
+        match self {
+            Value::Value(v) => v.to_float(),
+            o => if o.is_truthy() { 1.0 } else { 0.0 }
+        }
+    }
+
+    fn pow(&self, rhs: &Value<'a>) -> Value<'a> {
+        match (self, rhs) {
+            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1.pow(v2)),
+            (v1, v2) => panic!("Type Error! Can not perform ** on {:?} and {:?}", v1, v2)
+        }
+    }
+
+    fn display_numerical(&self) -> String {
+        match self {
+            Value::Value(v) => v.display_numerical(),
+            other => other.to_int().to_string()
+        }
+    }
+}
 
 impl PartialEq for Value<'_> { // For some reason the derive breaks but just copying it over is fine
     fn eq(&self, other: &Self) -> bool {
@@ -29,36 +64,6 @@ impl Display for Value<'_> {
             Value::Label(v) => write!(f, "{}", v.to_string()),
         }
     }
-}
-
-impl<'a> Value<'a> {
-	fn is_truthy(&self) -> bool {
-		match self {
-		    Value::Value(v) => v.is_truthy(),
-		    Value::Label(l) => l.is_eps(),
-		}
-	}
-
-	pub fn to_int(&self) -> i32 {
-		match self {
-			Value::Value(v) => v.to_int(),
-			o => if o.is_truthy() { 1 } else { 0 }
-		}
-	}
-
-	pub fn to_float(&self) -> f32 {
-		match self {
-			Value::Value(v) => v.to_float(),
-			o => if o.is_truthy() { 1.0 } else { 0.0 }
-		}
-	}
-
-	pub fn pow(self, rhs: Value<'a>) -> Value<'a> {
-		match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1.pow(v2)),
-            (v1, v2) => panic!("Type Error! Can not perform ** on {:?} and {:?}", v1, v2)
-        }
-	}
 }
 
 impl From<Value<'_>> for i32 { // Can't genericize these because Rust doesn't allow it
