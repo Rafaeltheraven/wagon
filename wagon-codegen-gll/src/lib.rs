@@ -21,6 +21,18 @@ type ReqCodeAttrs = AttrSet;
 type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
 
+struct WeightConfig {
+	no_first: bool,
+	no_prune: bool,
+	min_weight: bool
+}
+
+impl Default for WeightConfig {
+    fn default() -> Self {
+        Self {no_first: false, no_prune: false, min_weight: false}
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct CodeGenArgs {
 	pub(crate) state: CodeGenState,
@@ -33,7 +45,8 @@ pub(crate) struct CodeGenArgs {
 	pub(crate) block_size: Option<usize>,
 	pub(crate) found_first: Option<bool>,
 	pub(crate) full_args: Option<IndexSet<SpannableIdent>>,
-	pub(crate) prev_args: Option<Vec<SpannableIdent>>
+	pub(crate) prev_args: Option<Vec<SpannableIdent>>,
+	pub(crate) weight_config: WeightConfig
 }
 
 #[derive(Debug, Default)]

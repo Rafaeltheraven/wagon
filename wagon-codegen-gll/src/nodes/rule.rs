@@ -31,14 +31,28 @@ impl CodeGen for Rule {
                     gen_args.alt = Some(i);
             		alt.into_inner().gen(gen_args);
             	}
-                gen_args.state.add_code(pointer.clone(), quote!(
-                    if !candidates.is_empty() {
-                        let to_add = itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state));
-                        for slot in to_add {
-                            state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root);
+                let stream = if gen_args.weight_config.no_prune {
+                    quote!(
+                        for slot in candidates {
+                            state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root)
                         }
-                    }
-                ));
+                    )
+                } else {
+                    let to_add = if gen_args.weight_config.min_weight {
+                        quote!(itertools::Itertools::min_set_by(candidates.into_iter(), |x, y| x.cmp(y, state)))
+                    } else {
+                        quote!(itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state)))
+                    };
+                    quote!(
+                        if !candidates.is_empty() {
+                            let to_add = #to_add;
+                            for slot in to_add {
+                                state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root);
+                            }
+                        }
+                    )
+                };
+                gen_args.state.add_code(pointer.clone(), stream);
                 gen_args.state.roots.insert(pointer);
             },
             Rule::Generate(_, _, _) => todo!(),

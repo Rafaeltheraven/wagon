@@ -98,15 +98,23 @@ impl CodeGen for Rhs {
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
                 let rule_str = format!("{}_{}", ident, gen_args.alt.unwrap());
-                gen_args.state.add_code(ident.clone(), quote!(
-                    let fst = state.get_label_by_uuid(#label_str);
-                    if state.test_next(fst) {
-                        let root = state.get_label_by_uuid(#root_str);
-                        let rules = state.get_rule(#rule_str);
-                        let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
-                        candidates.push(std::rc::Rc::new(slot));
-                    }
-                ));
+                let inner_block = quote!(
+                    let root = state.get_label_by_uuid(#root_str);
+                    let rules = state.get_rule(#rule_str);
+                    let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
+                    candidates.push(std::rc::Rc::new(slot));
+                );
+                let stream = if !gen_args.weight_config.no_first {
+                    quote!(
+                       let fst = state.get_label_by_uuid(#label_str);
+                       if state.test_next(fst) {
+                           #inner_block 
+                       } 
+                    )
+                } else {
+                    inner_block
+                };
+                gen_args.state.add_code(ident.clone(), stream);
             }
             firsts.push(wagon_ident::Ident::Unknown(label_str).into());
 		}
