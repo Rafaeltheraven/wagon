@@ -1,8 +1,7 @@
 use std::{collections::{HashSet, HashMap}, rc::Rc, format};
 
 use indexmap::IndexSet;
-use petgraph::{Direction::{Outgoing}, visit::EdgeRef};
-use wagon_codegen::value::Valueable;
+use petgraph::Direction::Outgoing;
 
 use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 

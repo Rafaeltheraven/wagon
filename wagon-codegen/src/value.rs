@@ -10,6 +10,10 @@ pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone 
     fn display_numerical(&self) -> String;
 }
 
+pub trait ToValue<T: Valueable> {
+    fn to_value(&self) -> &Value<T>;
+}
+
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum Value<T: Valueable> {
 	Bool(bool),
@@ -18,6 +22,12 @@ pub enum Value<T: Valueable> {
 	Float(NotNan<f32>),
 	Dict(BTreeMap<String, T>),
 	Array(Vec<T>)
+}
+
+impl ToValue<Self> for RecursiveValue {
+    fn to_value(&self) -> &Value<Self> {
+        &self.0
+    }
 }
 
 impl<T: Valueable> Valueable for Value<T> {
@@ -73,25 +83,25 @@ impl<T: Valueable> Valueable for Value<T> {
     }
 }
 
-impl Valueable for RecursiveValue {
+impl<T: ToValue<T> + From<Value<T>> + Clone + Eq + std::hash::Hash + std::fmt::Debug> Valueable for T {
     fn is_truthy(&self) -> bool {
-        self.0.is_truthy()
+        self.to_value().is_truthy()
     }
 
     fn to_int(&self) -> i32 {
-        self.0.to_int()
+        self.to_value().to_int()
     }
 
     fn to_float(&self) -> f32 {
-        self.0.to_float()
+        self.to_value().to_float()
     }
 
     fn pow(&self, rhs: &Self) -> Self {
-        Self(self.0.pow(&rhs.0))
+        Self::from(self.to_value().pow(rhs.to_value()))
     }
 
     fn display_numerical(&self) -> String {
-        self.0.display_numerical()
+        self.to_value().display_numerical()
     }
 }
 
@@ -106,12 +116,6 @@ impl std::ops::Deref for RecursiveValue {
     }
 }
 
-impl std::ops::DerefMut for RecursiveValue {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 impl<T: Valueable> Display for Value<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -122,6 +126,12 @@ impl<T: Valueable> Display for Value<T> {
             Value::Dict(v) => write!(f, "{:?}", v),
             Value::Array(v) => write!(f, "{:?}", v),
         }
+    }
+}
+
+impl From<Value<RecursiveValue>> for RecursiveValue {
+    fn from(value: Value<Self>) -> Self {
+        Self(value)
     }
 }
 
@@ -140,6 +150,12 @@ impl<T: Valueable> From<Value<T>> for f32 {
 impl<T: Valueable> From<Value<T>> for bool {
     fn from(value: Value<T>) -> Self {
         value.is_truthy()
+    }
+}
+
+impl From<RecursiveValue> for Value<RecursiveValue> {
+    fn from(value: RecursiveValue) -> Self {
+        value.0
     }
 }
 
