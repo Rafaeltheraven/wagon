@@ -1,17 +1,22 @@
+use proc_macro::TokenStream;
 use proc_macro2::{Span};
-use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput};
-use extendable_data::extendable_data;
-use quote::ToTokens;
+use proc_macro2::TokenStream as TokenStream2;
+use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput, punctuated::Punctuated, ExprStruct, ExprCall, Expr, Token};
+use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
+use extendable_data::extendable_data;
 
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"/\*([^*]|\*[^/])+\*/|[ \t\n\f]+")]
+#[logos(error = LexingError)]
 enum Base {
-    #[regex("(\\$|!)?([a-zA-Z][a-zA-Z0-9]*)", |lex| Ident::detect(lex.slice()))]
+    #[display_override("Identifier")]
+    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| Ident::detect(lex.slice()))]
     Identifier(Ident),
 
+    #[display_override("String Literal")]
     #[regex("\"([^\"\\\\]|\\\\.)*\"", |lex| rem_first_and_last_char(lex.slice()))]
     #[regex("\'([^\'\\\\]|\\\\.)*\'", |lex| rem_first_and_last_char(lex.slice()))]
     LitString(String),
@@ -27,18 +32,21 @@ enum Base {
 
     #[token("}")]
     RCur,
-}
 
-struct Args {
-    message: String,
-}
+    #[token("(")]
+    LPar,
 
-impl Default for Args {
-    fn default() -> Self {
-        Self {
-            message: "Unexpected token {}, expecting {}".to_string(),
-        }
-    }
+    #[token(")")]
+    RPar,
+
+    #[token(";")]
+    Semi,
+
+    #[token(":")]
+    Colon,
+
+    #[token(",")]
+    Comma,
 }
 
 fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
@@ -85,6 +93,277 @@ pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
     ).into()
 }
 
+#[proc_macro_attribute]
+pub fn new_unspanned(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(item as DeriveInput);
+    let orig_stream = quote!(#ast);
+    let span = ast.span();
+    let ident = ast.ident.clone();
+    let data = match ast.data {
+        syn::Data::Enum(e) => nonspanned_enum(e),
+        syn::Data::Struct(s) => nonspanned_struct(s),
+        _ => return syn::Error::new(span, "Can only derive NonSpanned for enums and structs").into_compile_error().into()
+    };
+    quote!(
+        #orig_stream
+
+        impl #ident {
+            #(#data)*
+        }
+    ).into()
+}
+
+fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
+    let mut funcs = Vec::with_capacity(e.variants.len());
+    for variant in e.variants {
+        let ident = variant.ident;
+        let func_name = format_ident!("new_unspanned_{}", ident.to_string().to_lowercase());
+        match variant.fields {
+            syn::Fields::Named(n) => {
+                let mut parameters = Vec::new();
+                let mut args = Vec::new();
+                for field in n.named.into_iter() {
+                    let name = field.ident.unwrap();
+                    let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
+                    parameters.push(quote!(#name: #typ));
+                    if has_changed {
+                        if known_iter {
+                            args.push(quote!(#name: crate::WrapSpannable::wrap_spannable(#name)));
+                        } else {
+                            args.push(quote!(#name: #name.into()));
+                        }
+                    } else {
+                        args.push(quote!(#name));
+                    }
+                }
+                funcs.push(quote!(
+                    pub(crate) fn #func_name(#(#parameters),*) -> Self {
+                        Self::#ident{#(#args),*}
+                    }
+                ));
+            },
+            syn::Fields::Unnamed(u) => {
+                let mut parameters = Vec::new();
+                let mut args = Vec::new();
+                for (i, field) in u.unnamed.into_iter().enumerate() {
+                    let name = format_ident!("arg_{}", i);
+                    let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
+                    parameters.push(quote!(#name: #typ));
+                    if has_changed {
+                        if known_iter {
+                            args.push(quote!(crate::WrapSpannable::wrap_spannable(#name)));
+                        } else {
+                            args.push(quote!(#name.into()));
+                        }
+                    } else {
+                        args.push(quote!(#name));
+                    }
+                }
+                funcs.push(quote!(
+                    pub(crate) fn #func_name(#(#parameters),*) -> Self {
+                        Self::#ident(#(#args),*)
+                    }
+                ));
+            },
+            syn::Fields::Unit => {
+                funcs.push(quote!(
+                    pub(crate) fn #func_name() -> Self {
+                        Self::#ident
+                    }
+                ));
+            },
+        }
+    }
+    funcs
+}
+
+fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
+    let mut funcs = Vec::with_capacity(1);
+    match s.fields {
+        syn::Fields::Named(n) => {
+                let mut parameters = Vec::new();
+                let mut args = Vec::new();
+                for field in n.named.into_iter() {
+                    let name = field.ident.unwrap();
+                    let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
+                    parameters.push(quote!(#name: #typ));
+                    if has_changed {
+                        if known_iter {
+                            args.push(quote!(#name: crate::WrapSpannable::wrap_spannable(#name)));
+                        } else {
+                            args.push(quote!(#name: #name.into()));
+                        }
+                    } else {
+                        args.push(quote!(#name));
+                    }
+                }
+                funcs.push(quote!(
+                    pub(crate) fn new_unspanned(#(#parameters),*) -> Self {
+                        Self {#(#args),*}
+                    }
+                ));
+            },
+            syn::Fields::Unnamed(u) => {
+                let mut parameters = Vec::new();
+                let mut args = Vec::new();
+                for (i, field) in u.unnamed.into_iter().enumerate() {
+                    let name = format_ident!("arg_{}", i);
+                    let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
+                    parameters.push(quote!(#name: #typ));
+                    if has_changed {
+                        if known_iter {
+                            args.push(quote!(crate::WrapSpannable::wrap_spannable(#name)));
+                        } else {
+                            args.push(quote!(#name.into()));
+                        }
+                    } else {
+                        args.push(quote!(#name));
+                    }
+                }
+                funcs.push(quote!(
+                    pub(crate) fn new_unspanned(#(#parameters),*) -> Self {
+                        Self (#(#args),*)
+                    }
+                ));
+            },
+            syn::Fields::Unit => {
+                funcs.push(quote!(
+                    pub(crate) fn new_unspanned() -> Self {
+                        Self
+                    }
+                ));
+            },
+    }
+    funcs
+}
+
+const CUSTOM_INTO: [&str; 3] = ["Vec", "Option", "Box"];
+const IGNORE_UNSPAN: [&str; 4] = ["Terminal", "Ident", "Some", "None"];
+
+fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::Type, bool, bool) {
+    match root {
+        syn::Type::Path(mut p) => {
+            let mut has_changed = false;
+            for segment in p.path.segments.iter_mut() {
+                let ident = segment.ident.to_string();
+                if ident == "SpannableNode" {
+                    if let syn::PathArguments::AngleBracketed(b) = &segment.arguments {
+                        for arg in b.args.iter() {
+                            if let syn::GenericArgument::Type(t) = arg {
+                                return (t.clone(), known_custom, true)
+                            }
+                        }
+                    }
+                } else if let syn::PathArguments::AngleBracketed(b) = &mut segment.arguments {
+                    let mut new_args = Punctuated::new();
+                    for arg in &b.args {
+                        match arg {
+                            syn::GenericArgument::Type(t) => {
+                                let (new_type, new_known, new_changed) = extract_spanned_node_type(t.clone(), CUSTOM_INTO.contains(&ident.as_str()));
+                                (known_custom, has_changed) = (new_known, new_changed);
+                                new_args.push(
+                                    syn::GenericArgument::Type(
+                                        new_type
+                                    )
+                                );
+                            },
+                            other => new_args.push(other.clone()),
+                        }
+                    }
+                    b.args = new_args;
+                }
+            }
+            (syn::Type::Path(p), known_custom, has_changed)
+        },
+        other => (other, false, false)
+    }
+}
+
+#[proc_macro]
+pub fn unspanned_tree(stream: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(stream as ExprStruct);
+    match unspanned_struct(ast) {
+        Ok(s) => s,
+        Err(e) => e.into_compile_error(),
+    }.into()
+}
+
+fn unspanned_struct(ast: ExprStruct) -> Result<TokenStream2> {
+    let mut path_iter = ast.path.segments.into_iter();
+    let main_ident = path_iter.next().unwrap().ident;
+    let mut args = Vec::new();
+    for field in ast.fields {
+        args.push(handle_expr(field.expr)?);
+    }
+    Ok(quote!(
+        #main_ident::new_unspanned(#(#args),*)
+    ))
+}
+
+fn unspanned_enum(ast: ExprCall) -> Result<TokenStream2> {
+    let span = ast.span();
+    let path = match *ast.func {
+        syn::Expr::Path(p) => p.path,
+        other => return Err(syn::Error::new(span, format!("Expected path for an enum. Got {:?}", other))),
+    };
+    let mut path_iter = path.segments.into_iter();
+    let main_ident = path_iter.next().unwrap().ident;
+    let func_path = if let Some(sub_path) = path_iter.next() {
+        let ident_string = sub_path.ident.to_string();
+        let func_path = if !IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) && ident_string.chars().next().unwrap().is_uppercase() {
+            format_ident!("new_unspanned_{}", ident_string.to_lowercase())
+        } else {
+            sub_path.ident
+        };
+        quote!(#main_ident::#func_path)
+    } else { // Tuple structs AAAAAAAAAAAAAAAAAAAAA
+        if !IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) {
+            quote!(#main_ident::new_unspanned)
+        } else {
+            main_ident.into_token_stream()
+        }
+    };
+    let mut args = Vec::new();
+    for expr in ast.args {
+        args.push(handle_expr(expr)?);
+    }
+    Ok(quote!(
+        #func_path(#(#args),*)
+    ))
+}
+
+fn unspanned_macro(ast: ExprMacro) -> Result<TokenStream2> {
+    let exprs = ast.mac.parse_body_with(Punctuated::<Expr, Token![,]>::parse_terminated)?;
+    let (path, bang, delim) = (ast.mac.path, ast.mac.bang_token, ast.mac.delimiter);
+    let mut args = Vec::new();
+    for expr in exprs {
+        args.push(handle_expr(expr)?);
+    }
+    let arg_stream = quote!(#(#args,)*);
+    let mut surround_stream = TokenStream2::new();
+    match delim {
+        syn::MacroDelimiter::Paren(p) => p.surround(&mut surround_stream, |x| x.extend(arg_stream)),
+        syn::MacroDelimiter::Brace(b) => b.surround(&mut surround_stream, |x| x.extend(arg_stream)),
+        syn::MacroDelimiter::Bracket(b) => b.surround(&mut surround_stream, |x| x.extend(arg_stream)),
+    }
+    Ok(quote!(
+        #path #bang #surround_stream
+    ))
+}
+
+fn handle_expr(expr: Expr) -> Result<TokenStream2> {
+    let span = expr.span();
+    match expr {
+        syn::Expr::Call(c) => unspanned_enum(c),
+        syn::Expr::Macro(m) => unspanned_macro(m),
+        syn::Expr::Struct(s) => unspanned_struct(s),
+        syn::Expr::MethodCall(m) => Ok(m.to_token_stream()),
+        syn::Expr::Path(p) => Ok(p.to_token_stream()),
+        syn::Expr::Lit(l) => Ok(l.to_token_stream()),
+        other => Err(syn::Error::new(span, format!("Unexpected Expression {:?}", other)))
+    }
+}
+
 #[proc_macro]
 pub fn match_error(stream: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(stream as ExprMatch);
@@ -104,17 +383,9 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     let joined = quote! {
         #( #expected ),*
     };
-    let mut args = Args::default();
-    if let Some(message) = pop_attr(&mut ast.attrs, "message") {
-        args.message = message.to_string();
-    }
-    let message = args.message;
-    let expr = &ast.expr;
     let wc_arm: Arm = syn::parse_quote!(
-        _ => {
-            let mut expected = [#joined];
-            expected[expected.len() - 1] = format!("or {}", expected[expected.len() - 1]);
-            Err(format!(#message, #expr, expected.join(", ")))
+        _error => {
+            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);
@@ -147,18 +418,18 @@ fn pat_to_str(pat: &Pat, span: Span) -> Result<TokenStream2> {
         Pat::Ident(p) => Ok(p.ident.to_token_stream()),
         Pat::Lit(l) => Ok(l.lit.to_token_stream()),
         Pat::Macro(m) => handle_macro(m, span),
-        Pat::Or(o) => o.cases.iter().map(|x| pat_to_str(&x, span)).collect(),
+        Pat::Or(o) => o.cases.iter().map(|x| pat_to_str(x, span)).collect(),
         Pat::Paren(p) => pat_to_str(&p.pat, span),
         Pat::Path(p) => Ok(p.path.to_token_stream()),
         Pat::Reference(r) => pat_to_str(&r.pat, span),
-        Pat::Tuple(t) => t.elems.iter().map(|x| pat_to_str(&x, span)).collect(),
+        Pat::Tuple(t) => t.elems.iter().map(|x| pat_to_str(x, span)).collect(),
         Pat::TupleStruct(t) => {
             let mut sub_list: Vec<TokenStream2> = Vec::new();
             for elem in t.elems.iter() {
                 if let Pat::Ident(_) = elem {
                     sub_list.push(quote!(Default::default()))
                 } else {
-                    sub_list.push(pat_to_str(&elem, span)?);
+                    sub_list.push(pat_to_str(elem, span)?);
                 }
             };
             let main = &t.path;

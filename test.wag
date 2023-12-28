@@ -1,0 +1,16 @@
+S -> A | B;
+A -> {$did_a = true;} E($did_a) B | ;
+B -> {$did_a = false;} E($did_a) A | ;
+E(*did_a) -> [*did_a] C 
+  | [*did_a] C C C
+  | [!*did_a] D
+  | [!*did_a] D D D
+  ;
+C -> [0.3] F 
+  | [0.7] G
+  ;
+D -> [0.7] F
+  | [0.3] G
+  ;
+F -> "1";
+G -> "1";

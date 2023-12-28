@@ -1,17 +1,44 @@
-[package]
-name = "wagon"
+[workspace]
+members = [
+	"wagon-bin",
+	"wagon-codegen",
+	"wagon-gll",
+	"wagon-ident",
+	"wagon-lexer",
+	"wagon-macros",
+	"wagon-parser",
+	"wagon-utils",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
+authors = ["Rafael Dulfer"]
+repository = "https://gitlab.utwente.nl/s1945785/wagon"
+license = "MIT"
 edition = "2021"
+keywords = ["parsing", "gll", "weighted attribute grammar"]
+categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-lazy_static = "1.4.0"
-logos = "0.13.0"
-logos-derive = "0.13.0"
-regex = "1.8.4"
+[workspace.dependencies]
+# common dependencies
+syn = "2.0.38"
+quote = "1.0.33"
+proc-macro2 = "1.0.67"
 petgraph = {version = "0.6.3", default-features = false}
-wagon-macros = { path = "./wagon-macros"}
-strum = "0.25"
-strum_macros = "0.25"
-logos-display = "0.1.0"
+indexmap = "2.0.2"
+ordered-float = "3.9.1"
+
+# local crates
+wagon-codegen = {path = "./wagon-codegen"}
+wagon-codegen-gll = {path = "./wagon-codegen-gll"}
+wagon-gll = {path = "./wagon-gll"}
+wagon-ident = {path = "./wagon-ident"}
+wagon-lexer = {path = "./wagon-lexer"}
+wagon-macros = {path = "./wagon-macros"}
+wagon-parser = {path = "./wagon-parser"}
+wagon-utils = {path = "./wagon-utils"}
+
+# For tests
+pretty_assertions = "1.4.0"
+assert-tokenstreams-eq = "0.1.0"
