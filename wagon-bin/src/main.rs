@@ -37,7 +37,7 @@ fn handle_error(err: WagParseError, file_path: &str, file: String) {
     let mut colors = ColorGenerator::new();
     let a = colors.next();
     let ((head, msg), span) = err.msg_and_span();
-    Report::build(ReportKind::Error, file_path, 12)
+    Report::build(ReportKind::Error, file_path, 0)
         .with_message(head)
         .with_label(
             Label::new((file_path, span))
