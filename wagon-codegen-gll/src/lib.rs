@@ -21,16 +21,11 @@ type ReqCodeAttrs = AttrSet;
 type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
 
+#[derive(Default)]
 struct WeightConfig {
-	no_first: bool,
-	no_prune: bool,
-	min_weight: bool
-}
-
-impl Default for WeightConfig {
-    fn default() -> Self {
-        Self {no_first: false, no_prune: false, min_weight: false}
-    }
+	pub(crate) no_first: bool,
+	pub(crate) no_prune: bool,
+	pub(crate) min_weight: bool
 }
 
 #[derive(Default)]
