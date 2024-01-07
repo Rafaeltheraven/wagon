@@ -3,6 +3,7 @@ use std::format;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::Command;
 
 use wagon_parser::parser::WagParseError;
@@ -15,20 +16,30 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let input_file: &String = &args[1];
-    let proj_name: &String = &args[2];
-    let overwrite = if args.len() > 3 {
-        args[3] == "--overwrite"
-    } else {
-        false
-    };
+    let args = clap::command!()
+        .arg(
+            clap::arg!(< filename > "The input WAGon grammar file")
+                .value_parser(clap::value_parser!(std::path::PathBuf)),
+        )
+        .arg(
+            clap::arg!(< project_name > "The name of the project to output")
+                .value_parser(clap::value_parser!(std::path::PathBuf)),
+        )
+        .arg(clap::arg!(- - "overwrite" "Delete any existing project with the same name").num_args(0))
+        .get_matches();
+    let input_file = args
+        .get_one::<std::path::PathBuf>("filename")
+        .expect("Input file required");
+    let proj_name = args
+        .get_one::<std::path::PathBuf>("project_name")
+        .expect("Project name required");
+    let overwrite = args.get_one::<bool>("overwrite").unwrap() == &false;
     let contents = fs::read_to_string(input_file).expect("Couldn't read file");
     match parse_and_check(&contents) {
         Ok(wag) => {
             write_parser(gen_parser(wag), proj_name, overwrite)
         },
-        Err(e) => handle_error(e, input_file, contents),
+        Err(e) => handle_error(e, input_file.to_str().unwrap(), contents),
     }
 }
 
@@ -49,7 +60,7 @@ fn handle_error(err: WagParseError, file_path: &str, file: String) {
         .unwrap();
 }
 
-fn write_parser(data: CodeMap, proj_name: &str, overwrite: bool) {
+fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
     let (subcode, code) = data;
     let root_terms = subcode.keys().collect();
     create_structure(proj_name, &root_terms, overwrite);
@@ -71,7 +82,7 @@ fn write_parser(data: CodeMap, proj_name: &str, overwrite: bool) {
     }
 }
 
-fn create_structure(proj_name: &str, terminals: &Vec<&String>, overwrite: bool) {
+fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bool) {
     let path = std::path::Path::new(proj_name);
     let mut exists = path.exists();
     if exists && overwrite {
@@ -82,7 +93,7 @@ fn create_structure(proj_name: &str, terminals: &Vec<&String>, overwrite: bool) 
     let term_path = path.join("src").join("terminals");
     if !exists {
         let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
-        Command::new("cargo").args(["new", proj_name]).output().unwrap();
+        Command::new("cargo").args(["new", proj_name.to_str().expect("Project name must be valid unicode")]).output().unwrap();
         let mut toml = File::create(&path.join("Cargo.toml")).unwrap();
         toml.write_all(format!(
 "[package]
@@ -94,7 +105,7 @@ edition = \"2021\"
 
 [workspace]
 
-[dependencies]", proj_name).as_bytes()).unwrap();
+[dependencies]", proj_name.display()).as_bytes()).unwrap();
         Command::new("cargo") 
             .current_dir(path)
             .args(["add", "wagon-gll", "--path", "../wagon-gll"])
