@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 //! Procedural macros for use in the WAGon suite of libraries. 
 
-//! It would make more sense to put these in the [wagon_utils] crate. But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
+//! It would make more sense to put these in the [wagon-utils] crate. But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -11,7 +11,7 @@ use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
 use extendable_data::extendable_data;
 
-/// A procedural macro to extend lexers from a base lexer. Used by [wagon_lexers::math::Math] and [wagon_lexer::productions::Productions].
+/// A procedural macro to extend lexers from a base lexer. Used by [wagon-lexers::math::Math] and [wagon-lexer::productions::Productions].
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
@@ -20,7 +20,7 @@ use extendable_data::extendable_data;
 enum Base {
     #[display_override("Identifier")]
     #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| wagon_ident::Ident::detect(lex.slice()))]
-    /// An identifier. Gets parsed to an [wagon_ident::Ident] automatically.
+    /// An identifier. Gets parsed to an [wagon-ident::Ident] automatically.
     /// An identifier may be any string of alphanumeric characters, as well as `_`. The string must start with a purely alphabetical character.
     /// The identifier may be prepended by `$`/`&`/`*` to specify what type of identifier it is.
     Identifier(wagon_ident::Ident),
@@ -92,9 +92,9 @@ fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
 }
 
 #[proc_macro_derive(TokenMapper)]
-/// Derive macro for the [wagon_parser::helpers::TokenMapper] trait.
+/// Derive macro for the [wagon-parser::helpers::TokenMapper] trait.
 ///
-/// If we have an enum that has fields with the exact same names as that of specific [wagon_lexer::math::Math] tokens.
+/// If we have an enum that has fields with the exact same names as that of specific [wagon-lexer::math::Math] tokens.
 /// We can automatically derive this trait to convert those tokens into instances of this enum.
 pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as DeriveInput);
@@ -122,7 +122,7 @@ pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-/// Given a struct/enum with [`wagon_parser::SpannableNode`] fields, creates constructors which do not require any `SpannableNode` wrapping.
+/// Given a struct/enum with [`wagon-parser::SpannableNode`] fields, creates constructors which do not require any `SpannableNode` wrapping.
 pub fn new_unspanned(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
     let orig_stream = quote!(#ast);
@@ -309,7 +309,7 @@ fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::T
 }
 
 #[proc_macro]
-/// Given a hand-written, complete [wagon_parser::Wag] without any Span information, creates a proper one with dummy Span data.
+/// Given a hand-written, complete [wagon-parser::Wag] without any Span information, creates a proper one with dummy Span data.
 pub fn unspanned_tree(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as ExprStruct);
     match unspanned_struct(ast) {
@@ -401,7 +401,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 ///
 /// Put around a match statement. This will automatically create a catch-all that, if matched, returns an error.
 ///
-/// This macro is intended specifically for [wagon_parser] and thus expects a lexer to be present and returns a specific error. This macro is not intended to be used for any other match statements.
+/// This macro is intended specifically for [wagon-parser] and thus expects a lexer to be present and returns a specific error. This macro is not intended to be used for any other match statements.
 /// # Example
 /// ```
 /// enum A {
