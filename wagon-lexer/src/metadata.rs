@@ -4,16 +4,20 @@ use logos_display::{Debug, Display};
 use wagon_macros::inherit_from_base;
 
 #[inherit_from_base(filter(Identifier, LitString, LBr, RBr, LCur, RCur, LPar, RPar, Colon, Comma))]
+/// Lexer for the Metadata DSL.
 pub enum Metadata {
 	#[display_override("Metadata Key")]
 	#[regex(r#"[a-zA-Z][a-zA-Z0-9]*:"#, |lex| wagon_utils::rem_last_char(lex.slice()))]
+	/// An identifier, followed by a `:`. 
 	Key(String),
 
 	#[display_override("Metadata Delimiter")]
 	#[regex(r#"===+"#)]
+	/// 3 or more `=`
 	Delim,
 
 	#[token("include")]
+	/// `include`
 	Include,
 }
 

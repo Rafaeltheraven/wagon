@@ -1,10 +1,41 @@
+#![warn(missing_docs)]
+//! WAGon Lexers
+//!
+//! Provides lexers for the WAGon DSL, as well as helper iterators which can switch between lexers on the fly.
+//! Most likely, all you will care about are [`PeekLexer`]/[`LexerBridge`] and [`Tokens`].
+//!
+//! # Example
+//! ```rust
+//! let s = "
+//! meta: "data";
+//! ============
+//! S -> A;
+//! ";
+//! let lexer = PeekLexer::new(s);
+//! let tokens = lexer.collect();
+//! assert_eq!(tokens, vec![
+//! Tokens::Metadata(Metadata::Key("meta")), 
+//! Tokens::Math(Math::LitString("data")),
+//! Tokens::Math(Math::Semi),
+//! Tokens::Metadata(Metadata::Delim),
+//! Tokens::Productions(Productions::Identifier(Ident::Unknown("S"))),
+//! Tokens::Productions(Productions::Produce),
+//! Tokens::Productions(Productions::Identifier(Ident::Unknown("A"))),
+//! Tokens::Productions(Productions::Semi)
+//! ])
+//! ```
+
+
 pub(crate) mod ident;
+/// The lexer for the Math DSL
 pub mod math;
+/// The Lexer for the Grammar DSL
 pub mod productions;
+/// The Lexer for the Metadata
 pub mod metadata;
 
 use metadata::Metadata;
-use wagon_utils::{peekable::Peekable, SplitError};
+use wagon_utils::peekable::Peekable;
 use logos::Logos;
 use std::fmt::{self, Display};
 use productions::Productions;
@@ -13,19 +44,16 @@ use wagon_ident::Ident;
 use replace_with::replace_with_or_abort;
 pub use logos::Span;
 
+/// An Enum for any errors that may occur during lexing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexingError {
+	/// Error for any unknown reason. Usually when a character is encountered that can not be lexed.
 	#[default]
 	UnknownError,
+	/// Error for an unexpected character in this context.
 	UnexpectedCharacter(String),
+	/// Error when encountering EOF before we expect.
 	UnexpectedEOF,
-	MetaError(String)
-}
-
-impl From<SplitError> for LexingError {
-    fn from(value: SplitError) -> Self {
-        Self::MetaError(value.get_input())
-    }
 }
 
 impl Display for LexingError {
@@ -34,7 +62,6 @@ impl Display for LexingError {
             LexingError::UnknownError => write!(f, "Encountered unknown error!"),
             LexingError::UnexpectedCharacter(c) => write!(f, "Encountered unexpected character {}", c),
             LexingError::UnexpectedEOF => write!(f, "Got EOF but expected more characters!"),
-            LexingError::MetaError(s) => write!(f, "Was unable to extract metadata from {}", s),
         }
     }
 }
@@ -57,10 +84,14 @@ impl<'source> Lexer<'source> {
 	}
 }
 
+/// An enum that holds the different types of tokens for the different lexers.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Tokens {
+	/// Tokens created by the [Productions] lexer.
 	ProductionToken(Productions),
+	/// Tokens created by the [Math] lexer.
 	MathToken(Math),
+	/// Tokens created by the [Metadata] lexer.
 	MetadataToken(Metadata)
 }
 
@@ -80,6 +111,7 @@ impl Default for Tokens {
     }
 }
 
+/// A struct which automatically switches between the different lexers based on context. You likely want to use either this or [PeekLexer].
 pub struct LexerBridge<'source> {
 	lexer: Lexer<'source>,
 	counter: u16,
@@ -87,6 +119,7 @@ pub struct LexerBridge<'source> {
 }
 
 impl<'source> LexerBridge<'source> {
+	/// Initialize the LexerBridge
 	pub fn new(s: &'source str) -> Self {
 		let lexer = Lexer::new(s);
 		let counter = 0;
@@ -94,6 +127,7 @@ impl<'source> LexerBridge<'source> {
 		Self { lexer, counter, in_meta }
 	}
 
+	/// Inspect what part of the input string the lexer is currently at
 	pub fn slice(&self) -> &str {
 		match &self.lexer {
 		    Lexer::Productions(l) => l.slice(),
@@ -126,6 +160,7 @@ impl<'source> LexerBridge<'source> {
 		Lexer::Metadata(Peekable::new(curr.morph()))
 	}
 
+	/// Make the LexerBridge use the [Math] lexer.
 	pub fn morph_to_math(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(prod) => Self::_morph_to_math(prod),
@@ -134,6 +169,7 @@ impl<'source> LexerBridge<'source> {
 		});
 	}
 
+	/// Make the LexerBridge use the [Productions] lexer.
 	pub fn morph_to_productions(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(_) => lexer,
@@ -142,6 +178,7 @@ impl<'source> LexerBridge<'source> {
 		});
 	}
 
+	/// Make the LexerBridge use the [Metadata] lexer.
 	pub fn morph_to_metadata(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(prod) => Self::_morph_to_metadata(prod),
@@ -151,7 +188,20 @@ impl<'source> LexerBridge<'source> {
 	}
 }
 
+/// Forcibly extract an item out of an iterator of [Result]s.
+///
+/// If you have an iterator that holds [Result] items, it quickly becomes annoying to constantly unwrap.
+/// This trait provides the method `next_unwrap` to quickly extract the inner item.
 pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
+	/// # Example
+	/// ```
+	/// let iter = vec![Some(Ok(1)), None].into_iter();
+	/// assert_eq(1, iter.next_unwrap());
+	/// iter.next_unwrap() // panic!
+	/// ```
+	///
+	/// # Panics
+	/// Panics if the next element is either `None` or an `Err`.
 	fn next_unwrap(&mut self) -> T {
 		match self.next() {
 		    Some(Ok(x)) => x,
@@ -161,12 +211,17 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
 	}
 }
 
+/// Same as [UnsafeNext] but intended for iterators that allow peeking (such as [Peekable])
 pub trait UnsafePeek<T> {
+	/// See [UnsafeNext]
 	fn peek_unwrap(&mut self) -> &T;
 }
 
+/// Trait for objects that provide [Span] information. Used for error messaging.
 pub trait Spannable {
+	/// Get the [Span] of the object
 	fn span(&mut self) -> Span;
+	/// Set the [Span] of the object. Possibly does nothing as implementation is optional.
 	fn set_span(&mut self, _span: Span) {}
 }
 
@@ -283,9 +338,11 @@ impl<'source> Iterator for LexerBridge<'source> {
     }
 }
 
+/// A [LexerBridge] that allows peeking through [Peekable].
 pub type PeekLexer<'source> = Peekable<LexerBridge<'source>>;
 
 #[cfg(test)]
+/// A helper method to assert that a lexer will encounter a given list of tokens.
 pub fn assert_lex<'a, Token>(
     source: &'a Token::Source,
     tokens: &[Result<Token, Token::Error>],

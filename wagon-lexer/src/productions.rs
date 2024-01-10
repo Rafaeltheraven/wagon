@@ -3,13 +3,17 @@ use logos::Logos;
 use wagon_macros::inherit_from_base;
 use logos_display::{Debug, Display};
 use wagon_utils::rem_first_and_last_char;
-use super::Ident;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+/// Enum to specify what type of import this is.
 pub enum ImportType {
+	/// `<-`
 	Basic,
+	/// `<=`
 	Full,
+	/// `<<`
 	Recursive,
+	/// `</`
 	Exclude
 }
 
@@ -32,9 +36,13 @@ impl Default for ImportType {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+/// Enum to specify a type of EBNF operator.
 pub enum EbnfType {
+	/// `+`
 	Some,
+	/// `*`
 	Many,
+	/// `?`
 	Maybe
 }
 
@@ -50,36 +58,44 @@ impl TypeDetect for EbnfType {
 }
 
 #[inherit_from_base]
+/// Lexer for the grammar DSL.
 pub enum Productions {
 
 	#[token("->")]
+	/// `->`
 	Produce,
 
 	#[token("=>")]
+	/// `=>`
 	Generate,
 
 	#[token("|")]
+	/// `|`
 	Alternative,
 
 	#[token("&")]
+	/// `&`
 	Additional,
 
 	#[display_override("Import")]
 	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
+	/// Any of the possible [ImportType] arrows.
 	Import(ImportType),
 
 	#[display_override("Regex")]
 	#[regex(r#"/[^\*]([^/\\]|\\.)*/"#, |lex| rem_first_and_last_char(lex.slice()))]
+	/// A regular expression (defined as any string between two `/`).
 	LitRegex(String),
 
 	#[display_override("EBNF Operator")]
 	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice()))]
+	/// Any of the possible [EbnfType] operators.
 	Ebnf(EbnfType),
 }
 
 #[cfg(test)]
 mod tests {
-	use super::Ident;
+	use wagon_ident::Ident;
 	use crate::{assert_lex, LexingError};
 	use std::assert_eq;
 

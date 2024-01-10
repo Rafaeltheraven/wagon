@@ -6,84 +6,110 @@ use logos_display::{Debug, Display};
 use wagon_utils::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]
+/// Lexer for the Math DSL.
 pub enum Math {
 	#[token("!")]
+	/// `!`
 	Not,
 
 	#[token("&&")]
+	/// `&&`
 	And,
 
 	#[token("||")]
+	/// `||`
 	Or,
 
 	#[token("**")]
+	/// `**`
 	Pow,
 
 	#[token("*")]
+	/// `*`
 	Mul,
 
 	#[token("/")]
+	/// `/`
 	Div,
 
 	#[token("//")]
+	/// `//`
 	Floor,
 
 	#[token("%")]
+	/// `%`
 	Mod,
 
 	#[token("+")]
+	/// `+`
 	Add,
 
 	#[token("-")]
+	/// `-`
 	Sub,
 
 	#[token("==")]
+	/// `==`
 	Eq,
 
 	#[token("!=")]
+	/// `!=`
 	Neq,
 
 	#[token("<=")]
+	/// `<=`
 	Lte,
 
 	#[token("<")]
+	/// `<`
 	Lt,
 
 	#[token(">=")]
+	/// `>=`
 	Gte,
 
 	#[token(">")]
+	/// `>`
 	Gt,
 
 	#[token("in")]
+	/// `in`
 	In,
 
 	#[token("if")]
+	/// `if`
 	If,
 
 	#[token("then")]
+	/// `then`
 	Then,
 
 	#[token("else")]
+	/// `else`
 	Else,
 
 	#[token("=")]
+	/// `=`
 	Assigns,
 
 	#[display_override("Subprocess")]
 	#[regex(r#"\$\(([^\)\\]|\\.)*\)"#, |lex| rem_first_and_last_char(&rem_first_char(lex.slice())))]
+	/// A bash style subprocess. Defined as any string surrounded by `$()`
 	Bash(String),
 
 	#[token("false", |_| false)]
     #[token("true", |_| true)]
+    /// Either `true` or `false`
     LitBool(bool),
 
     #[display_override("Integer")]
     #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i32>().unwrap())]
+    /// Any integer
 	LitInt(i32),
 
 	#[display_override("Float")]
 	#[regex("(-?[0-9]+\\.[0-9]+)", |lex| lex.slice().parse::<f32>().unwrap())]
+	/// Any float
 	LitFloat(f32),
 }
 
