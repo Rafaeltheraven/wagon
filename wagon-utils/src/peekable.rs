@@ -1,28 +1,31 @@
-/*
-A variant of Peekable in which you can call methods on the inner iter.
-For documentation, just check official Rust docs
-*/
+/// A variant of [std::iter::Peekable] in which you have access to the inner iterator.
+/// For full documentation, just check the official Rust docs.
 
 pub struct Peekable<I: Iterator> {
+    /// The inner iterator.
 	pub iter: I,
 	peeked: Option<Option<I::Item>>
 }
 
 impl<I: Iterator> Peekable<I> {
+    /// Construct a [`Peekable`] from any iterator.
 	pub fn new(iter: I) -> Peekable<I> {
 		Peekable { iter, peeked: None }
 	}
 
+    /// Peek at the next value in the iterator.
 	pub fn peek(&mut self) -> Option<&I::Item> {
         let iter = &mut self.iter;
         self.peeked.get_or_insert_with(|| iter.next()).as_ref()
     }
 
+    /// Peek at the next value in the iterator, mutable.
     pub fn peek_mut(&mut self) -> Option<&mut I::Item> {
         let iter = &mut self.iter;
         self.peeked.get_or_insert_with(|| iter.next()).as_mut()
     }
 
+    /// Get the next value from the iterator, only if this value fulfills a predicate.
     pub fn next_if(&mut self, func: impl FnOnce(&I::Item) -> bool) -> Option<I::Item> {
         match self.next() {
             Some(matched) if func(&matched) => Some(matched),
@@ -35,6 +38,7 @@ impl<I: Iterator> Peekable<I> {
         }
     }
 
+    /// Get the next value from the iterator, only if it is equal to some expected value.
     pub fn next_if_eq<T>(&mut self, expected: &T) -> Option<I::Item>
     where
         T: ?Sized,
