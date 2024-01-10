@@ -15,10 +15,17 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A symbol in a [`Chunk`][super::chunk::Chunk].
+///
+/// A symbol is any individual element of a `Chunk`.
 pub enum Symbol {
+    /// A non-terminal with optional parameters.
 	NonTerminal(SpannableNode<Ident>, Vec<SpannableNode<Ident>>),
+    /// A list of [`Assignment`] enclosed by `{}`.
 	Assignment(Vec<SpannableNode<Assignment>>),
+    /// A Terminal.
 	Terminal(SpannableNode<Terminal>),
+    /// Nothing.
     Epsilon
 }
 
@@ -51,22 +58,27 @@ impl Default for Symbol {
 
 impl Symbol {
 
+    /// Check if this symbol is not a non-terminal.
     pub(crate) fn is_terminal(&self) -> bool {
         matches!(self, Self::Terminal(..) | Self::Assignment(..) | Self::Epsilon)
     }
 
+    /// Check if this symbol is an [`Assignment`].
     pub fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment(..))
     }
 
+    /// Create a symbol which is just a [`Terminal::LitString`] representing the input parameter.
     pub(crate) fn simple_terminal(ident: &str) -> Self {
         Self::Terminal(SpannableNode::new(Terminal::LitString(ident.to_string()), 0..ident.len()))
     }
 
+    /// Create a symbol which is just a non-terminal [`Ident::Unknown`] with no arguments, representing the input parameter.
     pub (crate) fn simple_ident(ident: &str) -> Self {
         Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), 0..ident.len()), Vec::new())
     }
 
+    /// Create a symbol which is just a spanned non-terminal [`Ident::Unknown`].
     pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
         SpannableNode::new(Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), span.clone()), Vec::new()), span)
     }

@@ -11,8 +11,11 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[cfg_attr(test, new_unspanned)]
+/// The full WAG tree.
 pub struct Wag {
+    /// Metadata associated with this WAG.
 	pub metadata: Metadata,
+    /// The actual grammar.
 	pub grammar: Vec<SpannableNode<Rule>>,
 }
 
@@ -39,6 +42,7 @@ impl ToAst for Wag {
     }
 }
 
+/// Check all rules in the WAG for parameter errors and run rewrite on the children.
 impl Rewrite<()> for Wag {
 
     fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<()> {

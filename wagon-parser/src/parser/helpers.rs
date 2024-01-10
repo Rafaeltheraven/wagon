@@ -14,6 +14,7 @@ impl ToAst for String {
 	}
 }
 
+/// A helper trait to quickly convert from any [`Tokens`] into an instance of something else.
 pub(super) trait TokenMapper {
 	fn token_to_enum(token: &Tokens) -> Option<Self> where Self: Sized;
 }
@@ -41,18 +42,22 @@ fn __between<T>(lexer: &mut PeekLexer, left: Tokens, right: Tokens, fun: Box<dyn
 	}
 }
 
+/// Parse a node, terminated by a final right [`Tokens`].
 pub(super) fn between_right<T: Parse>(lexer: &mut PeekLexer, right: Tokens) -> ParseResult<T> {
 	__between_right(lexer, right, Box::new(|x| T::parse(x)))
 }
 
+/// Parse a node that is wrapped between a left [`Tokens`] and a right [`Tokens`].
 pub(super) fn between<T: Parse>(lexer: &mut PeekLexer, left: Tokens, right: Tokens) -> ParseResult<T> {
 	__between(lexer, left, right, Box::new(|x| T::parse(x)))
 }
 
+/// Parse multiple nodes wrapped between left and right [`Tokens`] and separated by (another) [`Tokens`].
 pub(super) fn between_sep<T: Parse>(lexer: &mut PeekLexer, left: Tokens, right: Tokens, sep: Tokens) -> ParseResult<Vec<T>> {
 	__between(lexer, left, right, Box::new(|x| T::parse_sep(x, sep)))
 }
 
+/// A macro that automatically expands to allow either a [`wagon_lexer::Tokens::ProductionToken`] or a [`wagon_lexer::Tokens::MathToken`].
 #[macro_export] 
 macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {
@@ -63,7 +68,7 @@ macro_rules! either_token {
     };
 }
 
-
+/// The same as [`either_token!`] but as a reference.
 #[macro_export]
 macro_rules! either_token_ref {
 	($variant:ident($($arg:tt)*)) => {
@@ -74,6 +79,7 @@ macro_rules! either_token_ref {
     };
 }
 
+/// A macro that automatically expands to allow either a [`wagon_lexer::Tokens::ProductionToken`], a [`wagon_lexer::Tokens::MathToken`] or a [`wagon_lexer::Tokens::MetadataToken`].
 #[macro_export] 
 macro_rules! any_token {
     ($variant:ident($($arg:tt)*)) => {
@@ -84,6 +90,7 @@ macro_rules! any_token {
     };
 }
 
+/// Check if there's a `;` token, return an error otherwise.
 pub(super) fn check_semi(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
 	if lexer.next_if(|x| matches!(x, Ok(any_token!(Semi)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_unwrap(), expected: string_vec![Tokens::ProductionToken(Productions::Semi)] })
@@ -92,6 +99,7 @@ pub(super) fn check_semi(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
     }
 }
 
+/// Check if there's a `:` token, return an error otherwise.
 pub(super) fn check_colon(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
 	if lexer.next_if(|x| matches!(x, Ok(either_token!(Colon)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_unwrap(), expected: string_vec![Tokens::ProductionToken(Productions::Colon)] })

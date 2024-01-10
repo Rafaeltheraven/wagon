@@ -1,5 +1,15 @@
+#![warn(missing_docs)]
+//! WAGon Parser
+//!
+//! A crate containing the [`Parser`] for the WAGon DSL as well as a checker and associated functions. 
+//! As long as you do not need any extensions to the WAGon DSL itself, this will likely be your main interface to the ecosystem. 
+//! After you have a parsed a full [`Wag`] tree, you can do with it whatever you require.
+
+/// The parser
 pub mod parser;
+/// The checker
 pub mod firstpass;
+/// A module for converting a parsed tree into a [petgraph] compatible AST with less information.
 mod ast;
 
 use std::fmt::Display;
@@ -9,6 +19,9 @@ use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
 use crate::ast::ToAst;
 use crate::firstpass::{FirstPassState, Rewrite};
 
+/// Parse an input string and check if the resulting WAG is valid.
+///
+/// Given the input string, will either return a full, rewritten, WAG or an error.
 pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut parser = Parser::new(date);
     let mut wag = parser.parse()?;
@@ -17,6 +30,9 @@ pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     Ok(wag)
 }
 
+/// A node is anything that implements [`Parse`]. `SpannableNode` then, is a wrapper around this node that holds span information about it.
+/// It is intended to be a mostly see-through wrapper around whatever the inner node is. [`Parse`] is implemented on it in a way that
+/// automatically calculates the span information.
 #[derive(Debug, Clone)]
 pub struct SpannableNode<T: Parse> {
 	node: T,
@@ -50,10 +66,12 @@ impl<T: Parse> From<T> for SpannableNode<T> {
 }
 
 impl<T: Parse> SpannableNode<T> {
+    /// Get the inner node, consuming the wrapper.
 	pub fn into_inner(self) -> T {
 		self.node
 	}
 
+    /// Get a reference to the inner node.
 	pub fn to_inner(&self) -> &T {
 		&self.node
 	}
@@ -62,11 +80,13 @@ impl<T: Parse> SpannableNode<T> {
 		Self {node, span}
 	}
 
+    /// Get mutable references to both the inner node and the span.
 	pub fn deconstruct(&mut self) -> (&mut T, &mut Span) {
 		(&mut self.node, &mut self.span)
 	}
 }
 
+/// A trait for internal use to automatically convert between nodes and [`SpannableNode`].
 pub(crate) trait WrapSpannable<T: Parse, U> {
 	fn wrap_spannable(self) -> U;
 

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
-use wagon_lexer::{math::Math};
+use wagon_lexer::math::Math;
 
 use super::inverse::Inverse;
 
@@ -9,6 +9,7 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A list of [`Inverse`] nodes. Separated by `||`.
 pub struct Conjunct(pub Vec<SpannableNode<Inverse>>);
 
 impl Parse for Conjunct {

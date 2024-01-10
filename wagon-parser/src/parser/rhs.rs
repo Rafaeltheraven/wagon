@@ -1,10 +1,10 @@
 use crate::parser::Span;
 use std::matches;
 
-use wagon_lexer::{Spannable};
+use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::{Chunk}, expression::Expression, symbol::Symbol, ToAst, WagNode, WagIx, WagTree};
-use super::helpers::{between};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, ToAst, WagNode, WagIx, WagTree};
+use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};
 
@@ -13,8 +13,15 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[cfg_attr(test, new_unspanned)]
+/// A right-hand side (AKA alternative) of a rule.
+///
+/// Any `Rhs` optionally has an expression that evaluates it's weight, enclosed by `[]`.
+/// 
+/// After the weight, it has a list of chunks (which may be empty)
 pub struct Rhs {
+	/// The weight expression of this alternative.
 	pub weight: Option<SpannableNode<Expression>>,
+	/// The chunks of this alternative.
 	pub chunks: Vec<SpannableNode<Chunk>>,
 }
 
@@ -51,6 +58,7 @@ impl Rhs {
 		Ok(resp)
 	}
 
+	/// Automatically create an empty rule with no weight.
 	pub(crate) fn empty() -> Self {
 		Self {
             weight: None,
@@ -60,6 +68,7 @@ impl Rhs {
         }
 	}
 
+	/// Automatically create a spanned empty rule with no weight.
 	pub(crate) fn empty_spanned(span: Span) -> SpannableNode<Self> {
 		SpannableNode::new(Self {
 			weight: None,
@@ -69,6 +78,7 @@ impl Rhs {
 		}, span)
 	}
 
+	/// Automatically create a rule which is just an ident. See [`Chunk::simple_ident`].
 	pub(crate) fn simple_ident(ident: &str) -> Self {
 		Self {
 			weight: None,
@@ -78,6 +88,7 @@ impl Rhs {
 		}
 	}
 
+	/// Automatically create a rule which is just a terminal. See [`Chunk::simple_terminal`].
 	pub(crate) fn simple_terminal(term: &str) -> Self {
 		Self {
 			weight: None,
@@ -85,6 +96,9 @@ impl Rhs {
 		}
 	}
 
+	/// Split up a rule into GLL-Blocks[^gll], represented as a matrix of [`Symbol`]s. 
+	///
+	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
 	pub fn blocks(self) -> Vec<Vec<Symbol>> {
 		let mut blocks = Vec::new();
 		let mut curr = Vec::new();

@@ -1,6 +1,6 @@
 use petgraph::{Graph, Directed, graph::DefaultIx, graph::NodeIndex, Direction::Incoming};
 
-use wagon_lexer::{productions::EbnfType};
+use wagon_lexer::productions::EbnfType;
 
 use crate::parser::{metadata::Metadata, rule::Arrow, terminal::Terminal, inverse::InverseNode, comp::CompOp, sum::Op1, term::Op2, atom::AtomNode};
 use wagon_ident::Ident;

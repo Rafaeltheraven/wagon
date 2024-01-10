@@ -1,21 +1,39 @@
 #[macro_use]
+/// The full WAG tree.
 pub mod wag;
+/// An assignment.
 pub mod assignment;
+/// An atom.
 pub mod atom;
+/// A chunk.
 pub mod chunk;
+/// A comparison.
 pub mod comp;
+/// `||`
 pub mod conjunct;
+/// `&&`
 pub mod disjunct;
+/// An expression.
 pub mod expression;
+/// `**`
 pub mod factor;
+/// Helper methods.
 pub mod helpers;
+/// `!`
 pub mod inverse;
+/// Metadata for the WAG.
 pub mod metadata;
+/// The right-hand-side of a rule.
 pub mod rhs;
+/// A rule.
 pub mod rule;
+/// `+` or `-`.
 pub mod sum;
+/// An individual symbol.
 pub mod symbol;
+/// `*` or `/`.
 pub mod term;
+/// A terminal.
 pub mod terminal;
 mod ident;
 
@@ -29,32 +47,50 @@ use wagon_ident::Ident;
 use wagon_utils::{peekable::Peekable, comma_separated_with_or, string_vec};
 use wagon_lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable, Span};
 
+/// The main parser struct.
+///
+/// Uses a [`LexerBridge`] internally.
+/// # Example
+/// ```
+/// let s = "S -> A;";
+/// let parser = Parser::new(s);
+/// assert!(parser.parse().is_ok())
 pub struct Parser<'source> {
 	lexer: PeekLexer<'source>
 }
 
 impl<'source> Parser<'source> {
+	/// Given an input string, construct a parser.
 	pub fn new(data: &'source str) -> Self {
 		Self {
 			lexer: Peekable::new(LexerBridge::new(data))
 		}
 	}
 
+	/// Start parsing and return a result.
 	pub fn parse(&mut self) -> ParseResult<Wag> {
 		Wag::parse(&mut self.lexer)
 	}
 }
 
+/// Any parse will either return the node we are trying to parse, or a [WagParseError].
 pub type ParseResult<T> = Result<T, WagParseError>;
 
 #[derive(PartialEq, Debug)]
+/// Any of the various errors that can occur during parsing.
 pub enum WagParseError {
+	/// An unexpected character was encountered.
 	Unexpected {
+		/// The span info for this character.
 		span: Span,
+		/// The token we found.
 		offender: Tokens,
+		/// String representations for the tokens we expected to see.
 		expected: Vec<String>
 	},
+	/// Something horrible happened that we do not have a specific error for.
 	Fatal((Span, String)),
+	/// A wrapper around [`WagCheckError`].
 	CheckError(WagCheckError)
 }
 
@@ -73,6 +109,7 @@ impl Display for WagParseError {
 }
 
 impl WagParseError {
+	/// Get the message and span information from the error.
 	pub fn msg_and_span(self) -> ((String, String), Span) {
 		let msg = self.msg();
 		let span = self.span();
@@ -97,10 +134,15 @@ impl WagParseError {
 	}
 }
 
+/// The main trait for parsing.
+///
+/// Any node that can be parsed must implement this trait.
 pub trait Parse {
 
+	/// Given a lexer, try to parse a valid instance of this node.
 	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized;
 
+	/// Parse multiple instances of this node, separated by a [`Tokens`].
 	fn parse_sep(lexer: &mut PeekLexer, join: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
@@ -110,6 +152,7 @@ pub trait Parse {
 		Ok(res)
 	}
 
+	/// Parse multiple instances of this node, separated by a [`Tokens`] end ended by a (possibly different) [`Tokens`].
 	fn parse_sep_end(lexer: &mut PeekLexer, join: Tokens, end: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
@@ -131,6 +174,10 @@ pub trait Parse {
 	}
 }
 
+/// Optionally parse the node.
+///
+/// Sometimes, we want to try parsing a node, but don't care if we fail in some ways, but do care in others. 
+/// In that case, we should implement this trait and return `Ok(None)` if the failure doesn't matter and `Err` if it does.
 trait ParseOption {
 
 	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized;

@@ -11,13 +11,20 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// An expression in the WAGon attribute evaluation DSL.
 pub enum Expression {
+	/// A subprocess that should do evaluation in the shell.
 	Subproc(SpannableNode<String>),
+	/// An if(-else) statement.
 	If {
+		/// If this evaluation returns true.
 		this: SpannableNode<Disjunct>,
+		/// Do this.
 		then: SpannableNode<Disjunct>,
+		/// Else, evaluate this expression.
 		r#else: Option<Box<SpannableNode<Expression>>>
 	},
+	/// The next layer down. See [`Disjunct`].
 	Disjunct(SpannableNode<Disjunct>),
 }
 

@@ -7,8 +7,11 @@ use wagon_lexer::{productions::Productions, Spannable};
 use wagon_macros::match_error;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+/// A terminal for the grammar.
 pub enum Terminal {
+    /// A terminal described as a regex.
 	Regex(String),
+    /// A string to exactly match.
 	LitString(String)
 }
 

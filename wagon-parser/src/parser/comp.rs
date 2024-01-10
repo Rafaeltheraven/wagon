@@ -17,26 +17,42 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A comparison between two [`Sum`]s.
+///
+/// If `comp == None`, then this is just a `Sum`.
 pub struct Comparison {
+    /// The left-hand side of the comparison
 	pub sum: SpannableNode<Sum>,
+    /// The optional operator and right-hand side.
 	pub comp: Option<Comp>
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// The operator and right-hand side of a comparison.
 pub struct Comp {
+    /// The operator.
 	pub op: CompOp,
+    /// The right-hand side.
 	pub right: SpannableNode<Sum>
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
+/// All possible comparison operators.
 pub enum CompOp {
+    /// `==`
 	Eq,
+    /// `!=` 
 	Neq,
+    /// `<=`
 	Lte,
+    /// `<`
 	Lt,
+    /// `>=`
 	Gte,
+    /// `>`
 	Gt,
+    /// `in`
 	In
 }
 

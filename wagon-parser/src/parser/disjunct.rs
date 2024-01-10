@@ -1,7 +1,7 @@
 use std::{fmt::Display, write};
 
 use super::{Parse, PeekLexer, ParseResult, Tokens, ToAst, WagNode, WagIx, WagTree, SpannableNode};
-use wagon_lexer::{math::Math};
+use wagon_lexer::math::Math;
 use super::conjunct::Conjunct;
 
 #[cfg(test)]
@@ -9,6 +9,7 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A list of [`Conjunct`] nodes, seperated by `&&`.
 pub struct Disjunct(pub Vec<SpannableNode<Conjunct>>);
 
 impl Parse for Disjunct {

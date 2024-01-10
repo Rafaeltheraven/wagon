@@ -7,21 +7,26 @@ use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ide
 #[cfg(test)]
 use wagon_macros::new_unspanned;
 
-/*
- Chunks are symbols in () with optionally an EBNF token following it.
- If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
-*/
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A chunk of a [`Rule`].
+///
+/// Chunks are symbols in () with optionally an EBNF token following it.
+/// If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
 pub struct Chunk {
+    /// The actual chunk part.
 	pub chunk: ChunkP,
+    /// The possible EBNF operator.
 	pub ebnf: Option<EbnfType>,
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// The actual chunk part.
 pub enum ChunkP {
+    /// Just a [`Symbol`].
 	Unit(SpannableNode<Symbol>),
+    /// A group of [`Chunk`]s. Enclosed with `()`.
 	Group(Vec<SpannableNode<Chunk>>)
 }
 
@@ -92,6 +97,11 @@ impl Chunk {
         rules.push(SpannableNode::new(rule_func(ident, args, chunks), span.to_owned()));
 	}
 
+    /// Rewrite according to the EBNF operator.
+    ///
+    /// If there is no EBNF operator, we do nothing.
+    /// If there is, we extract the chunk that it operates on and rewrite it as a new, separate rule. We do this recursively.
+    /// At the end, all EBNF operators are replaced by references to the new rules and we return a list of new rules to add to the grammar.
 	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<SpannableNode<Ident>>, span: &Span, rule_func: fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
 		let mut rules = Vec::new();
 		match self {
@@ -123,6 +133,7 @@ impl Chunk {
         Ok(rules)
 	}
 
+    /// Check if this chunk is a terminal
     pub(crate) fn is_terminal(&self) -> bool {
         match &self.chunk {
             ChunkP::Unit(s) => s.node.is_terminal(),
@@ -130,6 +141,7 @@ impl Chunk {
         }
     }
 
+    /// Automatically create a `Chunk` that is just a terminal. See [`Symbol::simple_terminal`].
     pub(crate) fn simple_terminal(term: &str) -> Self {
         Self { 
             ebnf: None, 
@@ -137,6 +149,7 @@ impl Chunk {
         }
     }
 
+    /// Automatically create a `Chunk` that is just an ident. See [`Symbol::simple_ident`].
     pub(crate) fn simple_ident(ident: &str) -> Self {
         Self {
             ebnf: None,
@@ -144,6 +157,7 @@ impl Chunk {
         }
     }
 
+    /// Automatically create a spanned `Chunk` that is just an ident. 
     pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
         SpannableNode::new(Self {
             ebnf: None,
@@ -151,6 +165,7 @@ impl Chunk {
         }, span)
     }
 
+    /// Automatically create an empty chunk.
     pub(crate) fn empty() -> Self {
         Self {
             ebnf: None,
@@ -158,6 +173,7 @@ impl Chunk {
         }
     }
 
+    /// Automatically create a spanned empty chunk.
     pub(crate) fn empty_spanned(span: Span) -> SpannableNode<Self> {
         SpannableNode::new(
             Self {
@@ -167,6 +183,7 @@ impl Chunk {
         )
     }
 
+    /// Extract all the symbols that are in this chunk.
     pub(crate) fn extract_symbols(self) -> Vec<Symbol> {
         match self {
             Self {chunk: ChunkP::Unit(s), ..} => vec![s.into_inner()],

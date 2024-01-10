@@ -11,8 +11,13 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// Assigns the result of an expression to an attribute.
+///
+/// Each assignment has the following structure: [`Ident`] = [`Expression`];
 pub struct Assignment {
+	/// The left-hand side.
 	pub ident: SpannableNode<Ident>,
+	/// The right-hand side.
 	pub expr: SpannableNode<Expression>
 }
 

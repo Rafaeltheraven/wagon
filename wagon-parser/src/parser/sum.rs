@@ -15,16 +15,25 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A sum of any number of [`Term`]s.
+///
+/// If `cont == None`, then this is just a `Term`.
 pub struct Sum {
+    /// The left-hand [`Term`].
 	pub left: SpannableNode<Term>,
+    /// The optional continuation.
 	pub cont: Option<SumP>
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// The operator, right-hand side and possible further continuation of this sum.
 pub struct SumP {
+    /// The operator
 	pub op: Op1,
+    /// The right-hand [`Term`].
 	pub right: SpannableNode<Term>,
+    /// The optional rest of the sum
 	pub cont: Option<Box<SumP>>
 }
 
@@ -51,8 +60,11 @@ impl ParseOption for SumP {
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
+/// The sum operations
 pub enum Op1 {
+    /// `+`
 	Add,
+    /// `-`
 	Sub
 }
 

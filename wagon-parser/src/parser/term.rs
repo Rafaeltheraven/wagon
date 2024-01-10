@@ -24,16 +24,25 @@ Term' -> Op Factor Term' | epsilon
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A multiplication/division on any number of [`Factor`]s.
+///
+/// If `cont == None`, then this is just a `Factor`.
 pub struct Term {
+    /// The left-hand [`Factor`].
 	pub left: SpannableNode<Factor>,
+    /// The optional continuation.
 	pub cont: Option<TermP>
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// The operator, right-hand side and possible further continuation of this `Term`.
 pub struct TermP {
+    /// The operator
 	pub op: Op2,
+    /// The right-hand side of the equation.
 	pub right: SpannableNode<Factor>,
+    /// The optional continuation.
 	pub cont: Option<Box<TermP>>
 }
 
@@ -60,10 +69,15 @@ impl ParseOption for TermP {
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
+/// The [`Term`] operators
 pub enum Op2 {
+    /// `*`
 	Mul,
+    /// `/`
 	Div,
+    /// `//`
 	Floor,
+    /// `%`
 	Mod
 }
 

@@ -2,7 +2,7 @@ use std::{fmt::Display, write};
 
 use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
 
-use wagon_lexer::{math::Math};
+use wagon_lexer::math::Math;
 
 use super::comp::Comparison;
 
@@ -11,8 +11,11 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// Either another `Inverse`, prepend by `!` or just a `[Comparison]`.
 pub enum Inverse {
+    /// `!`
 	Not(Box<SpannableNode<Inverse>>),
+    /// The next layer down.
 	Comparison(SpannableNode<Comparison>)
 }
 

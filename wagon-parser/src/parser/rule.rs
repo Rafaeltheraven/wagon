@@ -12,10 +12,17 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[cfg_attr(test, new_unspanned)]
+/// A single rule in the WAG grammar. 
+///
+/// A rule is of the form: [`Ident`] {ARROW} [`Rhs`] | ['Rhs'] | ...;
 pub enum Rule {
+    /// An analytic rule (`->`).
 	Analytic(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>),
+    /// A generative rule (`=>`).
 	Generate(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>),
+    /// An import rule (`<-/=/<`).
 	Import(String, ImportType, String),
+    /// An import exclude rule (`</`).
 	Exclude(String, Vec<SpannableNode<String>>)
 }
 
@@ -76,6 +83,7 @@ Ident format:
                                - - Default again but at this layer
 
 */
+/// Convert every [`Chunk`] for every alternative into it's own separate `Rule`.
 impl Rewrite<Vec<SpannableNode<Rule>>> for SpannableNode<Rule> {
     fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
         match &mut self.node {

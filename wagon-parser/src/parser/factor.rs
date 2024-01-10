@@ -9,10 +9,15 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// A possible power equation, or just an [`Atom`].
 pub enum Factor {
+	/// Just an [`Atom`].
 	Primary(SpannableNode<Atom>),
+	/// A power equation
 	Power {
+		/// The left-hand side.
 		left: SpannableNode<Atom>,
+		/// Whatever to evaluate to the power to.
 		right: Box<SpannableNode<Factor>>
 	}
 }

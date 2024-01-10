@@ -1,11 +1,11 @@
 use std::fmt::Display;
-use std::hash::{Hash};
+use std::hash::Hash;
 use std::write;
 
 use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ToAst, WagNode, WagIx, WagTree, expression::Expression};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use wagon_lexer::{math::Math, productions::Productions, Spannable, UnsafeNext};
+use wagon_lexer::{math::Math, Spannable, UnsafeNext};
 
 use wagon_macros::match_error;
 use ordered_float::NotNan;
@@ -14,9 +14,13 @@ use ordered_float::NotNan;
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
+/// A python-style dictionary.
+///
+/// Is of the form [`Ident`][[`Expression`]].
 pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
+	/// Deconstruct the dictionary into it's [`Ident`] and [`Expression`].
 	pub fn deconstruct(&self) -> (&Ident, &Expression) {
 		(&self.0, &self.1)
 	}
@@ -24,13 +28,21 @@ impl Dictionary {
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
+/// The base elements of each expression.
 pub enum Atom {
+	/// An [`Ident`].
 	Ident(Ident),
+	/// A [`Dictionary`].
 	Dict(Dictionary),
+	/// A [`bool`].
 	LitBool(bool),
+	/// An [`i32`].
 	LitNum(i32),
+	/// An [`f32`].
 	LitFloat(NotNan<f32>),
+	/// A [`String`].
 	LitString(String),
+	/// Another full [`Expression`]. Enclosed by `()`.
 	Group(SpannableNode<Expression>)
 }
 
