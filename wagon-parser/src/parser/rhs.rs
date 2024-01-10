@@ -96,7 +96,7 @@ impl Rhs {
 		}
 	}
 
-	/// Split up a rule into GLL-Blocks[^gll], represented as a matrix of [`Symbol`]s. 
+	/// Split up a rule into GLL-Blocks[^gll]. Represented as a matrix of [`Symbol`]s. 
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
 	pub fn blocks(self) -> Vec<Vec<Symbol>> {

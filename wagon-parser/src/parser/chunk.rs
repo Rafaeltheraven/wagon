@@ -9,7 +9,7 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
-/// A chunk of a [`Rule`].
+/// A chunk of an [`Rhs`].
 ///
 /// Chunks are symbols in () with optionally an EBNF token following it.
 /// If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
