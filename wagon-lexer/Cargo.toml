@@ -18,3 +18,7 @@ logos-display = "0.1.2"
 wagon-ident = {workspace = true}
 wagon-utils = {workspace = true}
 wagon-macros = {workspace = true}
+replace_with = {workspace = true}
+
+[dev-dependencies]
+pretty_assertions = {workspace = true}

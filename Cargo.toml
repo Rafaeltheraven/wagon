@@ -28,6 +28,7 @@ proc-macro2 = "1.0.67"
 petgraph = {version = "0.6.3", default-features = false}
 indexmap = "2.0.2"
 ordered-float = "3.9.1"
+replace_with = "0.1.7"
 
 # local crates
 wagon-codegen = {path = "./wagon-codegen"}

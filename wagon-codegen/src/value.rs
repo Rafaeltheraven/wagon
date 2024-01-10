@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
 
 use ordered_float::{NotNan, Pow};
+use wagon_parser::parser::atom::Atom;
 
 pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone {
     fn is_truthy(&self) -> bool;
@@ -325,3 +326,35 @@ impl<T: Valueable> PartialOrd for Value<T> {
     }
 }
 
+#[derive(Debug)]
+pub struct FromAtomError(Atom);
+
+impl Display for FromAtomError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Cannot convert {} to a Value", self.0)
+    }
+}
+
+impl std::error::Error for FromAtomError {}
+
+impl<T: Valueable> TryFrom<Atom> for Value<T> {
+    type Error = FromAtomError;
+
+    fn try_from(value: Atom) -> Result<Self, Self::Error> {
+        match value {
+            Atom::Ident(_) | Atom::Dict(_) | Atom::Group(_) => Err(FromAtomError(value)),
+            Atom::LitBool(b) => Ok(Self::Bool(b)),
+            Atom::LitNum(i) => Ok(Self::Natural(i)),
+            Atom::LitFloat(f) => Ok(Self::Float(f)),
+            Atom::LitString(s) => Ok(Self::String(s)),
+        }
+    }
+}
+
+impl TryFrom<Atom> for RecursiveValue {
+    type Error = FromAtomError;
+
+    fn try_from(value: Atom) -> Result<Self, Self::Error> {
+        Ok(Self::from(Value::try_from(value)?))
+    }
+}

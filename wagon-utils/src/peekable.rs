@@ -116,3 +116,8 @@ impl<I: Iterator> Iterator for Peekable<I> {
 
 impl<I: ExactSizeIterator> ExactSizeIterator for Peekable<I> {}
 
+impl<I: Iterator + std::fmt::Debug> std::fmt::Debug for Peekable<I> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.iter.fmt(f)
+    }
+}

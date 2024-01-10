@@ -56,20 +56,45 @@ pub(super) fn between_sep<T: Parse>(lexer: &mut PeekLexer, left: Tokens, right: 
 #[macro_export] 
 macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {
-        Tokens::ProductionToken(Productions::$variant($($arg)*)) | Tokens::MathToken(Math::$variant($($arg)*))
+        wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) | wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
+    };
+    ($variant:ident) => {
+    	wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) | wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
     };
 }
+
 
 #[macro_export]
 macro_rules! either_token_ref {
 	($variant:ident($($arg:tt)*)) => {
-        &Tokens::ProductionToken(Productions::$variant($($arg)*)) | &Tokens::MathToken(Math::$variant($($arg)*))
+        &wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) | &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
+    };
+    ($variant:ident) => {
+    	&wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) | &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
+    };
+}
+
+#[macro_export] 
+macro_rules! any_token {
+    ($variant:ident($($arg:tt)*)) => {
+        either_token!($variant) | wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant($($arg)*))
+    };
+    ($variant:ident) => {
+    	either_token!($variant) | wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant)
     };
 }
 
 pub(super) fn check_semi(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
-	if lexer.next_if(|x| x.as_ref() == Ok(&Tokens::ProductionToken(Productions::Semi))).is_none() {
+	if lexer.next_if(|x| matches!(x, Ok(any_token!(Semi)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_unwrap(), expected: string_vec![Tokens::ProductionToken(Productions::Semi)] })
+    } else {
+    	Ok(())
+    }
+}
+
+pub(super) fn check_colon(lexer: &mut PeekLexer) -> Result<(), WagParseError> {
+	if lexer.next_if(|x| matches!(x, Ok(either_token!(Colon)))).is_none() {
+    	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_unwrap(), expected: string_vec![Tokens::ProductionToken(Productions::Colon)] })
     } else {
     	Ok(())
     }

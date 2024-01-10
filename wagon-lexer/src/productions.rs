@@ -2,33 +2,8 @@ use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::inherit_from_base;
 use logos_display::{Debug, Display};
-use wagon_utils::{rem_first_and_last_char};
+use wagon_utils::rem_first_and_last_char;
 use super::Ident;
-
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub enum GrammarType {
-	Conversational,
-	Generative,
-	Analytical
-}
-
-impl TypeDetect for GrammarType {
-	fn detect(inp: &str) -> Self {
-	    if inp.starts_with('c') {
-	    	GrammarType::Conversational
-	    } else if inp.starts_with("ge") {
-	    	GrammarType::Generative
-	    } else {
-	    	GrammarType::Analytical
-	    }
-	}
-}
-
-impl Default for GrammarType {
-    fn default() -> Self {
-        Self::Analytical
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum ImportType {
@@ -89,13 +64,6 @@ pub enum Productions {
 	#[token("&")]
 	Additional,
 
-	#[token("include")]
-	Include,
-
-	#[display_override("Include Path")]
-	#[regex(r"[a-zA-Z]*(::[a-zA-Z]*)+", |lex| lex.slice().to_string())]
-	Path(String),
-
 	#[display_override("Import")]
 	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
 	Import(ImportType),
@@ -103,10 +71,6 @@ pub enum Productions {
 	#[display_override("Regex")]
 	#[regex(r#"/[^\*]([^/\\]|\\.)*/"#, |lex| rem_first_and_last_char(lex.slice()))]
 	LitRegex(String),
-
-	#[display_override("Grammar Type Definition")]
-	#[regex(r"((conversational|generative)\s+)?grammar", |lex| GrammarType::detect(lex.slice()))]
-	GrammarSpec(GrammarType),
 
 	#[display_override("EBNF Operator")]
 	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice()))]
@@ -122,7 +86,6 @@ mod tests {
 	use logos::Logos;
 	use super::Productions::{self};
 	use super::ImportType::*;
-	use super::GrammarType::*;
 	use super::EbnfType;
 
 	#[test]
@@ -183,17 +146,6 @@ mod tests {
 	}
 
 	#[test]
-	fn test_grammar_types() {
-		let s = "conversational grammar generative grammar grammar";
-		let expect = &[
-			Ok(Productions::GrammarSpec(Conversational)),
-			Ok(Productions::GrammarSpec(Generative)),
-			Ok(Productions::GrammarSpec(Analytical))
-		];
-		assert_lex(s, expect);
-	}
-
-	#[test]
 	fn test_ebnf() {
 		let s = "* + ?";
 		let expect = &[
@@ -202,22 +154,6 @@ mod tests {
 			Ok(Productions::Ebnf(EbnfType::Maybe))
 		];
 		assert_lex(s, expect);
-	}
-
-	#[test]
-	fn test_include() {
-		let s = "include some::path";
-		let s2 = "include ::another";
-		let expect = &[
-			Ok(Productions::Include),
-			Ok(Productions::Path("some::path".to_string()))
-		];
-		let expect2 = &[
-			Ok(Productions::Include),
-			Ok(Productions::Path("::another".to_string()))
-		];
-		assert_lex(s, expect);
-		assert_lex(s2, expect2)
 	}
 
 	#[test]

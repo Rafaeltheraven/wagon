@@ -1,3 +1,9 @@
+first_set: false
+min_weight: true
+prune: false
+type: analytical
+=========================================
+
 S -> A | B;
 A -> {$did_a = true;} E($did_a) B | ;
 B -> {$did_a = false;} E($did_a) A | ;

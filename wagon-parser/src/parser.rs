@@ -139,7 +139,10 @@ trait ParseOption {
 #[cfg(test)]
 mod tests {
 
-    use wagon_lexer::productions::{EbnfType, Productions};
+    use wagon_lexer::math::Math;
+	use std::collections::BTreeMap;
+
+    use wagon_lexer::productions::EbnfType;
 	use crate::firstpass::FirstPassState;
     use super::Peekable;
 	use super::Parse;
@@ -159,7 +162,6 @@ mod tests {
     use super::term::Term;
     use super::{Parser, Wag, metadata::Metadata, rule::Rule, rhs::Rhs, chunk::Chunk, symbol::Symbol, terminal::Terminal, sum::Sum};
     use wagon_lexer::Tokens;
-    use wagon_lexer::productions::GrammarType;
     use wagon_ident::Ident;
     use super::chunk::ChunkP;
     use super::string_vec;
@@ -171,8 +173,8 @@ mod tests {
 	fn test_example_wag() {
 		let input = r#"
 		include activities::other;
-
-		conversational grammar;
+		type: "conversational";
+		====================
 
 		start -> setup activity* 'stop'; /* a comment */
 		setup -> greet? getname | ;
@@ -186,7 +188,7 @@ mod tests {
 		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata {
 				includes: vec!["activities::other".to_string()],
-				spec: Some(GrammarType::Conversational)
+				mappings: BTreeMap::from([("type".to_string(), Atom::LitString("conversational".to_string()))])
 			}, 
 			grammar: vec![
 				Rule::Analytic("start".to_string(), Vec::new(), vec![
@@ -331,7 +333,7 @@ mod tests {
 		let mut lexer = Peekable::new(LexerBridge::new(input));
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: vec![], spec: None },
+			metadata: Metadata { includes: vec![], mappings: BTreeMap::new() },
 			grammar: vec![
 				Rule::Analytic("S".to_string(), Vec::new(), vec![
 					Rhs {
@@ -487,7 +489,7 @@ mod tests {
 		let mut lexer = Peekable::new(LexerBridge::new(input));
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag {
-		    metadata: Metadata { includes: vec![], spec: None },
+		    metadata: Metadata { includes: vec![], mappings: BTreeMap::new() },
 		    grammar: vec![
 		    	Rule::Analytic("S".to_string(), Vec::new(), vec![
 		    		Rhs { 
@@ -505,8 +507,8 @@ mod tests {
 	fn test_parse_error() {
 		let input = r#"
 		include activities::other;
-
-		conversational grammar
+		type: conversational
+		==========================
 
 		start -> setup activity* 'stop'; /* a comment */
 		setup -> greet? getname;
@@ -517,10 +519,10 @@ mod tests {
 		let mut parser = Parser::new(input);
 		let output = parser.parse();
 		let expected = Err(crate::parser::WagParseError::Unexpected { 
-			span: Span {start: 59, end: 64}, 
-			offender: Tokens::ProductionToken(Productions::Identifier(Ident::Unknown("start".to_string()))), 
+			span: Span {start: 55, end: 57}, 
+			offender: Tokens::MathToken(Math::Eq), 
 			expected: string_vec![
-				Tokens::ProductionToken(Productions::Semi)
+				Tokens::MathToken(Math::Semi)
 			]
 		});
 		assert_eq!(expected, output);
@@ -535,7 +537,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
 					Rhs {
@@ -567,7 +569,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
 					Rhs {
@@ -602,7 +604,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A·0·1·p".to_string(), Vec::new(), vec![
 					Rhs {
@@ -646,7 +648,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
 					Rhs {
@@ -703,7 +705,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A·0·0_0·0·0_1".to_string(), Vec::new(), vec![
 	                Rhs {
@@ -792,7 +794,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs {
@@ -824,7 +826,7 @@ mod tests {
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
 		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), spec: None }, 
+			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
 				Rule::Analytic("A".to_string(), Vec::new(), vec![
 					Rhs::simple_ident("B"),

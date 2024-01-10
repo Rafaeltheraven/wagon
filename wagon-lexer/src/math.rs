@@ -1,8 +1,8 @@
 use super::{TypeDetect, LexingError};
 use logos::Logos;
-use wagon_macros::{inherit_from_base};
+use wagon_macros::inherit_from_base;
 use logos_display::{Debug, Display};
-use super::Ident;
+
 use wagon_utils::{rem_first_and_last_char, rem_first_char};
 
 #[inherit_from_base]

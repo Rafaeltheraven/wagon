@@ -1,8 +1,9 @@
+use crate::parser::helpers::check_semi;
 use wagon_macros::match_error;
+use std::collections::BTreeMap;
 
-use wagon_lexer::{UnsafeNext, UnsafePeek, Spannable};
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, helpers::check_semi};
-use wagon_lexer::productions::{Productions, GrammarType};
+use wagon_lexer::{UnsafeNext, Spannable};
+use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, atom::Atom};
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -11,28 +12,33 @@ use wagon_macros::new_unspanned;
 #[cfg_attr(test, new_unspanned)]
 pub struct Metadata {
 	pub includes: Vec<String>,
-	pub spec: Option<GrammarType>
+	pub mappings: BTreeMap<String, Atom>
 }
 
 impl Parse for Metadata {
     fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
         let mut includes = Vec::new();
-        while lexer.next_if_eq(&Ok(Tokens::ProductionToken(Productions::Include))).is_some() {
-            match_error!(match lexer.next_unwrap() {
-                Tokens::ProductionToken(Productions::Path(p)) => {includes.push(p); Ok(())}
-            })?;
-            check_semi(lexer)?;
+        let mut mappings = BTreeMap::new();
+        while let Some(Ok(Tokens::MetadataToken(_))) = lexer.peek() {
+                match_error!(match lexer.next_unwrap() {
+                    Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Key(s)) => {
+                        let atom = Atom::parse(lexer)?;
+                        check_semi(lexer)?;
+                        mappings.insert(s, atom);
+                        Ok(())
+                    },
+                    Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Delim) => break,
+                    Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Include) => {
+                        match_error!(match lexer.next_unwrap() {
+                            Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Path(p)) => {
+                                includes.push(p); 
+                                check_semi(lexer)?;
+                                Ok(())
+                            }
+                        })
+                    }
+                })?
         }
-        if let Tokens::ProductionToken(Productions::GrammarSpec(_)) = lexer.peek_unwrap() {
-        	if let Tokens::ProductionToken(Productions::GrammarSpec(s)) = lexer.next_unwrap() {
-                check_semi(lexer)?;
-        		Ok(Self {includes, spec: Some(s)})
-        	} else {
-        		Err(WagParseError::Fatal((lexer.span(), "Something went terribly wrong unwrapping the grammarspec token".to_string())))
-        	}
-        } else {
-        	Ok(Self {includes, spec: None})
-        }
-
+        Ok(Metadata { includes, mappings })
     }
 }

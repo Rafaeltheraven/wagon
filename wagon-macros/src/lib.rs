@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::{Span};
+use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
 use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput, punctuated::Punctuated, ExprStruct, ExprCall, Expr, Token};
 use quote::{quote, ToTokens, format_ident};
@@ -13,12 +13,12 @@ use extendable_data::extendable_data;
 #[logos(error = LexingError)]
 enum Base {
     #[display_override("Identifier")]
-    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| Ident::detect(lex.slice()))]
-    Identifier(Ident),
+    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| wagon_ident::Ident::detect(lex.slice()))]
+    Identifier(wagon_ident::Ident),
 
     #[display_override("String Literal")]
-    #[regex("\"([^\"\\\\]|\\\\.)*\"", |lex| rem_first_and_last_char(lex.slice()))]
-    #[regex("\'([^\'\\\\]|\\\\.)*\'", |lex| rem_first_and_last_char(lex.slice()))]
+    #[regex("\"([^\"\\\\]|\\\\.)*\"", |lex| wagon_utils::rem_first_and_last_char(lex.slice()))]
+    #[regex("\'([^\'\\\\]|\\\\.)*\'", |lex| wagon_utils::rem_first_and_last_char(lex.slice()))]
     LitString(String),
 
     #[token("[")]
@@ -47,6 +47,10 @@ enum Base {
 
     #[token(",")]
     Comma,
+
+    #[display_override("Path")]
+    #[regex(r"[a-zA-Z]*(::[a-zA-Z]*)+", |lex| lex.slice().to_string())]
+    Path(String),
 }
 
 fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
@@ -360,6 +364,8 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
         syn::Expr::MethodCall(m) => Ok(m.to_token_stream()),
         syn::Expr::Path(p) => Ok(p.to_token_stream()),
         syn::Expr::Lit(l) => Ok(l.to_token_stream()),
+        syn::Expr::Tuple(t) => Ok(t.to_token_stream()),
+        syn::Expr::Array(a) => Ok(a.to_token_stream()),
         other => Err(syn::Error::new(span, format!("Unexpected Expression {:?}", other)))
     }
 }
@@ -385,11 +391,16 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     };
     let wc_arm: Arm = syn::parse_quote!(
         _error => {
-            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
+            Err(WagParseError::Unexpected{span: span, offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);
-    ast.into_token_stream().into()
+    quote!(
+        {
+            let span = lexer.span();
+            #ast
+        }
+    ).into()
 }
 
 #[cfg(feature = "nightly")]

@@ -23,6 +23,30 @@ pub fn remove_whitespace(mut s: String) -> String {
     s
 }
 
+pub fn split_to_twople(s: &str, split: char) -> Result<(String, String), SplitError> {
+    let mut splitted = s.split(split);
+    if let Some(left) = splitted.next() {
+        if let Some(right) = splitted.next() {
+            return Ok((left.trim().to_string(), right.trim().to_string()))
+        }
+    }
+    Err(SplitError(s.to_owned(), split))
+}
+
+pub struct SplitError(String, char);
+
+impl SplitError {
+    pub fn get_input(self) -> String {
+        self.0
+    }
+    pub fn get_split(self) -> char {
+        self.1
+    }
+    pub fn decompose(self) -> (String, char) {
+        (self.0, self.1)
+    }
+}
+
 fn _rem_first_char(value: &str) -> Chars {
     let mut chars = value.chars();
     chars.next();
