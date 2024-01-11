@@ -31,35 +31,38 @@ pub type CodeMap = (HashMap<String, Vec<(String, TokenStream)>>, TokenStream);
 /// A quick type alias to represent a [`wagon_ident::Ident`] with span information.
 pub type SpannableIdent = SpannableNode<wagon_ident::Ident>;
 
-/// A trait for nodes to implement that do code generation based on some generic state object `U` and a [`proc_macro2::Ident`]
-/// and that can use these inputs together with a [`SpannableIdent`] to possibly modify the state and return a [`TokenStream`].
-///
-/// # Example
-/// ```
-/// struct A;
-/// struct State { toggle: bool }
-/// impl State {
-///     fn new() -> Self {
-///         Self { toggle: false }  
-///     }
-///     fn toggle(&mut self, Rc<proc_macro2::Ident>, SpannableIdent) {
-///         self.toggle = true;
-///     }   
-/// }
-/// impl ToTokensState<State> for A {
-///     fn to_tokens(&self, state: &mut State, label: Rc<proc_macro2::Ident>, attr_fun: fn(&mut State, Rc<proc_macro2::Ident>, SpannableIdent)) -> TokenStream {
-///         attr_fun(state, label, SpannableNode::from(wagon_ident::Ident::default()));
-///     }
-/// }
-/// let a = A;
-/// let state = State { toggle: false };
-/// let label = proc_macro2::Ident::from("label");
-/// a.to_tokens(state, label, State::toggle);
-/// assert!(state.toggle) // this is now true
-/// ```
-///
-/// For practical examples. Look at the implementations in this crate as well as how they are called in the [`wagon-codegen-gll`] crate.
+/// A trait for anything that does codegen while having to keep track of some state object `U`.
 pub trait ToTokensState<U> {
+    /// A method to do codegen based on state and possibly modify that state.
+    ///
+    /// This method takes a given mutable state `U`, as well as a reference to some [`proc_macro2::Ident`] and a function to modify the state.
+    /// It then potentially calls this function to modify the state and returns a `TokenStream` for the generated code.
+    ///
+    /// # Example
+    /// ```
+    /// struct A;
+    /// struct State { toggle: bool }
+    /// impl State {
+    ///     fn new() -> Self {
+    ///         Self { toggle: false }  
+    ///     }
+    ///     fn toggle(&mut self, Rc<proc_macro2::Ident>, SpannableIdent) {
+    ///         self.toggle = true;
+    ///     }   
+    /// }
+    /// impl ToTokensState<State> for A {
+    ///     fn to_tokens(&self, state: &mut State, label: Rc<proc_macro2::Ident>, attr_fun: fn(&mut State, Rc<proc_macro2::Ident>, SpannableIdent)) -> TokenStream {
+    ///         attr_fun(state, label, SpannableNode::from(wagon_ident::Ident::default()));
+    ///     }
+    /// }
+    /// let a = A;
+    /// let state = State { toggle: false };
+    /// let label = proc_macro2::Ident::from("label");
+    /// a.to_tokens(state, label, State::toggle);
+    /// assert!(state.toggle) // this is now true
+    /// ```
+    ///
+    /// For practical examples. Look at the implementations in this crate as well as how they are called in the [`wagon-codegen-gll`] crate.
 	fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream;
 }
 
