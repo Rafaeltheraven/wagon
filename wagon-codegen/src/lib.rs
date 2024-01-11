@@ -7,6 +7,10 @@
 /// Codegen for parts of the [`wagon-parser`] AST that are generally useful.
 pub mod nodes;
 /// Code to deal with typing, addition and general operations on attributes.
+/// 
+/// Because of the strict type system in Rust, it's nice to have a more lenient data structure that can deal with various types and operations called on it.
+/// 
+/// This module holds code for those purposes.
 pub mod value;
 
 use std::{rc::Rc, collections::HashMap};

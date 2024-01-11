@@ -1,7 +1,3 @@
-/// Because of the strict type system in Rust, it's nice to have a more lenient data structure that can deal with various types and operations called on it.
-/// 
-/// This module holds code for those purposes.
-
 use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
 
 use ordered_float::{NotNan, Pow};
