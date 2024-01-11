@@ -6,11 +6,11 @@
 //!
 //! # Example
 //! ```rust
-//! let s = "
+//! let s = r#"
 //! meta: "data";
 //! ============
 //! S -> A;
-//! ";
+//! "#;
 //! let lexer = PeekLexer::new(s);
 //! let tokens = lexer.collect();
 //! assert_eq!(tokens, vec![
