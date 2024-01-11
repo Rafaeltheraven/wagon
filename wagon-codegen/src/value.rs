@@ -1,29 +1,74 @@
+/// Because of the strict type system in Rust, it's nice to have a more lenient data structure that can deal with various types and operations called on it.
+/// 
+/// This module holds code for those purposes.
+
 use std::{collections::BTreeMap, fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
 
 use ordered_float::{NotNan, Pow};
 use wagon_parser::parser::atom::Atom;
 
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+/// The most basic types that a value can ever be.
+///
+/// For recursion reasons, this type is generic over any other type that can be seen as a Value (see [`Valueable`]).
+pub enum Value<T: Valueable> {
+    /// A bool.
+    Bool(bool),
+    /// A string.
+    String(String),
+    /// A whole number.
+    Natural(i32),
+    /// A float.
+    Float(NotNan<f32>),
+    /// A dictionary.
+    Dict(BTreeMap<String, T>),
+    /// A list.
+    Array(Vec<T>)
+}
+
+/// A trait to allow "extension" of the [`Value`] enum.
+///
+/// Sometimes, the basic types supported by `Value` are not enough and the newtype pattern is required to extend it.
+/// Registering this newtype as `Valueable` means that it supports all common operations associated with a `Value`.
 pub trait Valueable: std::fmt::Debug + PartialEq + std::hash::Hash + Eq + Clone {
+    /// Is this value seen as `true` or `false`?
     fn is_truthy(&self) -> bool;
+    /// Convert the value to a regular [`i32`].
     fn to_int(&self) -> i32;
+    /// Convert the value to a regular [`f32`].
     fn to_float(&self) -> f32;
+    /// Calculate this value to the power of another.
     fn pow(&self, rhs: &Self) -> Self;
+    /// Get a string representation of the value, as if it were a number. 
     fn display_numerical(&self) -> String;
 }
 
+/// A second trait for "extension" of the [`Value`] enum.
+///
+/// This is intended to "extract" the inner value if possible.
 pub trait ToValue<T: Valueable> {
+    /// Return a reference to the [`Value`] that this type encompasses.
     fn to_value(&self) -> &Value<T>;
 }
 
+/// A [`Valueable`] that can hold a list/dict mapping to other values.
+///
+/// Because of recursion limits in Rust, [`Value`] can not be implemented over itself. 
+/// `RecursiveValue` is, for all intends and purposes, a `Value` implemented over itself. 
+///
+/// If the basic [`Value`] enum is enough for your purposes, you will want to use `RecursiveValue`.
+///
+/// # Example
+/// Instead of doing this: 
+/// ```
+/// use wagon_codegen::value::Value;
+/// ```
+/// Do this:
+/// ```
+/// use wagon_codegen::value::RecursiveValue as Value;
+/// ```
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
-pub enum Value<T: Valueable> {
-	Bool(bool),
-	String(String),
-	Natural(i32),
-	Float(NotNan<f32>),
-	Dict(BTreeMap<String, T>),
-	Array(Vec<T>)
-}
+pub struct RecursiveValue(Value<RecursiveValue>);
 
 impl ToValue<Self> for RecursiveValue {
     fn to_value(&self) -> &Value<Self> {
@@ -105,9 +150,6 @@ impl<T: ToValue<T> + From<Value<T>> + Clone + Eq + std::hash::Hash + std::fmt::D
         self.to_value().display_numerical()
     }
 }
-
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
-pub struct RecursiveValue(Value<RecursiveValue>);
 
 impl std::ops::Deref for RecursiveValue {
     type Target = Value<RecursiveValue>;
@@ -327,6 +369,10 @@ impl<T: Valueable> PartialOrd for Value<T> {
 }
 
 #[derive(Debug)]
+/// An error for when we fail to convert to a `Value` from an `Atom`.
+///
+/// In many cases, it is nice to easily convert a `wagon-parser::parser::atom::Atom` into a `Value` since they are essentially the same information.
+/// However, this is not always fully possible. This struct represents that error.
 pub struct FromAtomError(Atom);
 
 impl Display for FromAtomError {

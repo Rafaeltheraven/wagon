@@ -1,3 +1,4 @@
+/// A valid WAGon expression
 pub mod expression;
 mod disjunct;
 mod conjunct;
