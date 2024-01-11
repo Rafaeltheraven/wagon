@@ -54,7 +54,7 @@ pub trait ToValue<T: Valueable> {
 /// A [`Valueable`] that can hold a list/dict mapping to other values.
 ///
 /// Because of recursion limits in Rust, [`Value`] can not be implemented over itself. 
-/// `RecursiveValue` is, for all intends and purposes, a `Value` implemented over itself. 
+/// `RecursiveValue` is, for all intents and purposes, a `Value` implemented over itself. 
 ///
 /// If the basic [`Value`] enum is enough for your purposes, you will want to use `RecursiveValue`.
 ///

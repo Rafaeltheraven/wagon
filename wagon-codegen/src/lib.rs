@@ -21,7 +21,9 @@ use wagon_parser::{parser::Parse, SpannableNode};
 /// 2. The `TokenStream` for the `main.rs` file.
 ///
 /// # Example
-/// Say we have the following `CodeMap`: `(HashMap::from(("A", vec![("A_0_0", quote!(Foo)), ("A_0_1", quote!(Bar))]), quote!(Baz));`
+/// Say we have the following `CodeMap`: 
+/// 
+/// `(HashMap::from(("A", vec![("A_0_0", quote!(Foo)), ("A_0_1", quote!(Bar))]), quote!(Baz));`
 ///
 /// This map represents a structure such that we have a `main.rs` file with the code `Baz`. And then a module `A.rs` 
 /// which has 2 submodules `A_0_0.rs` and `A_0_1.rs` with the code `Foo` and `Bar` respectively.
