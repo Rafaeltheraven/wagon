@@ -4,7 +4,7 @@
 /// to whatever final value the expression represents. 
 ///
 /// If any new attributes occur in the
-/// expression, the provided `attr_fun` function (see [`ToTokensState`]) should register them with the state object.
+/// egut cixpression, the provided `attr_fun` function (see [`ToTokensState`]) should register them with the state object.
 use wagon_parser::parser::expression::Expression;
 use proc_macro2::{TokenStream, Ident};
 use quote::quote;
