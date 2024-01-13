@@ -7,17 +7,41 @@ use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
 
 use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Ident, ROOT_UUID, GLLBlockLabel};
 
+/// The state object for the GLL parse process.
+///
+/// This object handles the bulk of the GLL parsing. It runs the code for the labels as needed, keeps track of
+/// the [`GSS`] and the [`SPPF`], holds the common methods etc.
+///
+/// # Example
+/// ```
+/// let l_map = HashMap::new();
+/// let r_map = HashMap::new();
+/// let input = "abc".as_bytes();
+/// ...
+/// let state = GLLState::init(input, l_map, r_map);
+/// state.main();
+/// state.accepts();
 pub struct GLLState<'a> {
 	// Main structures
 	input: &'a [u8],
 	gss: GSS<'a>,
 	sppf: SPPF<'a>,
 	// Pointers
+	/// A pointer to where in the input we currently are.
+	///
+	/// `C_i` in the original paper.
 	pub input_pointer: usize, //C_i
+	/// A pointer to where in the GSS we currently are.
+	///
+	/// `C_u` in the original paper.
 	pub gss_pointer: GSSNodeIndex, // C_u
 	gss_root: GSSNodeIndex, // Points to <⊥, 0>
 	context_pointer: GSSNodeIndex, // Points to where the current context is stored
+	/// A pointer to where in the SPPF we currently are.
+	///
+	/// `C_n` in the original paper.
 	pub sppf_pointer: SPPFNodeIndex, // C_n
+	/// A simple pointer to $ for comparison purposes.
 	pub sppf_root: SPPFNodeIndex, // Points to $
 	// Memoization
 	todo: IndexSet<Descriptor<'a>>, // R
@@ -31,6 +55,9 @@ pub struct GLLState<'a> {
 }
 
 impl<'a> GLLState<'a> {
+	/// Initialize the state.
+	///
+	/// Takes the input data as a byte-array. As well as a mapping of specific [`GLLBlockLabel::uuid`] to the associated label and another mapping of a uuid to a specific rule.
 	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
 		let mut sppf = SPPF::default();
 		let mut gss = GSS::new();
@@ -64,12 +91,15 @@ impl<'a> GLLState<'a> {
 		state
 	}
 
-	/*
-	L => slot
-	u => gss_pointer
-	i => input_pointer
-	w => sppf_pointer
-	*/
+	/// Create a new GSS node.
+	///
+	/// This is the `create` method in the original paper. The arguments to that method are mapped as follows:
+	/// * `L` => `slot`.
+	/// * `u` => `self.gss_pointer`.
+	/// * `i` => `self.input_pointer`.
+	/// * `w` => `self.sppf_pointer`.
+	///
+	/// Differently from the paper, this method also takes a list of attributes that are passed along to the `GSS`.
 	pub fn create(&mut self, slot: Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> GSSNodeIndex {
 		let candidate = GSSNode::new(slot.clone(), self.input_pointer, args);
 		let v = if let Some(i) = self.gss_map.get(&candidate) {
@@ -104,6 +134,10 @@ impl<'a> GLLState<'a> {
 		None
 	}
 
+	/// Find or create an [`SPPFNode::Packed`].
+	///
+	/// This is `get_node_p` from the original paper. Differently from that paper, this also takes a `context_pointer`, which tells the packed node we are
+	/// retrieving/creating where it can find it's context.
 	pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex) -> SPPFNodeIndex {
 		if self.is_special_slot(&slot) {
 			right
@@ -143,16 +177,21 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
+	/// Find or create an [`SPPFNode::Symbol`].
+	///
+	/// `get_node_t` from the original paper.
 	pub fn get_node_t(&mut self, terminal: &'a [u8]) -> SPPFNodeIndex {
 		let left = self.input_pointer;
 		let right = left + terminal.len();
 		self.find_or_create_sppf_symbol(terminal, left, right)
 	}
 
+	/// Get the [`GSSNode`] `self.gss_pointer` is currently pointing to.
 	pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
 		self.get_gss_node_unchecked(self.gss_pointer)
 	}
 
+	/// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
 	pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
 		self.get_sppf_node_unchecked(self.sppf_pointer)
 	}
@@ -191,6 +230,9 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
+	/// Add a new slot to the `self.visited` and `self.todo` sets.
+	///
+	/// `add` from the original paper.
 	pub fn add(&mut self, slot: Rc<GrammarSlot<'a>>, g: GSSNodeIndex, i: usize, s: SPPFNodeIndex) {
 		let d = Descriptor::new(slot, g, i, s, self.gss_pointer);
 		if !self.visited.contains(&d) {
@@ -205,6 +247,14 @@ impl<'a> GLLState<'a> {
 	i => Ci => input_pointer (always)
 	z => Cn => sppf_pointer (always)
 	*/
+	/// Pop context back after a non-terminal was parsed.
+	///
+	/// `pop` from the original paper. The arguments to that method are mapped as follows:
+	/// * `u` => `self.gss_pointer`
+	/// * `i` => `self.input_pointer`
+	/// * `z` => `self.sppf_pointer`
+	///
+	/// Additionally, this method takes a list of attributes that are returned after the non-terminal was parsed.
 	pub fn pop(&mut self, ret_vals: ReturnMap<'a>) {
 		if self.gss_pointer != self.gss_root {
 			let curr_map = self.pop.get_mut(&self.gss_pointer);
@@ -225,6 +275,11 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
+	/// Consume the following bytes from the input string. 
+	///
+	/// If the bytes we just consumed are not the expected bytes, we return an error.
+	///
+	/// If no error is returned, we move `self.input_pointer` forward as much as needed.
 	pub fn next(&mut self, bytes: Terminal<'a>) -> ParseResult<()> {
 		let mut pointer = self.input_pointer;
 		for expected in bytes {
@@ -241,6 +296,7 @@ impl<'a> GLLState<'a> {
 		Ok(())
 	}
 
+	/// Check if the following bytes **can** be consumed, but do not consume them.
 	pub fn has_next(&mut self, bytes: Terminal<'a>) -> bool {
 		let curr = self.input_pointer;
 		let ret = self.next(bytes).is_ok();
@@ -248,14 +304,17 @@ impl<'a> GLLState<'a> {
 		ret
 	}
 
+	/// Check if, given the current state, the [`Label`]'s first-follow set is accepting.
 	pub fn test_next(&mut self, label: GLLBlockLabel<'a>) -> bool {
 		label.first(self)
 	}
 
+	/// Get a specific rule by its uuid.
 	pub fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
 		self.rule_map.get(ident).unwrap_or_else(|| panic!("Issue unwrapping rule map. {} not in keyset", ident)).clone()
 	}
 
+	/// Get a specific [`Label`] as identified by the given [`Ident`].
 	pub fn get_label(&self, ident: &Ident) -> GLLBlockLabel<'a> {
 		let raw_string = ident.extract_string();
 		if let Some(label) = self.label_map.get(raw_string) {
@@ -265,14 +324,17 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
+	/// Get a specific [`Label`] by its uuid.
 	pub fn get_label_by_uuid(&self, label: &str) -> GLLBlockLabel<'a> {
 		self.label_map.get(label).unwrap().clone()
 	}
 
+	/// Get an attribute from the node pointed at by `self.gss_pointer`.
 	pub fn get_attribute(&self, i: AttributeKey) -> &Value<'a> {
 		self.get_attribute_at_gss_node(self.gss_pointer, i).expect("Not enough attributes passed to NT.")
 	}
 
+	/// Get an attribute from the node pointed at by `self.context_pointer`.
 	pub fn restore_attribute(&self, i: AttributeKey) -> &Value<'a> {
 		self.get_attribute_at_gss_node(self.context_pointer, i).expect("Error restoring context.")
 	}
@@ -281,6 +343,7 @@ impl<'a> GLLState<'a> {
 		self.gss.node_weight(pointer).unwrap().get_attribute(i)
 	}
 
+	/// Get an attribute from the return arguments at the node currently pointed to by `self.sppf_pointer`.
 	pub fn get_ret_val(&self, i: AttributeKey) -> Option<&Value<'a>> {
 		self.sppf.node_weight(self.sppf_pointer).unwrap().get_ret_val(i)
 	}
@@ -307,6 +370,9 @@ impl<'a> GLLState<'a> {
 		label.code(self)
 	}
 
+	/// Run the parsing process.
+	///
+	/// Once this has finished running, we either completed parsing or ran into an error somewhere.
 	pub fn main(&mut self) {
 		while let Some(Descriptor {slot, gss, pointer, sppf, context_pointer}) = self.todo.pop() {
 			self.sppf_pointer = sppf;

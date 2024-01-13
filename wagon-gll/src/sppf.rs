@@ -8,40 +8,68 @@ use wagon_codegen::value::Valueable;
 
 use super::{GrammarSlot, Terminal};
 
-/// SPPF Nodes are stored into a tuple, and references are stored as integer
+/// The type of index used internally by the [`SPPFGraph`].
 pub type SPPFNodeIndex = NodeIndex<SPPFIx>;
 
 type SPPFIx = DefaultIx;
 
+/// A [`petgraph::Graph`] representing the SPPF.
+///
+/// This is a directed graph with [`SPPFNode`]s on the vertices and optionally [`wagon_gll::value::Value`] on the edges. 
 pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<Value<'a>>, Directed, SPPFIx>;
 
 #[derive(Debug, Clone)]
+/// A struct around the [`SPPFGraph`] so that we can define functions for it.
 pub struct SPPF<'a>(SPPFGraph<'a>);
 
 #[derive(Debug, Eq, Clone, Derivative)]
 #[derivative(PartialEq, Hash)]
+/// All possible SPPF nodes.
+///
+/// For explanations of what these nodes are. See any GLL paper.
 pub enum SPPFNode<'a> {
     /// $ node in original paper
     Dummy,
+    /// Symbol node
     Symbol {
+        /// The [`Terminal`] this symbol node represents
         terminal: Terminal<'a>,
+        /// Where this terminal starts in the input string.
         left: usize,
+        /// Where it ends.
         right: usize
     },
+    /// Intermediate node
     Intermediate {
+        /// The [`GrammarSlot`] this node represents.
     	slot: Rc<GrammarSlot<'a>>, 
+        /// Where it starts in the input string.
     	left: usize, 
+        /// Where it ends.
     	right: usize,
+        /// All the attribute values returned by this slot.
         ret: ReturnMap<'a>,
         #[derivative(Hash(hash_with="crate::gss::GSSNode::hash_attributes"))]
         #[derivative(PartialEq(compare_with="crate::gss::GSSNode::cmp_attributes"))]
         // #[derivative(Hash="ignore")]
         // #[derivative(PartialEq="ignore")]
+        /// Pointer to where the context of this slot can be found.
+        ///
+        /// During parsing, attributes are stored on an `GSSNode`. We'll call this specific node the "context".
+        /// Later on, we want to restore this context. In order to easily find what context we want to restore after we are done parsing,
+        /// this pointer tells us exactly where we can find it. 
+        ///
+        /// When we are comparing 2 intermediate nodes, we want to take the context into account.
+        /// As such, we hash and compare this part of the node with 2 specific methods found in [`GSSNode`]. 
         context: Rc<GSSNode<'a>>,
     },
+    /// Packed node
     Packed {
+        /// What [`GrammarSlot`] this node represents.
     	slot: Rc<GrammarSlot<'a>>, 
+        /// At what point of the input string this split occurs.
     	split: usize,
+        /// Pointer to the context at this split.
         context: GSSNodeIndex
     },
 }
@@ -146,6 +174,11 @@ impl<'a> DerefMut for SPPF<'a> {
 }
 
 impl<'a> SPPF<'a> {
+    /// Try to find a node that accepts the whole input string.
+    ///
+    /// Goes through the entire SPPF and attempts to locate the top-most node that consumes the string from `0` to `input_target`.
+    ///
+    /// If `input_target` is `None`, we just find the top-most node that consumes from `0`.
     pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
         let mut roots = Vec::new();
         for ix in self.0.node_indices() {
@@ -159,6 +192,11 @@ impl<'a> SPPF<'a> {
         roots
     }
 
+    /// Remove all nodes that can not be reached from the given set of nodes.
+    ///
+    /// Uses Dijkstra's algorithm to find all reachable nodes from a set of nodes and removes the rest.
+    ///
+    /// Mostly used together with [`find_accepting_roots`] in order to prune invalid parses.
     pub fn crop(&mut self, roots: Vec<SPPFNodeIndex>) -> Result<(), ()> {
         if !roots.is_empty() {
             let distances = roots.into_iter().flat_map(|x| petgraph::algo::dijkstra(&self.0, x, None, |_| 1).into_keys());
@@ -170,6 +208,7 @@ impl<'a> SPPF<'a> {
         }
     }
 
+    /// Convert the [`SPPF`] to `.dot` representation.
     pub fn to_dot(&self, state: &GLLState<'a>) -> String {
         let mut res = String::new();
         res.push_str("digraph {\n");
@@ -189,6 +228,7 @@ impl<'a> SPPF<'a> {
         res
     }
 
+    /// Find all the leaves in the [`SPPF`].
     pub fn find_leafs(&self) -> Vec<SPPFNodeIndex> {
         let mut leafs = Vec::new();
         for ix in self.0.node_indices() {
@@ -200,6 +240,54 @@ impl<'a> SPPF<'a> {
         leafs
     }
 
+    /// Attempt to extract every possible tree from the [`SPPF`].
+    ///
+    /// As evident in the name, an SPPF is a type of graph known as a [Forest](https://en.wikipedia.org/wiki/Tree_(graph_theory)#Forest). 
+    /// This method returns every single possible tree that could be drawn from the forest, starting from the given set of root nodes.
+    /// Each resulting SPPF can be seen as a singular valid interpretation of the parse.
+    ///
+    /// This method simply recursively calls [`deforest_indices`] and returns a set of complete [`SPPF`]s that represent these trees.
+    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<SPPF<'a>>, ()> {
+        let trees = self.deforest_indices(roots)?;
+        let mut new_graphs = Vec::with_capacity(trees.len());
+        for tree in trees {
+            let mut clone = self.clone();
+            clone.retain_nodes(|_, x| tree.contains(&x));
+            new_graphs.push(clone);
+        }
+        Ok(new_graphs)
+    }
+
+    /// Given a forest and some root nodes, attempt to extract sets of nodes that represent unique trees.
+    ///
+    /// The workhorse of [`deforest`]. Given a set of root nodes, explore the forest and split it up into forests.
+    ///
+    /// Each set in the result vector represents the nodes that are in a possible tree of the forest. We can then remove all other nodes from
+    /// this forest such that in the end, only the tree remains.
+    ///
+    /// # How does it work?
+    /// We start with an empty tree. We also create a queue of "candidate" nodes, in which we put the root we are currently working from.
+    ///
+    /// As long as there are nodes in the candidates queue, we pop one from the queue, add it to the current tree and inspect it.
+    /// 
+    /// ## In case of a packed node
+    /// In an SPPF, every packed node represents a specific choice made during the parse. We either took rule X or rule Y to reach this node.
+    /// Every child of a packed node is then an intermediate node or symbol node which we can just add to the queue. 
+    ///
+    /// ### In case of a symbol node
+    /// If we have a symbol node, no splits are possible and we also just add the children to the queue.
+    ///
+    /// ## In case of an intermediate node
+    /// If we have an intermediate node, we know that all the children are packed nodes. Each child represents a specific alternative that could
+    /// be chosen during the parsing process. As such, each child is a different option in the "path" from the root to the leaves.
+    ///
+    /// We can see these child nodes as the roots of a set of subforests, which we themselves can again split into trees.
+    /// We recursively call `deforest_indices` on all the children of this node and add them to a list of subtrees. We do **not** add them to the candidates queue.
+    ///
+    /// ## Finally
+    /// Once the candidates queue is done, we check if we have any subtrees. If we do, we clone the tree we have currently created and create `n` new
+    /// trees, each connected to one of the subtrees. We then add these new trees to the list of trees we want to return. If there are no subtrees, we
+    /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
     pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<HashSet<SPPFNodeIndex>>, ()> {
         let mut trees = Vec::new();
         for root in roots {
@@ -233,17 +321,6 @@ impl<'a> SPPF<'a> {
             }   
         }
         Ok(trees)
-    }
-
-    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<SPPF<'a>>, ()> {
-        let trees = self.deforest_indices(roots)?;
-        let mut new_graphs = Vec::with_capacity(trees.len());
-        for tree in trees {
-            let mut clone = self.clone();
-            clone.retain_nodes(|_, x| tree.contains(&x));
-            new_graphs.push(clone);
-        }
-        Ok(new_graphs)
     }
 }
 

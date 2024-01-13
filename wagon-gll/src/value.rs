@@ -5,6 +5,7 @@ pub use wagon_codegen::value::Value as InnerValue;
 use wagon_codegen::value::Valueable;
 
 #[derive(Debug, Eq, Hash, Clone)]
+/// An extension of [`wagon_codegen::value::Value`] that adds [`GLLBlockLabel`] as a possible type.
 pub enum Value<'a> {
     Value(InnerValue<Value<'a>>),
 	Label(GLLBlockLabel<'a>),
