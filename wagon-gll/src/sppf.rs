@@ -15,7 +15,7 @@ type SPPFIx = DefaultIx;
 
 /// A [`petgraph::Graph`] representing the SPPF.
 ///
-/// This is a directed graph with [`SPPFNode`]s on the vertices and optionally [`wagon_gll::value::Value`] on the edges. 
+/// This is a directed graph with [`SPPFNode`]s on the vertices and optionally [`wagon-gll::value::Value`] on the edges. 
 pub type SPPFGraph<'a> = Graph<SPPFNode<'a>, Option<Value<'a>>, Directed, SPPFIx>;
 
 #[derive(Debug, Clone)]
@@ -196,7 +196,7 @@ impl<'a> SPPF<'a> {
     ///
     /// Uses Dijkstra's algorithm to find all reachable nodes from a set of nodes and removes the rest.
     ///
-    /// Mostly used together with [`find_accepting_roots`] in order to prune invalid parses.
+    /// Mostly used together with [`find_accepting_roots`](`SPPF::find_accepting_roots`) in order to prune invalid parses.
     pub fn crop(&mut self, roots: Vec<SPPFNodeIndex>) -> Result<(), ()> {
         if !roots.is_empty() {
             let distances = roots.into_iter().flat_map(|x| petgraph::algo::dijkstra(&self.0, x, None, |_| 1).into_keys());
@@ -246,7 +246,7 @@ impl<'a> SPPF<'a> {
     /// This method returns every single possible tree that could be drawn from the forest, starting from the given set of root nodes.
     /// Each resulting SPPF can be seen as a singular valid interpretation of the parse.
     ///
-    /// This method simply recursively calls [`deforest_indices`] and returns a set of complete [`SPPF`]s that represent these trees.
+    /// This method simply recursively calls [`deforest_indices`](`SPPF::deforest_indices`) and returns a set of complete [`SPPF`]s that represent these trees.
     pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<SPPF<'a>>, ()> {
         let trees = self.deforest_indices(roots)?;
         let mut new_graphs = Vec::with_capacity(trees.len());
@@ -260,7 +260,7 @@ impl<'a> SPPF<'a> {
 
     /// Given a forest and some root nodes, attempt to extract sets of nodes that represent unique trees.
     ///
-    /// The workhorse of [`deforest`]. Given a set of root nodes, explore the forest and split it up into forests.
+    /// The workhorse of [`deforest`](`SPPF::deforest`). Given a set of root nodes, explore the forest and split it up into forests.
     ///
     /// Each set in the result vector represents the nodes that are in a possible tree of the forest. We can then remove all other nodes from
     /// this forest such that in the end, only the tree remains.

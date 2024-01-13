@@ -57,7 +57,7 @@ pub struct GLLState<'a> {
 impl<'a> GLLState<'a> {
 	/// Initialize the state.
 	///
-	/// Takes the input data as a byte-array. As well as a mapping of specific [`GLLBlockLabel::uuid`] to the associated label and another mapping of a uuid to a specific rule.
+	/// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule.
 	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
 		let mut sppf = SPPF::default();
 		let mut gss = GSS::new();
@@ -304,7 +304,7 @@ impl<'a> GLLState<'a> {
 		ret
 	}
 
-	/// Check if, given the current state, the [`Label`]'s first-follow set is accepting.
+	/// Check if, given the current state, the [`Label`](crate::Label)'s first-follow set is accepting.
 	pub fn test_next(&mut self, label: GLLBlockLabel<'a>) -> bool {
 		label.first(self)
 	}
@@ -314,7 +314,7 @@ impl<'a> GLLState<'a> {
 		self.rule_map.get(ident).unwrap_or_else(|| panic!("Issue unwrapping rule map. {} not in keyset", ident)).clone()
 	}
 
-	/// Get a specific [`Label`] as identified by the given [`Ident`].
+	/// Get a specific [`Label`](crate::Label) as identified by the given [`Ident`].
 	pub fn get_label(&self, ident: &Ident) -> GLLBlockLabel<'a> {
 		let raw_string = ident.extract_string();
 		if let Some(label) = self.label_map.get(raw_string) {
@@ -324,7 +324,7 @@ impl<'a> GLLState<'a> {
 		}
 	}
 
-	/// Get a specific [`Label`] by its uuid.
+	/// Get a specific [`Label`](crate::Label) by its uuid.
 	pub fn get_label_by_uuid(&self, label: &str) -> GLLBlockLabel<'a> {
 		self.label_map.get(label).unwrap().clone()
 	}

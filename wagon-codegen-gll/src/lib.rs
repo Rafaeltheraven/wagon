@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 //! Code to create a GLL parser from a WAG
 //!
-//! This (and the associated [`wagon_gll`] crate) can be seen as examples of
+//! This (and the associated [`wagon-gll`](../wagon_gll/index.html) crate) can be seen as examples of
 //! what the WAGon ecosystem can do. 
 //!
 //! This crate holds code specifically for creating a GLL parser out of a [`WAG`](wagon_parser::parser::wag::Wag).

@@ -7,7 +7,9 @@ use wagon_codegen::value::Valueable;
 #[derive(Debug, Eq, Hash, Clone)]
 /// An extension of [`wagon_codegen::value::Value`] that adds [`GLLBlockLabel`] as a possible type.
 pub enum Value<'a> {
+    /// Any regular [`wagon_codegen::value::Value`]
     Value(InnerValue<Value<'a>>),
+    /// A [`GLLBlockLabel`]
 	Label(GLLBlockLabel<'a>),
 }
 
