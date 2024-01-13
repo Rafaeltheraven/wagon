@@ -1,3 +1,13 @@
+#![warn(missing_docs)]
+//! Code to create a GLL parser from a WAG
+//!
+//! This (and the associated [`wagon_gll`] crate) can be seen as examples of
+//! what the WAGon ecosystem can do. 
+//!
+//! This crate holds code specifically for creating a GLL parser out of a [`WAG`](wagon_parser::parser::wag::Wag).
+//! As opposed to the [`wagon_codegen`] crate, which holds generic code to help with any codegen and is intended for internal use.
+
+/// Various implementations of codegen on the necessary [`wagon_parser::parser`] nodes.
 mod nodes;
 
 use std::{rc::Rc, collections::{HashSet, HashMap}};
@@ -22,19 +32,25 @@ type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
 
 #[derive(Default)]
+/// Configuration options for the final GLL parser.
 pub struct WeightConfig {
+	/// Ignore the first/follow-set when choosing possible alternatives to parse.
 	no_first: bool,
+	/// Don't remove alternatives based on weight.
+	///
+	/// Note that setting this to true essentially makes the final parser a normal, if less efficient, GLL parser.
+	/// Alternatives are selected solely on the first/follow set (unless that is disabled as well).
+	/// The weights are calculated and attached to the final parse nodes though.
 	no_prune: bool,
+	/// Choose alternatives with the lowest weight as opposed to the highest.
 	min_weight: bool
 }
 
-impl WeightConfig {
-	pub fn new(no_first: bool, no_prune: bool, min_weight: bool) -> Self {
-		WeightConfig { no_first, no_prune, min_weight }
-	}
-}
-
 #[derive(Default)]
+/// Arguments to pass along to codegen functions.
+///
+/// Because Rust does not allow for variable arguments, but we still need a trait to implement on the nodes, we pass
+/// along this struct for any arguments we need from higher up in the chain.
 pub(crate) struct CodeGenArgs {
 	pub(crate) state: CodeGenState,
 	pub(crate) fst: Option<bool>,
@@ -51,6 +67,7 @@ pub(crate) struct CodeGenArgs {
 }
 
 #[derive(Debug, Default)]
+/// The state object that is passed along to [`ToTokensState::to_tokens`](`wagon_codegen::ToTokensState::to_tokens`)
 pub(crate) struct CodeGenState {
 	// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set
 	first_queue: HashMap<Rc<Ident>, Vec<FirstSet>>,
@@ -372,6 +389,7 @@ impl CodeGenState {
     }
 }
 
+/// Given a [`Wag`], create a GLL parser and return a [`CodeMap`] representing this parser.
 pub fn gen_parser(wag: Wag) -> CodeMap {
 	let mut args = CodeGenArgs::default();
 	wag.gen(&mut args);
