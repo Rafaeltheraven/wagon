@@ -46,25 +46,30 @@ pub trait ToTokensState<U> {
     ///
     /// # Example
     /// ```
+    /// # use wagon_parser::SpannableNode;
+    /// # use proc_macro2::TokenStream;
+    /// # use wagon_codegen::{SpannableIdent, ToTokensState};
+    /// # use std::rc::Rc;
     /// struct A;
     /// struct State { toggle: bool }
     /// impl State {
     ///     fn new() -> Self {
     ///         Self { toggle: false }  
     ///     }
-    ///     fn toggle(&mut self, Rc<proc_macro2::Ident>, SpannableIdent) {
+    ///     fn toggle(&mut self, _: Rc<proc_macro2::Ident>, _: SpannableIdent) {
     ///         self.toggle = true;
     ///     }   
     /// }
     /// impl ToTokensState<State> for A {
     ///     fn to_tokens(&self, state: &mut State, label: Rc<proc_macro2::Ident>, attr_fun: fn(&mut State, Rc<proc_macro2::Ident>, SpannableIdent)) -> TokenStream {
     ///         attr_fun(state, label, SpannableNode::from(wagon_ident::Ident::default()));
+    ///         TokenStream::new()
     ///     }
     /// }
     /// let a = A;
-    /// let state = State { toggle: false };
-    /// let label = proc_macro2::Ident::from("label");
-    /// a.to_tokens(state, label, State::toggle);
+    /// let mut state = State { toggle: false };
+    /// let label = Rc::new(proc_macro2::Ident::new("label", proc_macro2::Span::call_site()));
+    /// a.to_tokens(&mut state, label, State::toggle);
     /// assert!(state.toggle) // this is now true
     /// ```
     ///

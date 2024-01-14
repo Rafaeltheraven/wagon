@@ -399,20 +399,45 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 #[proc_macro]
 /// Automatically return a parse error if an unexpected token is encountered.
 ///
-/// Put around a match statement. This will automatically create a catch-all that, if matched, returns an error.
+/// Put around a match statement. This will automatically create a catch-all that, if matched, returns an error. 
+/// You can annotate a match arm with the attribute `#[expect()]` in order to specify the string representation of that arm. 
+/// Otherwise, the string representation of whatever is on the left side of the arm is taken.
 ///
-/// This macro is intended specifically for [wagon-parser] and thus expects a lexer to be present and returns a specific error. This macro is not intended to be used for any other match statements.
+/// This macro is intended specifically for [wagon-parser](../wagon_parser/index.html) and thus expects a lexer to be present and returns a specific error. 
+/// This macro is not intended to be used for any other match statements.
+/// If you do want to use it, make sure there is a variable called `lexer` with the function `span` and an enum `WagParseError` with variant `Unexpected`,
+/// which has the fields `span`, `offender` and `expected`.
+///
 /// # Example
 /// ```
+/// # struct Lexer;
+/// # impl Lexer {
+/// #     fn span(&self) -> i32 {
+/// #         0        
+/// #     }
+/// # }
+/// # enum WagParseError {
+/// #     Unexpected {
+/// #         span: i32,
+/// #         offender: A,
+/// #         expected: Vec<String>
+/// #     }   
+/// # }
+/// use wagon_macros::match_error;
 /// enum A {
 ///    One,
 ///    Two,
 ///    Three
 /// };
+/// impl std::fmt::Display for A {
+/// # fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", "Bar") } 
+/// }
 /// let a = A::One;
-/// assert!(match_error(match a {
-///     Two => Ok(()),
-///     Three => Ok(())
+/// let lexer = Lexer;
+/// assert!(match_error!(match a {
+///     #[expect("Foo")]
+///     A::Two => Ok(()),
+///     A::Three => Ok(())
 /// }).is_err());
 /// ```
 pub fn match_error(stream: TokenStream) -> TokenStream {

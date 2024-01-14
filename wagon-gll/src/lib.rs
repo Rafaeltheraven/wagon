@@ -62,7 +62,7 @@ pub trait Label<'a>: Debug {
 	///
 	/// # Example
 	/// Assume we have the following rules: 
-	/// ```
+	/// ```ignore
 	/// S -> A B 'b' | B;
 	/// A -> 'a';
 	/// B -> 'b'

@@ -13,14 +13,16 @@ use super::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 /// the [`GSS`] and the [`SPPF`], holds the common methods etc.
 ///
 /// # Example
-/// ```
+/// ```should_panic // It shouldn't but I have no easy way to just say whatever here.
+/// # use std::collections::HashMap;
+/// use wagon_gll::state::GLLState;
 /// let l_map = HashMap::new();
 /// let r_map = HashMap::new();
 /// let input = "abc".as_bytes();
-/// ...
-/// let state = GLLState::init(input, l_map, r_map);
+/// let mut state = GLLState::init(input, l_map, r_map);
 /// state.main();
 /// state.accepts();
+/// ```
 pub struct GLLState<'a> {
 	// Main structures
 	input: &'a [u8],

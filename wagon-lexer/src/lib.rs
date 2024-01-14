@@ -11,17 +11,23 @@
 //! ============
 //! S -> A;
 //! "#;
-//! let lexer = PeekLexer::new(s);
-//! let tokens = lexer.collect();
+//! use wagon_lexer::{PeekLexer, Tokens, LexerBridge, LexResult};
+//! use wagon_ident::Ident;
+//! # use wagon_lexer::productions::Productions;
+//! # use wagon_lexer::math::Math;
+//! # use wagon_lexer::metadata::Metadata;
+//! 
+//! let lexer = PeekLexer::new(LexerBridge::new(s));
+//! let tokens: Vec<LexResult> = lexer.collect();
 //! assert_eq!(tokens, vec![
-//! Tokens::Metadata(Metadata::Key("meta")), 
-//! Tokens::Math(Math::LitString("data")),
-//! Tokens::Math(Math::Semi),
-//! Tokens::Metadata(Metadata::Delim),
-//! Tokens::Productions(Productions::Identifier(Ident::Unknown("S"))),
-//! Tokens::Productions(Productions::Produce),
-//! Tokens::Productions(Productions::Identifier(Ident::Unknown("A"))),
-//! Tokens::Productions(Productions::Semi)
+//! Ok(Tokens::MetadataToken(Metadata::Key("meta".to_string()))), 
+//! Ok(Tokens::MathToken(Math::LitString("data".to_string()))),
+//! Ok(Tokens::MathToken(Math::Semi)),
+//! Ok(Tokens::MetadataToken(Metadata::Delim)),
+//! Ok(Tokens::ProductionToken(Productions::Identifier(Ident::Unknown("S".to_string())))),
+//! Ok(Tokens::ProductionToken(Productions::Produce)),
+//! Ok(Tokens::ProductionToken(Productions::Identifier(Ident::Unknown("A".to_string())))),
+//! Ok(Tokens::ProductionToken(Productions::Semi))
 //! ])
 //! ```
 
@@ -55,6 +61,9 @@ pub enum LexingError {
 	/// Error when encountering EOF before we expect.
 	UnexpectedEOF,
 }
+
+/// The result of each lex step is either a token or an error.
+pub type LexResult = Result<Tokens, LexingError>;
 
 impl Display for LexingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -194,10 +203,20 @@ impl<'source> LexerBridge<'source> {
 /// This trait provides the method `next_unwrap` to quickly extract the inner item.
 pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
 	/// # Example
-	/// ```
-	/// let iter = vec![Some(Ok(1)), None].into_iter();
-	/// assert_eq(1, iter.next_unwrap());
-	/// iter.next_unwrap() // panic!
+	/// ```should_panic
+	/// # use wagon_lexer::UnsafeNext;
+	/// struct IterVec<T, E>(Vec<Result<T, E>>);
+	/// impl<T, E: std::fmt::Debug> Iterator for IterVec<T, E> {
+	///     # type Item = Result<T, E>;
+	///     # fn next(&mut self) -> Option<Self::Item> {
+	///     #     self.0.pop()
+	///     # }
+	/// }
+	/// impl<T, E: std::fmt::Debug> UnsafeNext<T, E> for IterVec<T, E> {}
+	/// 
+	/// let mut iter: IterVec<i32, ()> = IterVec(vec![Ok(1)]);
+	/// assert_eq!(1, iter.next_unwrap());
+	/// iter.next_unwrap(); // panic!
 	/// ```
 	///
 	/// # Panics
@@ -211,17 +230,17 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
 	}
 }
 
-/// Same as [UnsafeNext] but intended for iterators that allow peeking (such as [Peekable])
+/// Same as [`UnsafeNext`] but intended for iterators that allow peeking (such as [`Peekable`])
 pub trait UnsafePeek<T> {
-	/// See [UnsafeNext]
+	/// See [`UnsafeNext`]
 	fn peek_unwrap(&mut self) -> &T;
 }
 
-/// Trait for objects that provide [Span] information. Used for error messaging.
+/// Trait for objects that provide [`Span`] information. Used for error messaging.
 pub trait Spannable {
-	/// Get the [Span] of the object
+	/// Get the [`Span`] of the object
 	fn span(&mut self) -> Span;
-	/// Set the [Span] of the object. Possibly does nothing as implementation is optional.
+	/// Set the [`Span`] of the object. Possibly does nothing as implementation is optional.
 	fn set_span(&mut self, _span: Span) {}
 }
 

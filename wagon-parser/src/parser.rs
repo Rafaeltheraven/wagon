@@ -52,8 +52,10 @@ use wagon_lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable, Span};
 /// Uses a [`LexerBridge`] internally.
 /// # Example
 /// ```
+/// use wagon_parser::parser::Parser;
+/// 
 /// let s = "S -> A;";
-/// let parser = Parser::new(s);
+/// let mut parser = Parser::new(s);
 /// assert!(parser.parse().is_ok())
 pub struct Parser<'source> {
 	lexer: PeekLexer<'source>
