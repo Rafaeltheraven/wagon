@@ -6,13 +6,12 @@ use super::WagParseError;
 use wagon_macros::match_error;
 
 use crate::either_token;
-use wagon_lexer::UnsafePeek;
 
-use super::{Parse, Ident};
+use super::{Parse, Ident, ResultPeek};
 
 impl Parse for Ident {
-    fn parse(lexer: &mut wagon_lexer::PeekLexer) -> super::ParseResult<Self> {
-    	let next: Tokens = lexer.peek_unwrap().to_owned();
+    fn parse(lexer: &mut wagon_lexer::LexerBridge) -> super::ParseResult<Self> {
+    	let next: Tokens = lexer.peek_result()?.to_owned();
     	match_error!(
 	        match next {
 	        	#[expect("identifier")]

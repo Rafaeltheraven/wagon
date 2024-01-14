@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, ToAst, WagNode, WagIx, WagTree, SpannableNode};
+use super::{Parse, LexerBridge, ParseResult, Tokens, ToAst, WagNode, WagIx, WagTree, SpannableNode};
 use wagon_lexer::math::Math;
 use super::conjunct::Conjunct;
 
@@ -14,7 +14,7 @@ pub struct Disjunct(pub Vec<SpannableNode<Conjunct>>);
 
 impl Parse for Disjunct {
     
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         Ok(Self(SpannableNode::parse_sep(lexer, Tokens::MathToken(Math::And))?))
     }
 

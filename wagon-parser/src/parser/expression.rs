@@ -1,7 +1,7 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, ToAst, WagNode, WagIx, WagTree, SpannableNode};
-use wagon_lexer::{math::Math, UnsafeNext, UnsafePeek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, ToAst, WagNode, WagIx, WagTree, SpannableNode, ResultPeek, ResultNext};
+use wagon_lexer::math::Math;
 
 use wagon_macros::match_error;
 use super::disjunct::Disjunct;
@@ -30,8 +30,8 @@ pub enum Expression {
 
 impl Parse for Expression {
 
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> { 
-		match lexer.peek_unwrap() {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> { 
+		match lexer.peek_result()? {
 			Tokens::MathToken(Math::If) => {lexer.next(); Self::parse_if(lexer)},
 			Tokens::MathToken(Math::Bash(_)) => Ok(Self::Subproc(SpannableNode::parse(lexer)?)),
 			_ => Ok(Self::Disjunct(SpannableNode::parse(lexer)?))
@@ -41,12 +41,12 @@ impl Parse for Expression {
 
 impl Expression {
 
-	fn parse_if(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse_if(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		let this = SpannableNode::parse(lexer)?;
-		let then = match_error!(match lexer.next_unwrap() {
+		let then = match_error!(match lexer.next_result()? {
 			Tokens::MathToken(Math::Then) => SpannableNode::parse(lexer)
 		})?;
-		let r#else = match lexer.peek_unwrap() {
+		let r#else = match lexer.peek_result()? {
 		    Tokens::MathToken(Math::Else) => {lexer.next(); Some(Box::new(SpannableNode::parse(lexer)?))},
 		    _ => None
 		};

@@ -1,10 +1,10 @@
 use wagon_macros::TokenMapper;
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
 
 
-use wagon_lexer::{math::Math, UnsafePeek};
+use wagon_lexer::math::Math;
 
 use quote::{ToTokens, quote};
 
@@ -48,7 +48,7 @@ pub struct TermP {
 
 impl Parse for Term {
 
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		Ok(Self {
 			left: SpannableNode::parse(lexer)?,
 			cont: TermP::parse_option(lexer)?
@@ -58,8 +58,8 @@ impl Parse for Term {
 
 impl ParseOption for TermP {
 
-	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
-	    if let Some(op) = Op2::token_to_enum(lexer.peek_unwrap()) {
+	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
+	    if let Some(op) = Op2::token_to_enum(lexer.peek_result()?) {
 	    	lexer.next();
 	    	Ok(Some(TermP { op, right: SpannableNode::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(|x| Box::new(x)) }))
 	    } else {

@@ -1,8 +1,8 @@
 use std::fmt::Display;
 use std::write;
-use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
 use super::atom::Atom;
-use wagon_lexer::{math::Math, UnsafePeek};
+use wagon_lexer::math::Math;
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -24,9 +24,9 @@ pub enum Factor {
 
 impl Parse for Factor {
 
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		let left = SpannableNode::parse(lexer)?;
-		if &Tokens::MathToken(Math::Pow) == lexer.peek_unwrap() {
+		if &Tokens::MathToken(Math::Pow) == lexer.peek_result()? {
 			lexer.next();
 			Ok(
 				Factor::Power {

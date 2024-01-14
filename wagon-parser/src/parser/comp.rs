@@ -1,11 +1,11 @@
 use std::fmt::Display;
 use std::write;
 
-use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
 
 use super::helpers::TokenMapper;
 
-use wagon_lexer::{math::Math, UnsafePeek};
+use wagon_lexer::math::Math;
 
 use super::sum::Sum;
 use wagon_macros::TokenMapper;
@@ -58,7 +58,7 @@ pub enum CompOp {
 
 impl Parse for Comparison {
 
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         Ok(Self { sum: SpannableNode::parse(lexer)?, comp: Comp::parse_option(lexer)? })
     }
 
@@ -66,8 +66,8 @@ impl Parse for Comparison {
 
 impl ParseOption for Comp {
 
-    fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
-        if let Some(op) = CompOp::token_to_enum(lexer.peek_unwrap()) {
+    fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
+        if let Some(op) = CompOp::token_to_enum(lexer.peek_result()?) {
         	lexer.next();
         	Ok(Some(Self { op, right: SpannableNode::parse(lexer)?}))
         } else {
@@ -125,7 +125,7 @@ impl ToTokens for CompOp {
             CompOp::Lt => tokens.extend(quote!(<)),
             CompOp::Gte => tokens.extend(quote!(>=)),
             CompOp::Gt => tokens.extend(quote!(>)),
-            CompOp::In => panic!("Should be a special case!"),
+            CompOp::In => unimplemented!("Should be a special case!"),
         };
     }
 }

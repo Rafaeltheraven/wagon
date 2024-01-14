@@ -1,7 +1,6 @@
 use std::{fmt::Display, write};
 
-use wagon_lexer::UnsafeNext;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, ToAst, SpannableNode};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, ToAst, SpannableNode, ResultNext};
 use wagon_lexer::{math::Math, Spannable};
 
 use super::expression::Expression;
@@ -22,9 +21,9 @@ pub struct Assignment {
 }
 
 impl Parse for Assignment {
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		let ident = SpannableNode::parse(lexer)?;
-		let next = lexer.next_unwrap();
+		let next = lexer.next_result()?;
 		if next != Tokens::MathToken(Math::Assigns) {
 			Err(WagParseError::Unexpected { span: lexer.span(), offender: next, expected: vec![Tokens::MathToken(Math::Assigns).to_string()] })
 		} else {

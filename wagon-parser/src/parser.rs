@@ -44,8 +44,8 @@ use crate::ast::{ToAst, WagNode, WagIx, WagTree};
 use crate::SpannableNode;
 
 use wagon_ident::Ident;
-use wagon_utils::{peekable::Peekable, comma_separated_with_or, string_vec};
-use wagon_lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable, Span};
+use wagon_utils::{Peek, comma_separated_with_or, string_vec, ResultNext, ResultPeek};
+use wagon_lexer::{LexerBridge, Tokens, Spannable, Span, LexingError};
 
 /// The main parser struct.
 ///
@@ -58,14 +58,14 @@ use wagon_lexer::{LexerBridge, PeekLexer, Tokens, UnsafeNext, Spannable, Span};
 /// let mut parser = Parser::new(s);
 /// assert!(parser.parse().is_ok())
 pub struct Parser<'source> {
-	lexer: PeekLexer<'source>
+	lexer: LexerBridge<'source>
 }
 
 impl<'source> Parser<'source> {
 	/// Given an input string, construct a parser.
 	pub fn new(data: &'source str) -> Self {
 		Self {
-			lexer: Peekable::new(LexerBridge::new(data))
+			lexer: LexerBridge::new(data)
 		}
 	}
 
@@ -75,7 +75,7 @@ impl<'source> Parser<'source> {
 	}
 }
 
-/// Any parse will either return the node we are trying to parse, or a [WagParseError].
+/// Any parse will either return the node we are trying to parse, or a [`WagParseError`].
 pub type ParseResult<T> = Result<T, WagParseError>;
 
 #[derive(PartialEq, Debug)]
@@ -93,13 +93,21 @@ pub enum WagParseError {
 	/// Something horrible happened that we do not have a specific error for.
 	Fatal((Span, String)),
 	/// A wrapper around [`WagCheckError`].
-	CheckError(WagCheckError)
+	CheckError(WagCheckError),
+	/// A wrapper around [`LexingError`].
+	LexError(LexingError)
 }
 
 impl From<WagCheckError> for WagParseError {
     fn from(value: WagCheckError) -> Self {
         Self::CheckError(value)
     }
+}
+
+impl From<LexingError> for WagParseError {
+	fn from(value: LexingError) -> Self {
+		Self::LexError(value)
+	}
 }
 
 impl Error for WagParseError {}
@@ -122,7 +130,8 @@ impl WagParseError {
 		match self {
 		    WagParseError::Unexpected { span, .. } => span,
 		    WagParseError::Fatal((span, _)) => span,
-		    WagParseError::CheckError(check) => check.span()
+		    WagParseError::CheckError(check) => check.span(),
+		    WagParseError::LexError(lex) => lex.span()
 		}
 	}
 
@@ -131,7 +140,8 @@ impl WagParseError {
 		    WagParseError::Unexpected { span, offender, expected } => ("Unexpected Token".to_string(), 
 		    	format!{"Encountered token {:?} at position {:?}. Expected {:#?}", offender, span, comma_separated_with_or(expected)}),
 	        WagParseError::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
-	        WagParseError::CheckError(err) => err.msg()
+	        WagParseError::CheckError(err) => err.msg(),
+    		WagParseError::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
 		}
 	}
 }
@@ -142,10 +152,10 @@ impl WagParseError {
 pub trait Parse {
 
 	/// Given a lexer, try to parse a valid instance of this node.
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized;
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized;
 
 	/// Parse multiple instances of this node, separated by a [`Tokens`].
-	fn parse_sep(lexer: &mut PeekLexer, join: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
+	fn parse_sep(lexer: &mut LexerBridge, join: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
 		while lexer.next_if(|x| x.as_ref() == Ok(&join)).is_some() {
@@ -155,7 +165,7 @@ pub trait Parse {
 	}
 
 	/// Parse multiple instances of this node, separated by a [`Tokens`] end ended by a (possibly different) [`Tokens`].
-	fn parse_sep_end(lexer: &mut PeekLexer, join: Tokens, end: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
+	fn parse_sep_end(lexer: &mut LexerBridge, join: Tokens, end: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
 		let mut done = false;
@@ -169,7 +179,7 @@ pub trait Parse {
 			} else if lexer.next_if(|x| x.as_ref() == Ok(&end)).is_some() {
 				done = true;
 			} else {
-				return Err(WagParseError::Unexpected{ offender: lexer.next_unwrap(), expected: string_vec![join, end], span: lexer.span()})
+				return Err(WagParseError::Unexpected{ offender: lexer.next_result()?, expected: string_vec![join, end], span: lexer.span()})
 			}
 		}
 		Ok(res)
@@ -182,7 +192,7 @@ pub trait Parse {
 /// In that case, we should implement this trait and return `Ok(None)` if the failure doesn't matter and `Err` if it does.
 trait ParseOption {
 
-	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized;
+	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized;
 }
 
 #[cfg(test)]
@@ -193,7 +203,6 @@ mod tests {
 
     use wagon_lexer::productions::EbnfType;
 	use crate::firstpass::FirstPassState;
-    use super::Peekable;
 	use super::Parse;
 	use super::LexerBridge;
 	use super::sum::SumP;
@@ -232,7 +241,7 @@ mod tests {
 		| [0.3] "What is your name? ";
 		getname -> ;
 		"#;
-		let mut lexer = Peekable::new(LexerBridge::new(input));
+		let mut lexer = LexerBridge::new(input);
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag { 
 			metadata: Metadata {
@@ -379,7 +388,7 @@ mod tests {
 		X(*y, &x) -> 'a' {*y = *y + 1; &x = &x + 1;} B;
 		B -> 'b';
 		"#;
-		let mut lexer = Peekable::new(LexerBridge::new(input));
+		let mut lexer = LexerBridge::new(input);
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: vec![], mappings: BTreeMap::new() },
@@ -535,7 +544,7 @@ mod tests {
 	#[test]
 	fn test_simple_empty_alt() {
 		let input = "S -> 'a' | ;";
-		let mut lexer = Peekable::new(LexerBridge::new(input));
+		let mut lexer = LexerBridge::new(input);
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag {
 		    metadata: Metadata { includes: vec![], mappings: BTreeMap::new() },

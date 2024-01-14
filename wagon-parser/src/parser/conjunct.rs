@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
 use wagon_lexer::math::Math;
 
 use super::inverse::Inverse;
@@ -14,7 +14,7 @@ pub struct Conjunct(pub Vec<SpannableNode<Inverse>>);
 
 impl Parse for Conjunct {
     
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         Ok(Self(SpannableNode::parse_sep(lexer, Tokens::MathToken(Math::Or))?))
     }
 

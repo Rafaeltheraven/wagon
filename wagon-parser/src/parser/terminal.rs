@@ -1,10 +1,10 @@
 
 use std::{fmt::Display, write};
 
-use wagon_lexer::UnsafeNext;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError};
-use wagon_lexer::{productions::Productions, Spannable};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Spannable, ResultNext};
+use wagon_lexer::productions::Productions;
 use wagon_macros::match_error;
+
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 /// A terminal for the grammar.
@@ -16,8 +16,8 @@ pub enum Terminal {
 }
 
 impl Parse for Terminal {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
-        match_error!(match lexer.next_unwrap() {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
+        match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::LitString(x)) => Ok(Self::LitString(x)),
         	Tokens::ProductionToken(Productions::LitRegex(x)) => Ok(Self::Regex(x)),
         })

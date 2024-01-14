@@ -1,8 +1,8 @@
 
 use crate::WrapSpannable;
 use crate::firstpass::{FirstPassResult, FirstPassState};
-use wagon_lexer::{UnsafePeek, UnsafeNext, productions::{Productions, EbnfType}, Span};
-use super::{Parse, PeekLexer, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ToAst, WagNode, WagIx, WagTree, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode};
+use wagon_lexer::{productions::{Productions, EbnfType}, Span};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ToAst, WagNode, WagIx, WagTree, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, ResultPeek, ResultNext};
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -199,12 +199,12 @@ impl Chunk {
 }
 
 impl Parse for Chunk {
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> { 
-		let chunk = match lexer.peek_unwrap() {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> { 
+		let chunk = match lexer.peek_result()? {
 			Tokens::ProductionToken(Productions::LPar) => {
 				let mut ret = Vec::new();
 				lexer.next();
-				while lexer.peek_unwrap() != &Tokens::ProductionToken(Productions::RPar) {
+				while lexer.peek_result()? != &Tokens::ProductionToken(Productions::RPar) {
 					ret.push(SpannableNode::parse(lexer)?);
 				}
 				lexer.next();
@@ -217,8 +217,8 @@ impl Parse for Chunk {
 				ChunkP::Unit(SpannableNode::parse(lexer)?)
 			}
 		};
-		if let Tokens::ProductionToken(Productions::Ebnf(_)) = lexer.peek_unwrap() {
-			if let Tokens::ProductionToken(Productions::Ebnf(x)) = lexer.next_unwrap() {
+		if let Tokens::ProductionToken(Productions::Ebnf(_)) = lexer.peek_result()? {
+			if let Tokens::ProductionToken(Productions::Ebnf(x)) = lexer.next_result()? {
 				Ok(Self {chunk, ebnf: Some(x)})
 			} else { 
     			Err(WagParseError::Fatal((lexer.span(), "Something went terribly wrong. Unwrapped non-ebnf when should have unwrapped ebnf".to_string())))  

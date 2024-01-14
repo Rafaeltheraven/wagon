@@ -3,8 +3,8 @@ use std::fmt::Display;
 use std::write;
 
 use super::helpers::between_sep;
-use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
-use wagon_lexer::{math::Math, productions::Productions, UnsafePeek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, Peek, ResultPeek};
+use wagon_lexer::{math::Math, productions::Productions};
 
 use super::terminal::Terminal;
 use super::assignment::Assignment;
@@ -30,8 +30,8 @@ pub enum Symbol {
 }
 
 impl Parse for Symbol {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
-        match lexer.peek_unwrap() {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
+        match lexer.peek_result()? {
         	Tokens::ProductionToken(Productions::Identifier(_)) => {
                 let ident = SpannableNode::parse(lexer)?;
                 let args = if let Some(Ok(Tokens::ProductionToken(Productions::LPar))) = lexer.peek() {

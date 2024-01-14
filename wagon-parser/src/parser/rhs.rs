@@ -3,7 +3,7 @@ use std::matches;
 
 use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, ToAst, WagNode, WagIx, WagTree, Peek};
 use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};
@@ -26,21 +26,21 @@ pub struct Rhs {
 }
 
 impl Parse for Rhs {
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		Ok(Self {weight: Self::parse_weight(lexer)?, chunks: Self::parse_chunks(lexer)?})
 	}
 }
 
 impl Rhs {
 
-	fn parse_weight(lexer: &mut PeekLexer) -> ParseResult<Option<SpannableNode<Expression>>> {
+	fn parse_weight(lexer: &mut LexerBridge) -> ParseResult<Option<SpannableNode<Expression>>> {
 		match lexer.peek() {
 			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
 			_ => Ok(None)
 		}
 	}
 
-	fn parse_chunks(lexer: &mut PeekLexer) -> ParseResult<Vec<SpannableNode<Chunk>>> {
+	fn parse_chunks(lexer: &mut LexerBridge) -> ParseResult<Vec<SpannableNode<Chunk>>> {
 		let mut resp = Vec::new();
 		if lexer.peek() != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) { // If we immediately encounter a ;, this is an empty rule
 			resp.push(SpannableNode::parse(lexer)?);
@@ -96,7 +96,9 @@ impl Rhs {
 		}
 	}
 
-	/// Split up a rule into GLL-Blocks[^gll]. Represented as a matrix of [`Symbol`]s. 
+	/// Split up a rule into GLL-Blocks[^gll]. Represented as a matrix of [`Symbol`]s.
+	///
+	/// Expects all EBNF chunks to have been factored out.
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
 	pub fn blocks(self) -> Vec<Vec<Symbol>> {

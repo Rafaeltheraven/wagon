@@ -2,10 +2,10 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::write;
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ToAst, WagNode, WagIx, WagTree, expression::Expression};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ToAst, WagNode, WagIx, WagTree, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use wagon_lexer::{math::Math, Spannable, UnsafeNext};
+use wagon_lexer::{math::Math, Spannable};
 
 use wagon_macros::match_error;
 use ordered_float::NotNan;
@@ -59,8 +59,8 @@ pub(crate) enum AtomNode {
 
 impl Parse for Atom {
 
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
-	    match_error!(match lexer.next_unwrap() {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
+	    match_error!(match lexer.next_result()? {
 	    	#[expect("identifier or dictionary")]
 	        either_token!(Identifier(x)) => {
 	        	if let Ok(inner) = between(lexer, Tokens::MathToken(Math::LBr), Tokens::MathToken(Math::RBr)) {

@@ -1,12 +1,14 @@
 #![warn(missing_docs)]
 //! Utility methods for the WAGon suite of libraries.
 //!
-//! Provides a number of simple functions, as well as a modified version of [`std::iter::Peekable`].
+//! Provides a number of simple functions, as well as a trait version of [`std::iter::Peekable`].
 
-/// A modified version of [`std::iter::Peekable`] that allows access to the inner iterator.
-pub mod peekable;
+/// A trait version of [`std::iter::Peekable`].
+mod peek;
 
 use std::str::Chars;
+
+pub use peek::Peek;
 
 /// Removes the first and last character of a string.
 /// # Example
@@ -171,4 +173,120 @@ macro_rules! string_vec {
     ( $( $x:expr ),* ) => {
         vec![$($x.to_string(),)*]
     };
+}
+
+/// Quickly get a result from an iterator of [`Result`]s.
+///
+/// This trait is automatically implemented for any iterator of `Result`s that has an error type
+/// that implements [`From<UnexpectedEnd>`].
+pub trait ResultNext<T, E>: Iterator<Item = Result<T,E>> {
+    /// If you have an iterator that holds `Result` items, you start having to deal with nested `Some(Ok(...))` patterns,
+    /// which gets annoying quickly. This trait is intended so that the iterator always returns some sort of `Result`, which can then be unwrapped as needed (probably using `?`).
+    ///
+    /// # Example
+    /// ```
+    /// # use wagon_utils::ResultNext;
+    /// # use wagon_utils::UnexpectedEnd;
+    /// struct IterVec<T, E>(Vec<Result<T, E>>);
+    /// #[derive(Debug, Eq, PartialEq)]
+    /// enum IterErr {
+    ///      SomeErr,
+    ///      EndErr
+    /// }
+    /// impl From<UnexpectedEnd> for IterErr {
+    /// #    fn from(value: UnexpectedEnd) -> Self {
+    /// #        Self::EndErr
+    /// #    }
+    /// }
+    /// impl<T, E> Iterator for IterVec<T, E> {
+    ///     # type Item = Result<T, E>;
+    ///     # fn next(&mut self) -> Option<Self::Item> {
+    ///     #     self.0.pop()
+    ///     # }
+    /// }
+    /// 
+    /// let mut iter: IterVec<i32, IterErr> = IterVec(vec![Ok(1)]);
+    /// assert_eq!(Ok(1), iter.next_result());
+    /// assert_eq!(Err(IterErr::EndErr), iter.next_result());
+    /// ```
+    fn next_result(&mut self) -> Result<T, E>;
+}
+
+/// Same as [`ResultNext`] but for things that implement [`Peek`].
+///
+/// This trait is automatically implemented for any iterator of `Result`s that has an error type `E`
+/// such that `&E: From<UnexpectedEnd>`.
+pub trait ResultPeek<T, E>: Peek + Iterator<Item = Result<T, E>> {
+    /// See [`next_result`](`ResultNext::next_result`).
+    fn peek_result(&mut self) -> Result<&T, E>;
+}
+
+/// Error struct to represent we've reached the end of an iterator. Used for [`ResultNext`].
+pub struct UnexpectedEnd;
+
+impl<T, E: From<UnexpectedEnd>, U: Iterator<Item = Result<T, E>>> ResultNext<T, E> for U {
+    fn next_result(&mut self) -> Result<T, E> {
+        match self.next() {
+            Some(Ok(x)) => Ok(x),
+            Some(Err(e)) => Err(e),
+            None => Err(UnexpectedEnd.into())
+        }
+    }
+}
+
+impl<T, E, U: Peek + Iterator<Item = Result<T, E>>> ResultPeek<T, E> for U 
+    where for<'a> E: From<UnexpectedEnd> + Clone + 'a
+    {
+        fn peek_result(&mut self) -> Result<&T, E> {
+            match self.peek() {
+                None => Err(UnexpectedEnd.into()),
+                Some(Ok(ref x)) => Ok(x),
+                Some(Err(e)) => Err(e.clone())
+            }
+        }
+    }
+
+/// Forcibly extract an item out of an iterator of [`Result`]s.
+///
+/// If you have an iterator that holds `Result` items, it quickly becomes annoying to constantly unwrap.
+/// This trait provides the method `next_unwrap` to quickly extract the inner item.
+pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
+    /// # Example
+    /// ```should_panic
+    /// # use wagon_utils::UnsafeNext;
+    /// struct IterVec<T, E>(Vec<Result<T, E>>);
+    /// impl<T, E: std::fmt::Debug> Iterator for IterVec<T, E> {
+    ///     # type Item = Result<T, E>;
+    ///     # fn next(&mut self) -> Option<Self::Item> {
+    ///     #     self.0.pop()
+    ///     # }
+    /// }
+    /// impl<T, E: std::fmt::Debug> UnsafeNext<T, E> for IterVec<T, E> {}
+    /// 
+    /// let mut iter: IterVec<i32, ()> = IterVec(vec![Ok(1)]);
+    /// assert_eq!(1, iter.next_unwrap());
+    /// iter.next_unwrap(); // panic!
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if the next element is either `None` or an `Err`.
+    fn next_unwrap(&mut self) -> T {
+        match self.next() {
+            Some(Ok(x)) => x,
+            Some(Err(e)) => panic!("Got error: {:?}", e),
+            None => panic!("Expected a value, but failed")
+        }
+    }
+}
+
+/// Same as [`UnsafeNext`] but intended for iterators that allow peeking (such as [`Peekable`]).
+pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Result<T, E>> {
+    /// See [`next_unwrap`](`UnsafeNext::next_unwrap`).
+    fn peek_unwrap(&'a mut self) -> &T {
+        match self.peek() {
+            Some(Ok(ref x)) => x,
+            Some(Err(ref e)) => panic!("Got error: {:?}", e),
+            None => panic!("Expected a value, but failed")
+        }
+    }
 }

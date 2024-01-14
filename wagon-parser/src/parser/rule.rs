@@ -1,5 +1,5 @@
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, ToAst, WagNode, WagIx, WagTree, helpers::{check_semi, between_sep}, Rewrite, SpannableNode};
-use wagon_lexer::{productions::{ImportType, Productions}, UnsafeNext, Spannable};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, ToAst, WagNode, WagIx, WagTree, helpers::{check_semi, between_sep}, Rewrite, SpannableNode, Peek, ResultNext};
+use wagon_lexer::{productions::{ImportType, Productions}, Spannable};
 use crate::firstpass::{FirstPassState, FirstPassResult};
 
 use super::rhs::Rhs;
@@ -35,8 +35,8 @@ pub(crate) enum Arrow {
 }
 
 impl Parse for Rule {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
-        let ident = match_error!(match lexer.next_unwrap() {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
+        let ident = match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::Identifier(wagon_ident::Ident::Unknown(s))) => Ok(s),
         })?;
         let args = if let Some(Ok(Tokens::ProductionToken(Productions::LPar))) = lexer.peek() {
@@ -44,7 +44,7 @@ impl Parse for Rule {
         } else {
             Vec::new()
         };
-        let resp = match_error!(match lexer.next_unwrap() {
+        let resp = match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::Produce) => {
                 let rhs = SpannableNode::parse_sep(lexer, Tokens::ProductionToken(Productions::Alternative))?;
                 Ok(Self::Analytic(ident, args, rhs))
@@ -56,7 +56,7 @@ impl Parse for Rule {
         	Tokens::ProductionToken(Productions::Import(i)) => {
         		match i {
         			ImportType::Basic | ImportType::Full | ImportType::Recursive => {
-        				match lexer.next_unwrap() {
+        				match lexer.next_result()? {
         					Tokens::ProductionToken(Productions::Identifier(wagon_ident::Ident::Unknown(s))) => {
                                 Ok(Self::Import(ident, i, s))
                             },

@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, PeekLexer, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, Peek};
 
 use wagon_lexer::math::Math;
 
@@ -26,7 +26,7 @@ pub(crate) enum InverseNode {
 
 impl Parse for Inverse {
 
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         if lexer.next_if_eq(&Ok(Tokens::MathToken(Math::Not))).is_some() {
             Ok(Self::Not(Box::new(SpannableNode::parse(lexer)?)))
         } else {

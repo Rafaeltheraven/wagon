@@ -14,7 +14,7 @@ mod ast;
 
 use std::fmt::Display;
 
-use wagon_lexer::{Span, Spannable, PeekLexer};
+use wagon_lexer::{Span, Spannable, LexerBridge};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
 use crate::ast::ToAst;
 use crate::firstpass::{FirstPassState, Rewrite};
@@ -138,7 +138,7 @@ impl<T: Parse> WrapSpannable<T, SpannableNode<T>> for T {
 // }
 
 impl<T: Parse> Spannable for SpannableNode<T> {
-    fn span(&mut self) -> Span {
+    fn span(&self) -> Span {
         self.span.to_owned()
     }
 
@@ -148,7 +148,7 @@ impl<T: Parse> Spannable for SpannableNode<T> {
 }
 
 impl<T: Parse> Parse for SpannableNode<T> {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> where Self: Sized {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
     	let start = lexer.span().start;
     	let node = T::parse(lexer)?;
     	let span = start..lexer.span().end;

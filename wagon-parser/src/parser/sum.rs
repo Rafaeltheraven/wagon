@@ -1,9 +1,9 @@
 use std::fmt::Display;
 use std::write;
 
-use super::{Parse, PeekLexer, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
 
-use wagon_lexer::{math::Math, UnsafePeek};
+use wagon_lexer::math::Math;
 
 use super::term::Term;
 use super::helpers::TokenMapper;
@@ -39,7 +39,7 @@ pub struct SumP {
 
 impl Parse for Sum {
 
-	fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		Ok(Self {
 			left: SpannableNode::parse(lexer)?,
 			cont: SumP::parse_option(lexer)?
@@ -49,8 +49,8 @@ impl Parse for Sum {
 
 impl ParseOption for SumP {
 
-	fn parse_option(lexer: &mut PeekLexer) -> ParseResult<Option<Self>> where Self: Sized {
-	    if let Some(op) = Op1::token_to_enum(lexer.peek_unwrap()) {
+	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
+	    if let Some(op) = Op1::token_to_enum(lexer.peek_result()?) {
 	    	lexer.next();
 	    	Ok(Some(SumP { op, right: SpannableNode::parse(lexer)?, cont: SumP::parse_option(lexer)?.map(Box::new) }))
 	    } else {

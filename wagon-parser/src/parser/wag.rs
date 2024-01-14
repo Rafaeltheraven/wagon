@@ -1,7 +1,6 @@
-use wagon_lexer::Spannable;
 use crate::firstpass::{FirstPassState, FirstPassResult, WagCheckError};
 
-use super::{Parse, ParseResult, PeekLexer, Rewrite, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, ParseResult, LexerBridge, Rewrite, SpannableNode, ToAst, WagNode, WagIx, WagTree, Spannable, Peek};
 use super::metadata::Metadata;
 use super::rule::Rule;
 use indexmap::IndexMap;
@@ -20,7 +19,7 @@ pub struct Wag {
 }
 
 impl Parse for Wag {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
         let metadata = Metadata::parse(lexer)?;
         let mut grammar = Vec::new();
         while lexer.peek().is_some() {

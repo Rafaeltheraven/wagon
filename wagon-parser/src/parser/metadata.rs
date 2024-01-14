@@ -2,8 +2,7 @@ use crate::parser::helpers::check_semi;
 use wagon_macros::match_error;
 use std::collections::BTreeMap;
 
-use wagon_lexer::{UnsafeNext, Spannable};
-use super::{Parse, PeekLexer, ParseResult, Tokens, WagParseError, atom::Atom};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext};
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -19,11 +18,11 @@ pub struct Metadata {
 }
 
 impl Parse for Metadata {
-    fn parse(lexer: &mut PeekLexer) -> ParseResult<Self> {
+    fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
         let mut includes = Vec::new();
         let mut mappings = BTreeMap::new();
         while let Some(Ok(Tokens::MetadataToken(_))) = lexer.peek() {
-                match_error!(match lexer.next_unwrap() {
+                match_error!(match lexer.next_result()? {
                     Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Key(s)) => {
                         let atom = Atom::parse(lexer)?;
                         check_semi(lexer)?;
@@ -32,7 +31,7 @@ impl Parse for Metadata {
                     },
                     Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Delim) => break,
                     Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Include) => {
-                        match_error!(match lexer.next_unwrap() {
+                        match_error!(match lexer.next_result()? {
                             Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Path(p)) => {
                                 includes.push(p); 
                                 check_semi(lexer)?;
