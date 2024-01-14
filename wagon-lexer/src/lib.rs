@@ -167,7 +167,7 @@ impl Default for Tokens {
     }
 }
 
-/// A struct which automatically switches between the different lexers based on context. You likely want to use either this or [PeekLexer].
+/// A struct which automatically switches between the different lexers based on context.
 pub struct LexerBridge<'source> {
 	lexer: Lexer<'source>,
 	counter: u16,

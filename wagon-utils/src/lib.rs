@@ -279,7 +279,7 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
     }
 }
 
-/// Same as [`UnsafeNext`] but intended for iterators that allow peeking (such as [`Peekable`]).
+/// Same as [`UnsafeNext`] but intended for iterators that allow peeking (such as [`Peekable`](`std::iter::Peekable`)).
 pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Result<T, E>> {
     /// See [`next_unwrap`](`UnsafeNext::next_unwrap`).
     fn peek_unwrap(&'a mut self) -> &T {

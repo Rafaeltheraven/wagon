@@ -47,7 +47,7 @@ impl WagCheckError {
 
 	pub(crate) fn span(self) -> Span {
 		match self {
-		    WagCheckError::DuplicateParameters(_, mut i) => i.span(),
+		    WagCheckError::DuplicateParameters(_, i) => i.span(),
     		WagCheckError::DisparateParameters { span, .. } => span,
 		}
 	}
