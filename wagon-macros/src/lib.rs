@@ -460,16 +460,11 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     };
     let wc_arm: Arm = syn::parse_quote!(
         _error => {
-            Err(WagParseError::Unexpected{span: span, offender: _error, expected: vec![#joined]})
+            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);
-    quote!(
-        {
-            let span = lexer.span();
-            #ast
-        }
-    ).into()
+    ast.into_token_stream().into()
 }
 
 #[cfg(feature = "nightly")]

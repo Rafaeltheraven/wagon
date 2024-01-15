@@ -43,7 +43,7 @@ pub mod metadata;
 use metadata::Metadata;
 use wagon_utils::{ResultNext, Peek, ResultPeek};
 use logos::Logos;
-use std::{fmt::{self, Display}, collections::VecDeque};
+use std::{fmt::{self, Display}, collections::VecDeque, error::Error};
 use productions::Productions;
 use math::Math;
 use wagon_ident::Ident;
@@ -74,6 +74,8 @@ impl Display for LexingError {
         }
     }
 }
+
+impl Error for LexingError {}
 
 impl Spannable for LexingError {
     fn span(&self) -> Span {
@@ -255,6 +257,7 @@ pub trait Spannable {
 }
 
 impl<'source> Peek for LexerBridge<'source> {
+
     fn peek(&mut self) -> Option<&Self::Item> {
     	let next = match self.peeked.take() {
 	        Some(x) => x,
@@ -284,9 +287,14 @@ impl<'source> ResultNext<Tokens, LexingError> for LexerBridge<'source> {
 
 impl<'source> ResultPeek<Tokens, LexingError> for LexerBridge<'source> {
     fn peek_result(&mut self) -> Result<&Tokens, LexingError> {
+    	let next = match self.peeked.take() { // Gotta copy this over to please the borrow checker
+	        Some(x) => x,
+	        None => self.next()
+	    };
+	    let slice = self.slice().to_string();
     	let span = self.span();
-    	let slice = self.slice().to_string();
-        match self.peek() {
+	    let peek = self.peeked.get_or_insert(next).as_ref();
+        match peek {
         	Some(Err(LexingError::UnknownError)) => Err(LexingError::UnexpectedCharacter(slice, span)),
             Some(Ok(x)) => Ok(x),
             Some(Err(e)) => Err(e.clone()),
