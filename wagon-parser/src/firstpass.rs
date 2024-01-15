@@ -1,6 +1,7 @@
+use std::fmt::Display;
 use wagon_lexer::{Span, Spannable};
 use crate::SpannableNode;
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
 use indexmap::IndexSet;
 use wagon_ident::Ident;
@@ -37,6 +38,8 @@ pub enum WagCheckError {
 	}
 }
 
+impl Error for WagCheckError{}
+
 impl WagCheckError {
 	pub(crate) fn msg(&self) -> (String, String) {
 		match self {
@@ -51,6 +54,13 @@ impl WagCheckError {
     		WagCheckError::DisparateParameters { span, .. } => span,
 		}
 	}
+}
+
+impl Display for WagCheckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    	let (head, msg) = self.msg();
+    	write!(f, "{}: {}", head, msg)
+    }
 }
 
 impl FirstPassState {

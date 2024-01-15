@@ -43,6 +43,7 @@ use crate::firstpass::{WagCheckError, Rewrite};
 use crate::ast::{ToAst, WagNode, WagIx, WagTree};
 use crate::SpannableNode;
 
+use ordered_float::FloatIsNan;
 use wagon_ident::Ident;
 use wagon_utils::{Peek, comma_separated_with_or, string_vec, ResultNext, ResultPeek};
 use wagon_lexer::{LexerBridge, Tokens, Spannable, Span, LexingError};
@@ -95,7 +96,9 @@ pub enum WagParseError {
 	/// A wrapper around [`WagCheckError`].
 	CheckError(WagCheckError),
 	/// A wrapper around [`LexingError`].
-	LexError(LexingError)
+	LexError(LexingError),
+	/// Any other error we are wrapping.
+	FloatError(FloatIsNan, Span)
 }
 
 impl From<WagCheckError> for WagParseError {
@@ -110,7 +113,17 @@ impl From<LexingError> for WagParseError {
 	}
 }
 
-impl Error for WagParseError {}
+impl Error for WagParseError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            WagParseError::Unexpected { .. } => None,
+            WagParseError::Fatal(_) => None,
+            WagParseError::CheckError(e) => Some(e),
+            WagParseError::LexError(e) => Some(e),
+            WagParseError::FloatError(e, _) => Some(e)
+        }
+    }
+}
 impl Display for WagParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	let (head, msg) = self.msg();
@@ -131,7 +144,8 @@ impl WagParseError {
 		    WagParseError::Unexpected { span, .. } => span,
 		    WagParseError::Fatal((span, _)) => span,
 		    WagParseError::CheckError(check) => check.span(),
-		    WagParseError::LexError(lex) => lex.span()
+		    WagParseError::LexError(lex) => lex.span(),
+		    WagParseError::FloatError(_, span) => span,
 		}
 	}
 
@@ -142,6 +156,7 @@ impl WagParseError {
 	        WagParseError::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
 	        WagParseError::CheckError(err) => err.msg(),
     		WagParseError::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
+    		WagParseError::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string())
 		}
 	}
 }

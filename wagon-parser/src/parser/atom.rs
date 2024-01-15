@@ -71,7 +71,12 @@ impl Parse for Atom {
 	        },
 	        Tokens::MathToken(Math::LitBool(x)) => Ok(Self::LitBool(x)),
 	        Tokens::MathToken(Math::LitInt(x)) => Ok(Self::LitNum(x)),
-	        Tokens::MathToken(Math::LitFloat(x)) => Ok(Self::LitFloat(NotNan::new(x).unwrap())),
+	        Tokens::MathToken(Math::LitFloat(x)) => {
+	        	match NotNan::new(x) {
+				    Ok(f) => Ok(Self::LitFloat(f)),
+				    Err(e) => Err(WagParseError::FloatError(e, lexer.span())),
+				}
+	        },
 	        #[expect("string")]
 	        either_token!(LitString(x)) => Ok(Self::LitString(x)),
 	        Tokens::MathToken(Math::LPar) => {
