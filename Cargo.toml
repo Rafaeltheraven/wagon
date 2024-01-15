@@ -33,7 +33,6 @@ replace_with = "0.1.7"
 # local crates
 wagon-codegen = {path = "./wagon-codegen"}
 wagon-codegen-gll = {path = "./wagon-codegen-gll"}
-wagon-gll = {path = "./wagon-gll"}
 wagon-ident = {path = "./wagon-ident"}
 wagon-lexer = {path = "./wagon-lexer"}
 wagon-macros = {path = "./wagon-macros"}
@@ -42,4 +41,3 @@ wagon-utils = {path = "./wagon-utils"}
 
 # For tests
 pretty_assertions = "1.4.0"
-assert-tokenstreams-eq = "0.1.0"
