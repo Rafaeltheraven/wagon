@@ -320,7 +320,7 @@ impl Spannable for Lexer<'_> {
 }
 
 trait TypeDetect {
-	fn detect(inp: &str) -> Self;
+	fn detect(inp: &str, span: Span) -> Result<Self, LexingError> where Self: Sized;
 }
 
 impl<'source> Iterator for LexerBridge<'source> {

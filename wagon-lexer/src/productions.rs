@@ -18,13 +18,14 @@ pub enum ImportType {
 }
 
 impl TypeDetect for ImportType {
-	fn detect(inp: &str) -> Self {
-	    match inp.chars().last().unwrap() {
-	    	'-' => ImportType::Basic,
-	    	'=' => ImportType::Full,
-	    	'<' => ImportType::Recursive,
-	    	'/' => ImportType::Exclude,
-	    	_ => panic!("Tried to match type of import arrow, got unknown type: {}", inp)
+	fn detect(inp: &str, span: logos::Span) -> Result<Self, LexingError> {
+	    match inp.chars().last() {
+	    	Some('-') => Ok(ImportType::Basic),
+	    	Some('=') => Ok(ImportType::Full),
+	    	Some('<') => Ok(ImportType::Recursive),
+	    	Some('/') => Ok(ImportType::Exclude),
+	    	Some(x) => Err(LexingError::UnexpectedCharacter(x.to_string(), span)),
+	    	None => Err(LexingError::UnexpectedEOF(span))
 	    }
 	}
 }
@@ -47,12 +48,13 @@ pub enum EbnfType {
 }
 
 impl TypeDetect for EbnfType {
-	fn detect(inp: &str) -> Self {
-	    match inp.chars().next().unwrap() {
-	    	'+' => EbnfType::Some,
-	    	'*' => EbnfType::Many,
-	    	'?' => EbnfType::Maybe,
-	    	_ => panic!("Tried to match type of ebnf expansion, got unknown type: {}", inp)
+	fn detect(inp: &str, span: logos::Span) -> Result<Self, LexingError> {
+	    match inp.chars().next() {
+	    	Some('+') => Ok(EbnfType::Some),
+	    	Some('*') => Ok(EbnfType::Many),
+	    	Some('?') => Ok(EbnfType::Maybe),
+	    	Some(x)   => Err(LexingError::UnexpectedCharacter(x.to_string(), span)),
+	    	None      => Err(LexingError::UnexpectedEOF(span))
 	    }
 	}
 }
@@ -78,7 +80,7 @@ pub enum Productions {
 	Additional,
 
 	#[display_override("Import")]
-	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice()))]
+	#[regex("<(-|=|<|/)", |lex| ImportType::detect(lex.slice(), lex.span()))]
 	/// Any of the possible [ImportType] arrows.
 	Import(ImportType),
 
@@ -88,7 +90,7 @@ pub enum Productions {
 	LitRegex(String),
 
 	#[display_override("EBNF Operator")]
-	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice()))]
+	#[regex(r#"(\*|\+|\?)"#, |lex| EbnfType::detect(lex.slice(), lex.span()))]
 	/// Any of the possible [EbnfType] operators.
 	Ebnf(EbnfType),
 }
