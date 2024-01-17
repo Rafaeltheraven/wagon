@@ -35,7 +35,7 @@ pub enum WagCheckError {
 		expected: Vec<SpannableNode<Ident>>,
 		/// The span information of this node.
 		span: Span
-	}
+	},
 }
 
 impl Error for WagCheckError{}
@@ -80,7 +80,7 @@ impl FirstPassState {
 		}
 	}
 
-	pub(crate) fn get_parameters(&self, s: &str) -> &IndexSet<SpannableNode<Ident>> {
-		self.parameter_map.get(s).unwrap()
-	}
+	// pub(crate) fn get_parameters(&self, s: &str) -> Option<&IndexSet<SpannableNode<Ident>>> {
+	// 	self.parameter_map.get(s)
+	// }
 }
