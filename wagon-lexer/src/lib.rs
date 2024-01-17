@@ -60,6 +60,10 @@ pub enum LexingError {
 	UnexpectedCharacter(String, Span),
 	/// Error when encountering EOF before we expect.
 	UnexpectedEOF(Span),
+	/// Error when parsing an int
+	ParseIntError(std::num::ParseIntError, Span),
+	/// Error when parsing a float
+	ParseFloatError(std::num::ParseFloatError, Span)
 }
 
 /// The result of each lex step is either a token or an error.
@@ -71,6 +75,8 @@ impl Display for LexingError {
             LexingError::UnknownError => write!(f, "Encountered unknown error!"),
             LexingError::UnexpectedCharacter(c, _) => write!(f, "Encountered unexpected character {}", c),
             LexingError::UnexpectedEOF(_) => write!(f, "Got EOF but expected more characters!"),
+            LexingError::ParseIntError(p, _) => p.fmt(f),
+            LexingError::ParseFloatError(p, _) => p.fmt(f),
         }
     }
 }
@@ -83,6 +89,8 @@ impl Spannable for LexingError {
             LexingError::UnknownError => Span::default(),
             LexingError::UnexpectedCharacter(_, s) => s.to_owned(),
             LexingError::UnexpectedEOF(s) => s.to_owned(),
+            LexingError::ParseIntError(_, s) => s.to_owned(),
+            LexingError::ParseFloatError(_, s) => s.to_owned(),
         }
     }
 }

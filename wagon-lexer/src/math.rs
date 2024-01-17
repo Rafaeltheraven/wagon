@@ -103,12 +103,12 @@ pub enum Math {
     LitBool(bool),
 
     #[display_override("Integer")]
-    #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i32>().unwrap())]
+    #[regex("(-?[0-9]+)", |lex| lex.slice().parse::<i32>().map_err(|x| LexingError::ParseIntError(x, lex.span())))]
     /// Any integer
 	LitInt(i32),
 
 	#[display_override("Float")]
-	#[regex("(-?[0-9]+\\.[0-9]+)", |lex| lex.slice().parse::<f32>().unwrap())]
+	#[regex("(-?[0-9]+\\.[0-9]+)", |lex| lex.slice().parse::<f32>().map_err(|x| LexingError::ParseFloatError(x, lex.span())))]
 	/// Any float
 	LitFloat(f32),
 }
