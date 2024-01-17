@@ -135,15 +135,22 @@ fn _rem_first_char_n(value: &str, n: usize) -> Chars {
 ///
 /// let v = vec!["1".to_string(), "2".to_string(), "3".to_string()];
 /// assert_eq!("1, 2 or 3".to_string(), comma_separated_with_or(&v));
+/// let v = vec!["1".to_string()];
+/// assert_eq!("1".to_string(), comma_separated_with_or(&v));
+/// let v = vec![];
+/// assert_eq!("".to_string(), comma_separated_with_or(&v));
 pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
-    match strings.len() {
-        0 => String::new(),
-        1 => strings[0].clone(),
-        len => {
-            let last = strings.last().unwrap();
-            let joined = strings.iter().take(len - 1).map(String::as_str).collect::<Vec<&str>>().join(", ");
-            format!("{} or {}", joined, last)
-        }
+    match strings.last() {
+        Some(last) => {
+            let len = strings.len();
+            if len == 1 {
+                last.clone()
+            } else {
+                let joined = strings.iter().take(len - 1).map(String::as_str).collect::<Vec<&str>>().join(", ");
+                format!("{} or {}", joined, last)
+            }
+        },
+        None => String::new(),
     }
 }
 
