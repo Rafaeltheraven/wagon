@@ -186,9 +186,9 @@ dependencies = [
 
 [[package]]
 name = "extendable-data"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f14c74317feec3677f620a43718b58af83fb6ea0bcc04a6c5a6df1506d8b50c"
+checksum = "a610e836e3d0140be304bda68dd904ee7e17e29aa9999542d2c68cef6c76a0cc"
 dependencies = [
  "extendable-data-helpers",
  "proc-macro2",
@@ -198,9 +198,9 @@ dependencies = [
 
 [[package]]
 name = "extendable-data-helpers"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0701d47b9846426afe732c65b24817ffe9b8f350ec74a9e87e910bb779fb5955"
+checksum = "fb952f572a039c57d8767ed356c5b60c2a82c71b5262eba6eb22fe296b25ed5a"
 dependencies = [
  "proc-macro2",
  "quote",

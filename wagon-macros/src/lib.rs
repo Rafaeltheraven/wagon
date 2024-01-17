@@ -11,7 +11,7 @@ use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
 use extendable_data::extendable_data;
 
-/// A procedural macro to extend lexers from a base lexer. Used by [wagon-lexers::math::Math] and [wagon-lexer::productions::Productions].
+/// A procedural macro to extend lexers from a base lexer. Used by [`wagon_lexers::math::Math`](../wagon_lexer/math/enum.Math.html) and [wagon_lexer::productions::Productions](wagon_lexer/productions/enum.Productions.html).
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
