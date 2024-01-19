@@ -4,26 +4,29 @@ use std::matches;
 use quote::quote;
 
 use wagon_parser::parser::{symbol::Symbol, terminal::Terminal};
+use wagon_parser::{SpannableNode, Spannable};
 use proc_macro2::{Literal, TokenStream};
 
-use crate::{CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError};
+use crate::{CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError, CodeGenErrorKind};
 
-impl CodeGen for Symbol {
+impl CodeGen for SpannableNode<Symbol> {
 	fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
-		let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::MissingArg("ident".to_string()))?;
-		let alt = gen_args.alt.as_ref().ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?;
-		let block = gen_args.block.ok_or_else(|| CodeGenError::MissingArg("block".to_string()))?;
-		let symbol = gen_args.symbol.ok_or_else(|| CodeGenError::MissingArg("symbol".to_string()))?;
-		let label = gen_args.label.as_ref().ok_or_else(|| CodeGenError::MissingArg("label".to_string()))?;
-		let block_size = gen_args.block_size.ok_or_else(|| CodeGenError::MissingArg("block_size".to_string()))?;
-		let found_first = gen_args.found_first.ok_or_else(|| CodeGenError::MissingArg("found_first".to_string()))?;
-		let full_args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
+		let span = self.span();
+		let node = self.into_inner();
+		let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("ident".to_string()), span.clone()))?;
+		let alt = gen_args.alt.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?;
+		let block = gen_args.block.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("block".to_string()), span.clone()))?;
+		let symbol = gen_args.symbol.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("symbol".to_string()), span.clone()))?;
+		let label = gen_args.label.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("label".to_string()), span.clone()))?;
+		let block_size = gen_args.block_size.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("block_size".to_string()), span.clone()))?;
+		let found_first = gen_args.found_first.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("found_first".to_string()), span.clone()))?;
+		let full_args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
 		let state = &mut gen_args.state;
 
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
 		let rule_uuid = format!("{}_{}", uuid, alt);
-		match self {
+		match node {
 			Symbol::NonTerminal(i, args) => {
 				let next_block = block + 1;
 				let args_idents = args.iter().map(|x| x.to_inner().to_ident());
@@ -71,14 +74,14 @@ impl CodeGen for Symbol {
 			},
 			Symbol::Assignment(v) => {
 				for ass in v {
-					ass.into_inner().gen(gen_args)?;
+					ass.gen(gen_args)?;
 				}
 				gen_args.prev_args = Some(Vec::new());
 			},
 			Symbol::Terminal(t) => {
 				match t.into_inner() {
 					Terminal::Regex(_r) => {
-						return Err(crate::CodeGenError::Fatal("Still determining what to do with regexes".to_string()));
+						return Err(crate::CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Still determining what to do with regexes".to_string()), span));
 					},
 					Terminal::LitString(s) => {
 						let bytes = Literal::byte_string(s.as_bytes());

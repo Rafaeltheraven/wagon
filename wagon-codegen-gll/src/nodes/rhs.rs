@@ -3,25 +3,28 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 
 use wagon_parser::parser::rhs::Rhs;
+use wagon_parser::{SpannableNode, Spannable};
 
 use wagon_codegen::ToTokensState;
-use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError};
+use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError, CodeGenErrorKind};
 use std::rc::Rc;
 
 
-impl CodeGen for Rhs {
-    fn gen(mut self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
-        let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::MissingArg("ident".to_string()))?.clone();
-        let alt = gen_args.alt.ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?;
-        let mut firsts = Vec::with_capacity(self.chunks.len());
-        let weight = std::mem::take(&mut self.weight);
-        let blocks = self.blocks();
+impl CodeGen for SpannableNode<Rhs> {
+    fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
+        let span = self.span();
+        let mut node = self.into_inner();
+        let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("ident".to_string()), span.clone()))?.clone();
+        let alt = gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?;
+        let mut firsts = Vec::with_capacity(node.chunks.len());
+        let weight = std::mem::take(&mut node.weight);
+        let blocks = node.blocks();
         let blocks_count = blocks.len();
         gen_args.found_first = Some(false);
         gen_args.prev_args = Some(Vec::new());
         for (j, block) in blocks.into_iter().enumerate() {
-            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
-            let prev_args = gen_args.prev_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("prev_args".to_string()))?;
+            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
+            let prev_args = gen_args.prev_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("prev_args".to_string()), span.clone()))?;
 
             let label_str = format!("{}_{}_{}", ident, alt, j);
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
@@ -64,13 +67,13 @@ impl CodeGen for Rhs {
             gen_args.label = Some(label.clone());
             gen_args.block_size = Some(block_size);
         	for (k, symbol) in block.into_iter().enumerate() {
-                if !symbol.is_assignment() {
+                if !symbol.to_inner().is_assignment() {
                     str_repr.push(symbol.to_string());
                 }
                 gen_args.symbol = Some(k);
         		symbol.gen(gen_args)?;
         	}
-            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
+            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
             gen_args.state.str_repr.insert(label.clone(), str_repr);
             if j == blocks_count - 1 {
                 let mut ret_vals = Vec::new();
@@ -97,7 +100,7 @@ impl CodeGen for Rhs {
                 };
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
-                let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?);
+                let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?);
                 let inner_block = quote!(
                     let root = state.get_label_by_uuid(#root_str);
                     let rules = state.get_rule(#rule_str);

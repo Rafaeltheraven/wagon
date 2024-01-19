@@ -5,14 +5,16 @@ use indexmap::IndexSet;
 use proc_macro2::{Ident, Span};
 
 use wagon_parser::parser::rule::Rule;
+use wagon_parser::{SpannableNode, Spannable};
 
-use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError};
+use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError, CodeGenErrorKind};
 use std::rc::Rc;
 
 
-impl CodeGen for Rule {
+impl CodeGen for SpannableNode<Rule> {
    fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
-        match self {
+        let span = self.span();
+        match self.into_inner() {
             Rule::Analytic(ident, args, rhs) => {
                 let pointer: Rc<Ident> = Rc::new(Ident::new(&ident, Span::call_site()));
                 if gen_args.fst.is_some_and(|x| x) {
@@ -29,7 +31,7 @@ impl CodeGen for Rule {
                 gen_args.ident = Some(pointer.clone());
             	for (i, alt) in rhs.into_iter().enumerate() {
                     gen_args.alt = Some(i);
-            		alt.into_inner().gen(gen_args)?;
+            		alt.gen(gen_args)?;
             	}
                 let stream = if gen_args.weight_config.no_prune {
                     quote!(
@@ -57,7 +59,7 @@ impl CodeGen for Rule {
                 Ok(())
             },
             Rule::Generate(_, _, _) => todo!(),
-            Rule::Import(..) | Rule::Exclude(..) => Err(CodeGenError::Fatal("Encountered import rule during codegen. These should have been converted away.".to_string()))
+            Rule::Import(..) | Rule::Exclude(..) => Err(CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Encountered import rule during codegen. These should have been converted away.".to_string()), span))
         }  
     }
 }

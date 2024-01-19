@@ -2,7 +2,7 @@ use crate::parser::helpers::check_semi;
 use wagon_macros::match_error;
 use std::collections::BTreeMap;
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext, SpannableNode};
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -14,7 +14,7 @@ pub struct Metadata {
     /// All imports for this grammar.
 	pub includes: Vec<String>,
     /// Any extra key-value mappings.
-	pub mappings: BTreeMap<String, Atom>
+	pub mappings: BTreeMap<String, SpannableNode<Atom>>
 }
 
 impl Parse for Metadata {
@@ -24,7 +24,7 @@ impl Parse for Metadata {
         while let Some(Ok(Tokens::MetadataToken(_))) = lexer.peek() {
                 match_error!(match lexer.next_result()? {
                     Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Key(s)) => {
-                        let atom = Atom::parse(lexer)?;
+                        let atom = SpannableNode::parse(lexer)?;
                         check_semi(lexer)?;
                         mappings.insert(s, atom);
                         Ok(())

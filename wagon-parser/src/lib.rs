@@ -12,9 +12,12 @@ pub mod firstpass;
 /// A module for converting a parsed tree into a [petgraph] compatible AST with less information.
 mod ast;
 
+use std::collections::BTreeMap;
+use std::error::Error;
 use std::fmt::Display;
 
-use wagon_lexer::{Span, Spannable, LexerBridge};
+use wagon_lexer::{LexerBridge};
+pub use wagon_lexer::{Span, Spannable};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
 use crate::ast::ToAst;
 use crate::firstpass::{FirstPassState, Rewrite};
@@ -28,6 +31,25 @@ pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut state = FirstPassState::default();
     wag.rewrite(0, &mut state)?;
     Ok(wag)
+}
+
+/// A trait for [`Error`]s that return a specific message and span structure.
+pub trait MsgAndSpan: Error {
+    /// Return the message and the span.
+    fn msg_and_span(self) -> ((String, String), Span) where Self: Sized {
+        let msg = self.msg();
+        let span = self.span();
+        (msg, span)
+    }
+
+    /// Return span information for this error.
+    fn span(self) -> Span;
+
+    /// Return a tuple description of the error message.
+    ///
+    /// The first element is a "header" (for example: 'Fatal Exception!').
+    /// The second element is the actual message.
+    fn msg(&self) -> (String, String);
 }
 
 /// A node is anything that implements [`Parse`]. `SpannableNode` then, is a wrapper around this node that holds span information about it.
@@ -128,6 +150,12 @@ impl<T: Parse> WrapSpannable<T, SpannableNode<T>> for T {
         SpannableNode::new(self, span)
     }
 }
+
+impl<T: Parse, U: std::cmp::Ord> WrapSpannable<T, BTreeMap<U, SpannableNode<T>>> for BTreeMap<U, T> {
+    fn wrap_spannable(self) -> BTreeMap<U, SpannableNode<T>> {
+        self.into_iter().map(|(x, y)| (x, y.wrap_spannable())).collect()
+    }
+} 
 
 // impl<T: Parse> Deref for SpannableNode<T> {
 //     type Target = T;

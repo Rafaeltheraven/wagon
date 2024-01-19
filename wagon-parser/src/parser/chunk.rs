@@ -184,9 +184,9 @@ impl Chunk {
     }
 
     /// Extract all the symbols that are in this chunk.
-    pub(crate) fn extract_symbols(self) -> Vec<Symbol> {
+    pub(crate) fn extract_symbols(self) -> Vec<SpannableNode<Symbol>> {
         match self {
-            Self {chunk: ChunkP::Unit(s), ..} => vec![s.into_inner()],
+            Self {chunk: ChunkP::Unit(s), ..} => vec![s],
             Self {chunk: ChunkP::Group(g), ..} => {
                 let mut ret = Vec::with_capacity(g.len());
                 for chunk in g {

@@ -13,14 +13,14 @@ use wagon_macros::new_unspanned;
 /// The full WAG tree.
 pub struct Wag {
     /// Metadata associated with this WAG.
-	pub metadata: Metadata,
+	pub metadata: SpannableNode<Metadata>,
     /// The actual grammar.
 	pub grammar: Vec<SpannableNode<Rule>>,
 }
 
 impl Parse for Wag {
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
-        let metadata = Metadata::parse(lexer)?;
+        let metadata = SpannableNode::parse(lexer)?;
         let mut grammar = Vec::new();
         while lexer.peek().is_some() {
         	grammar.push(SpannableNode::parse(lexer)?);
@@ -32,7 +32,7 @@ impl Parse for Wag {
 impl ToAst for Wag {
 
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = ast.add_node(WagNode::Root(self.metadata));
+        let node = ast.add_node(WagNode::Root(self.metadata.into_inner()));
         for child in self.grammar {
             let child_ix = child.to_ast(ast);
             ast.add_edge(node, child_ix, ());

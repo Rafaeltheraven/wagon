@@ -41,7 +41,7 @@ use std::{error::Error, fmt::Display, write};
 use self::wag::Wag;
 use crate::firstpass::{WagCheckError, Rewrite};
 use crate::ast::{ToAst, WagNode, WagIx, WagTree};
-use crate::SpannableNode;
+use crate::{SpannableNode, MsgAndSpan};
 
 use ordered_float::FloatIsNan;
 use wagon_ident::Ident;
@@ -131,14 +131,7 @@ impl Display for WagParseError {
     }
 }
 
-impl WagParseError {
-	/// Get the message and span information from the error.
-	pub fn msg_and_span(self) -> ((String, String), Span) {
-		let msg = self.msg();
-		let span = self.span();
-		(msg, span)
-	}
-
+impl MsgAndSpan for WagParseError {
 	fn span(self) -> Span {
 		match self {
 		    WagParseError::Unexpected { span, .. } => span,

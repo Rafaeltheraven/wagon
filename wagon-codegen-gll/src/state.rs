@@ -7,7 +7,7 @@ use quote::{quote, format_ident};
 
 use wagon_codegen::{CodeMap, SpannableIdent};
 
-use crate::{FirstSet, CharBytes, AttrSet, ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs, CodeGenResult, CodeGenError};
+use crate::{FirstSet, CharBytes, AttrSet, ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs, CodeGenResult, CodeGenError, CodeGenErrorKind};
 
 #[derive(Debug, Default)]
 /// The state object that is passed along to [`ToTokensState::to_tokens`](`wagon_codegen::ToTokensState::to_tokens`)
@@ -75,7 +75,7 @@ impl CodeGenState {
     }
 
     pub(crate) fn get_first(&mut self, label: &Rc<Ident>) -> CodeGenResult<&mut Vec<FirstSet>> {
-    	self.first_queue.get_mut(label).ok_or_else(|| CodeGenError::MissingFirst(label.clone()))
+    	self.first_queue.get_mut(label).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::MissingFirst(label.clone())))
     }
 
     fn get_req_code_attrs(&self, label: &Ident) -> Option<&ReqCodeAttrs> {
@@ -178,11 +178,11 @@ impl CodeGenState {
     		let first_attr_stream = self.collect_attrs(id, self.get_req_first_attrs(id));
     		let code_attr_stream = self.collect_attrs(id, self.get_req_code_attrs(id));
     		let uuid = id.to_string();
-    		let root_uuid = uuid.chars().next().ok_or_else(|| CodeGenError::Fatal("Got an empty uuid".to_string()))?.to_string();
-    		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::Fatal(format!("Missing str_repr for {}", id)))?;
+    		let root_uuid = uuid.chars().next().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Got an empty uuid".to_string())))?.to_string();
+    		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Missing str_repr for {}", id))))?;
     		let str_repr = str_list.join(" ");
     		let (pop_repr, ctx_repr) = self.attr_repr.get(id).unwrap_or(&empty_repr);
-    		let code = self.code.get(id).ok_or_else(|| CodeGenError::Fatal(format!("Mssing code for {}", id)))?;
+    		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {}", id))))?;
     		let weight_stream = if let Some(weight) = self.weight_code.get(id) {
     			let weight_attrs = self.collect_attrs(id, self.get_req_weight_attrs(id));
     			quote!(
@@ -275,7 +275,7 @@ impl CodeGenState {
     	let mut stream = TokenStream::new();
     	for (i, (id, alts)) in self.first_queue.iter().enumerate() {
     		let str_repr = id.to_string();
-    		let root_path = Ident::new(&str_repr.chars().next().ok_or_else(|| CodeGenError::Fatal("Empty id".to_string()))?.to_string(), proc_macro2::Span::call_site());
+    		let root_path = Ident::new(&str_repr.chars().next().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Empty id".to_string())))?.to_string(), proc_macro2::Span::call_site());
     		let label_id = format_ident!("label_{}", i);
     		if self.roots.contains(id) {
     			stream.extend(quote!(

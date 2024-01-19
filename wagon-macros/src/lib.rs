@@ -266,7 +266,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
     funcs
 }
 
-const CUSTOM_INTO: [&str; 3] = ["Vec", "Option", "Box"];
+const CUSTOM_INTO: [&str; 4] = ["Vec", "Option", "Box", "BTreeMap"];
 const IGNORE_UNSPAN: [&str; 4] = ["Terminal", "Ident", "Some", "None"];
 
 fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::Type, bool, bool) {

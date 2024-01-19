@@ -101,7 +101,7 @@ impl Rhs {
 	/// Expects all EBNF chunks to have been factored out.
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
-	pub fn blocks(self) -> Vec<Vec<Symbol>> {
+	pub fn blocks(self) -> Vec<Vec<SpannableNode<Symbol>>> {
 		let mut blocks = Vec::new();
 		let mut curr = Vec::new();
 		for chunk in self.chunks.into_iter() {
@@ -110,7 +110,7 @@ impl Rhs {
 				c => c.extract_symbols(), // Deal with groups
 			};
 			for symbol in symbols {
-				let is_terminal = symbol.is_terminal();
+				let is_terminal = symbol.node.is_terminal();
 				curr.push(symbol);
 				if !is_terminal {
 					blocks.push(curr);
@@ -136,6 +136,7 @@ impl ToAst for Rhs {
 
 #[cfg(test)]
 mod tests {
+    use crate::WrapSpannable;
     use crate::parser::chunk::ChunkP;
 	use crate::parser::{chunk::Chunk, symbol::Symbol};
 
@@ -166,14 +167,14 @@ mod tests {
 				Symbol::simple_terminal("a"),
 		    	Symbol::simple_terminal("b"),
 		    	Symbol::simple_ident("C"),
-			],
+			].wrap_spannable(),
 			vec![
 				Symbol::simple_ident("D")
-			],
+			].wrap_spannable(),
 			vec![
 				Symbol::simple_terminal("e"),
 				Symbol::simple_ident("F")
-			],
+			].wrap_spannable(),
 			vec![]
 		];
 		assert_eq!(blocks, expected);

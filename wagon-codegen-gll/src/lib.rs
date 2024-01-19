@@ -19,6 +19,7 @@ use quote::quote;
 use indexmap::IndexSet;
 
 use wagon_parser::parser::{wag::Wag, atom::Atom};
+use wagon_parser::{Span, MsgAndSpan};
 use wagon_codegen::{SpannableIdent, CodeMap};
 use wagon_value::{RecursiveValue, ValueError};
 use wagon_utils::ConversionError;
@@ -73,7 +74,7 @@ pub(crate) struct CodeGenArgs {
 
 #[derive(Debug)]
 /// Enum for all errors that can occur during codegen.
-pub enum CodeGenError {
+pub(crate) enum CodeGenErrorKind {
 	/// Tried converting an [`Atom`] into a [`RecursiveValue`]
 	///
 	/// (this happens in [`nodes::metadata::Metadata::gen`]).
@@ -88,35 +89,62 @@ pub enum CodeGenError {
 	MissingFirst(Rc<Ident>),
 }
 
+#[derive(Debug)]
+pub struct CodeGenError {
+	kind: CodeGenErrorKind,
+	span: Span
+}
+
+impl CodeGenError {
+	fn new(kind: CodeGenErrorKind) -> Self {
+		Self {kind, span: Default::default()}
+	}
+
+	fn new_spanned(kind: CodeGenErrorKind, span: Span) -> Self {
+		Self {kind, span}
+	}
+}
+
+impl MsgAndSpan for CodeGenError {
+    fn span(self) -> Span {
+        self.span
+    }
+
+    fn msg(&self) -> (String, String) {
+        match &self.kind {
+        	CodeGenErrorKind::AtomConversionError(e) => ("Conversion Error".to_string(), e.to_string()),
+            CodeGenErrorKind::ValueError(e) => ("Value Error".to_string(), e.to_string()),
+            CodeGenErrorKind::Fatal(s) => ("Fatal Error".to_string(), s.to_owned()),
+            CodeGenErrorKind::MissingArg(s) => ("Missing Argument".to_string(), format!("Expected to see {} but it was None", s)),
+            CodeGenErrorKind::MissingFirst(i) => ("Missing First Set".to_string(), format!("Expected to have one for {} but it was None", i)),
+        }
+    }
+}
+
 impl std::fmt::Display for CodeGenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CodeGenError::AtomConversionError(e) => e.fmt(f),
-            CodeGenError::ValueError(e) => e.fmt(f),
-            CodeGenError::Fatal(s) => write!(f, "Fatal Error! {}", s),
-            CodeGenError::MissingArg(s) => write!(f, "Missing Argument! Expected to see {} but it was None", s),
-            CodeGenError::MissingFirst(i) => write!(f, "Missing First Set! Expected to have one for {} but it was None", i),
-        }
+    	let (head, text) = self.msg();
+        write!(f, "{}: {}", head, text)
     }
 }
 
 impl std::error::Error for CodeGenError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            CodeGenError::AtomConversionError(e) => Some(e),
-            CodeGenError::ValueError(e) => Some(e),
+        match &self.kind {
+            CodeGenErrorKind::AtomConversionError(e) => Some(e),
+            CodeGenErrorKind::ValueError(e) => Some(e),
             _ => None
         }
     }
 }
 
-impl From<ConversionError<Atom, RecursiveValue>> for CodeGenError {
+impl From<ConversionError<Atom, RecursiveValue>> for CodeGenErrorKind {
     fn from(value: ConversionError<Atom, RecursiveValue>) -> Self {
         Self::AtomConversionError(value)
     }
 }
 
-impl From<ValueError<RecursiveValue>> for CodeGenError {
+impl From<ValueError<RecursiveValue>> for CodeGenErrorKind {
     fn from(value: ValueError<RecursiveValue>) -> Self {
         Self::ValueError(value)
     }

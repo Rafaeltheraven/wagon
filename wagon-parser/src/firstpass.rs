@@ -1,6 +1,6 @@
 use std::fmt::Display;
-use wagon_lexer::{Span, Spannable};
-use crate::SpannableNode;
+use wagon_lexer::Spannable;
+use crate::{SpannableNode, MsgAndSpan, Span};
 use std::{collections::HashMap, error::Error};
 
 use indexmap::IndexSet;
@@ -40,15 +40,15 @@ pub enum WagCheckError {
 
 impl Error for WagCheckError{}
 
-impl WagCheckError {
-	pub(crate) fn msg(&self) -> (String, String) {
+impl MsgAndSpan for WagCheckError {
+	fn msg(&self) -> (String, String) {
 		match self {
 		    WagCheckError::DuplicateParameters(nt, i) => ("Duplicate Parameter!".to_string(), format!("Nonterminal {} uses parameter {} multiple times. This makes no sense.", nt, i)),
     		WagCheckError::DisparateParameters { terminal, offender, expected, ..} => ("Disparate Parameters!".to_string(), format!("Instance of terminal {} uses parameters {:?} while it was defined earlier as {:?}. This is unsupported", terminal, offender, expected)),
 		}
 	}
 
-	pub(crate) fn span(self) -> Span {
+	fn span(self) -> Span {
 		match self {
 		    WagCheckError::DuplicateParameters(_, i) => i.span(),
     		WagCheckError::DisparateParameters { span, .. } => span,
