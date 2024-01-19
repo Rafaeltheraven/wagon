@@ -9,6 +9,7 @@ mod value;
 mod valueable;
 mod result;
 
+use wagon_utils::ConversionError;
 use std::fmt::Display;
 
 pub use value::Value;

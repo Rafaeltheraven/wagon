@@ -360,6 +360,7 @@ pub enum GLLParseError<'a> {
 	},
 	/// A [`ValueError`] occurred during parsing.
 	ValueError(ValueError<'a>),
+	/// Any generic fatal error for which we have no specific variant.
 	Fatal(&'a str)
 }
 

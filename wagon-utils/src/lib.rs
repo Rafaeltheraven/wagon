@@ -337,4 +337,14 @@ impl<T, U> ConversionError<T, U> {
     pub fn new(subject: T) -> Self {
         Self {subject, to: PhantomData}
     }
+
+    /// Convert one implementation of `ConversionError` to another.
+    ///
+    /// More specifically, if we have a type `V` which implements `From<U>`, we can
+    /// construct a new `ConversionError<T,V>`.
+    ///
+    /// This exists for the case "We tried converting T to U, but actually we were converting T to V in this case". 
+    pub fn convert<V: From<U>>(self) -> ConversionError<T, V> {
+        ConversionError::<T, V>::new(self.subject)
+    }
 }

@@ -13,3 +13,4 @@ description = "Dynamic type value object for WAGon."
 
 [dependencies]
 ordered-float = {workspace = true}
+wagon-utils = {workspace = true}

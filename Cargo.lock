@@ -566,6 +566,7 @@ name = "wagon-value"
 version = "0.1.0"
 dependencies = [
  "ordered-float",
+ "wagon-utils",
 ]
 
 [[package]]
