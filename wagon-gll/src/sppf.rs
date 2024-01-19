@@ -219,7 +219,7 @@ impl<'a> SPPF<'a> {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));
                 if let Some(value) = edge.weight() {
-                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical()))
+                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().expect("Can always display as numerical")))
                 }
                 res.push('\n');
             }

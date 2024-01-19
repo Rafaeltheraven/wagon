@@ -54,6 +54,8 @@ pub struct GLLState<'a> {
 	sppf_map: HashMap<SPPFNode<'a>, SPPFNodeIndex>,
 	label_map: HashMap<&'a str, GLLBlockLabel<'a>>,
 	rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
+	/// All the errors
+	pub errors: Vec<GLLParseError<'a>>
 }
 
 impl<'a> GLLState<'a> {
@@ -88,6 +90,7 @@ impl<'a> GLLState<'a> {
 			sppf_map: Default::default(), 
 			rule_map,
 			label_map,
+			errors: Default::default(),
 		};
 		state.add(root_slot, gss_root, 0, sppf_root);
 		state
@@ -102,7 +105,7 @@ impl<'a> GLLState<'a> {
 	/// * `w` => `self.sppf_pointer`.
 	///
 	/// Differently from the paper, this method also takes a list of attributes that are passed along to the `GSS`.
-	pub fn create(&mut self, slot: Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> GSSNodeIndex {
+	pub fn create(&mut self, slot: Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> ParseResult<'a, GSSNodeIndex> {
 		let candidate = GSSNode::new(slot.clone(), self.input_pointer, args);
 		let v = if let Some(i) = self.gss_map.get(&candidate) {
 			i.to_owned()
@@ -118,12 +121,12 @@ impl<'a> GLLState<'a> {
 			if let Some(nodes) = pop.get(&v) {
 				for sppf_node in nodes {
 					let y = self.get_node_p(slot.clone(), self.sppf_pointer, *sppf_node, v);
-					self.add(slot.clone(), self.gss_pointer, self.sppf.node_weight(*sppf_node).unwrap().right_extend().unwrap(), y);
+					self.add(slot.clone(), self.gss_pointer, self.sppf.node_weight(*sppf_node).unwrap().right_extend().unwrap(), y?);
 				}
 			}
 			self.pop = pop;
 		}
-		v
+		Ok(v)
 	}
 
 	fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
@@ -140,9 +143,9 @@ impl<'a> GLLState<'a> {
 	///
 	/// This is `get_node_p` from the original paper. Differently from that paper, this also takes a `context_pointer`, which tells the packed node we are
 	/// retrieving/creating where it can find it's context.
-	pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex) -> SPPFNodeIndex {
+	pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex) -> ParseResult<'a, SPPFNodeIndex> {
 		if self.is_special_slot(&slot) {
-			right
+			Ok(right)
 		} else {
 			let left_node = self.sppf.node_weight(left).unwrap();
 			let right_node = self.sppf.node_weight(right).unwrap();
@@ -161,9 +164,9 @@ impl<'a> GLLState<'a> {
 					let packed = SPPFNode::Packed { slot, split: i, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, weight);
+					self.sppf.add_edge(node, ix, weight.transpose()?);
 				}
-				node
+				Ok(node)
 			} else {
 				let (i, k) = (left_node.left_extend().unwrap(), left_node.right_extend().unwrap());
 				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
@@ -172,9 +175,9 @@ impl<'a> GLLState<'a> {
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, left, None);
 					self.sppf.add_edge(ix, right, None);
-					self.sppf.add_edge(node, ix, weight);
+					self.sppf.add_edge(node, ix, weight.transpose()?);
 				}
-				node
+				Ok(node)
 			}
 		}
 	}
@@ -257,7 +260,7 @@ impl<'a> GLLState<'a> {
 	/// * `z` => `self.sppf_pointer`
 	///
 	/// Additionally, this method takes a list of attributes that are returned after the non-terminal was parsed.
-	pub fn pop(&mut self, ret_vals: ReturnMap<'a>) {
+	pub fn pop(&mut self, ret_vals: ReturnMap<'a>) -> ParseResult<'a, ()> {
 		if self.gss_pointer != self.gss_root {
 			let curr_map = self.pop.get_mut(&self.gss_pointer);
 			if let Some(map) = curr_map {
@@ -270,11 +273,12 @@ impl<'a> GLLState<'a> {
 			let mut detached = self.gss.neighbors_directed(self.gss_pointer, Outgoing).detach();
 			while let Some(edge) = detached.next_edge(&self.gss) {
 				let v = self.gss.edge_endpoints(edge).unwrap().1;
-				let y = self.get_node_p(slot.clone(), *self.gss.edge_weight(edge).unwrap(), self.sppf_pointer, self.gss_pointer);
+				let y = self.get_node_p(slot.clone(), *self.gss.edge_weight(edge).unwrap(), self.sppf_pointer, self.gss_pointer)?;
 				self.sppf.node_weight_mut(y).unwrap().add_ret_vals(&mut ret_vals.clone());
 				self.add(slot.clone(), v, self.input_pointer, y);
 			}
 		}
+		Ok(())
 	}
 
 	/// Consume the following bytes from the input string. 
@@ -369,7 +373,9 @@ impl<'a> GLLState<'a> {
 
 	fn goto(&mut self, slot: &GrammarSlot<'a>) {
 		let label = self.get_current_label_slot(slot);
-		label.code(self)
+		if let Err(e) = label.code(self) {
+			self.errors.push(e);
+		}
 	}
 
 	/// Run the parsing process.

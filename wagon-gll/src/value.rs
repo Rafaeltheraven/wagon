@@ -1,7 +1,9 @@
-use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}};
+use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}, error::Error};
 
 use crate::GLLBlockLabel;
 pub use wagon_codegen::value::Value as InnerValue;
+pub use wagon_codegen::value::ValueError as InnerValueError;
+pub use wagon_codegen::value::ValueResult as InnerValueResult;
 use wagon_codegen::value::Valueable;
 
 #[derive(Debug, Eq, Hash, Clone)]
@@ -13,39 +15,72 @@ pub enum Value<'a> {
 	Label(GLLBlockLabel<'a>),
 }
 
+#[derive(Debug)]
+/// An extension of [`wagon_codegen::value::ValueError`] for specific errors related to dealing with [`GLLBlockLabel`].
+pub enum ValueError<'a> {
+    ValueError(InnerValueError<Value<'a>>),
+    ConvertToLabel(Value<'a>)
+}
+
+pub type ValueResult<'a, T> = Result<T, ValueError<'a>>;
+
+impl<'a> From<InnerValueError<Value<'a>>> for ValueError<'a> {
+    fn from(value: InnerValueError<Value<'a>>) -> Self {
+        Self::ValueError(value)
+    }
+}
+
+impl Display for ValueError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValueError::ValueError(e) => e.fmt(f),
+            ValueError::ConvertToLabel(v) => write!(f, "Failed converting {} to label", v),
+        }
+    }
+}
+
+impl Error for ValueError<'static> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ValueError::ValueError(e) => Some(e),
+            ValueError::ConvertToLabel(_) => None,
+        }
+    }
+}
+
 impl<'a> Valueable for Value<'a> {
-    fn is_truthy(&self) -> bool {
+    fn is_truthy(&self) -> InnerValueResult<bool, Self> {
         match self {
-            Value::Value(v) => v.is_truthy(),
-            Value::Label(l) => l.is_eps(),
+            Value::Value(v) => Ok(v.is_truthy()?),
+            Value::Label(l) => Ok(l.is_eps()),
         }
     }
 
-    fn to_int(&self) -> i32 {
+    fn to_int(&self) -> InnerValueResult<i32, Self> {
         match self {
-            Value::Value(v) => v.to_int(),
-            o => if o.is_truthy() { 1 } else { 0 }
+            Value::Value(v) => Ok(v.to_int()?),
+            o => Ok(if o.is_truthy()? { 1 } else { 0 })
         }
     }
 
-    fn to_float(&self) -> f32 {
+    fn to_float(&self) -> InnerValueResult<f32, Self> {
         match self {
-            Value::Value(v) => v.to_float(),
-            o => if o.is_truthy() { 1.0 } else { 0.0 }
+            Value::Value(v) => Ok(v.to_float()?),
+            o => Ok(if o.is_truthy()? { 1.0 } else { 0.0 })
         }
     }
 
-    fn pow(&self, rhs: &Value<'a>) -> Value<'a> {
+    fn pow(&self, rhs: &Value<'a>) -> InnerValueResult<Self, Self> {
         match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1.pow(v2)),
-            (v1, v2) => panic!("Type Error! Can not perform ** on {:?} and {:?}", v1, v2)
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value(v1.pow(v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1.clone(), v2.clone(), "**".to_string()))
         }
     }
 
-    fn display_numerical(&self) -> String {
+    fn display_numerical(&self) -> InnerValueResult<String, Self> {
         match self {
-            Value::Value(v) => v.display_numerical(),
-            other => other.to_int().to_string()
+            Value::Value(v) => Ok(v.display_numerical()?),
+            other => Ok(other.to_int()?.to_string())
         }
     }
 }
@@ -71,19 +106,19 @@ impl Display for Value<'_> {
 
 impl From<Value<'_>> for i32 { // Can't genericize these because Rust doesn't allow it
     fn from(value: Value) -> Self {
-        value.to_int()
+        value.to_int().expect("This conversion can not fail")
     }
 }
 
 impl From<Value<'_>> for f32 {
     fn from(value: Value) -> Self {
-        value.to_float()
+        value.to_float().expect("This conversion can not fail")
     }
 }
 
 impl From<Value<'_>> for bool {
     fn from(value: Value) -> Self {
-        value.is_truthy()
+        value.is_truthy().expect("This conversion can not fail")
     }
 }
 
@@ -93,82 +128,77 @@ impl<'a, T> From<T> for Value<'a> where InnerValue<Value<'a>>: From<T> {
     }
 }
 
-impl<'a> From<Value<'a>> for GLLBlockLabel<'a> {
-    fn from(value: Value<'a>) -> Self {
+impl<'a> TryFrom<Value<'a>> for GLLBlockLabel<'a> {
+    type Error = ValueError<'a>;
+
+    fn try_from(value: Value<'a>) -> Result<Self, Self::Error> {
         match value {
-            Value::Label(l) => l,
-            other => panic!("Type error! Expected label value but got {:?}", other)
+            Value::Label(l) => Ok(l),
+            other => Err(ValueError::ConvertToLabel(other))
         }
     }
 }
 
 impl<'a> Add for Value<'a> {
-    type Output = Value<'a>;
+    type Output = InnerValueResult<Self, Self>;
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1 + v2),
-            (v1, v2) => panic!("Type Error! Can not perform + on {:?} and {:?}", v1, v2)
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 + v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "+".to_string()))
         }
     }
 }
 
 impl<'a> Sub for Value<'a> {
-    type Output = Value<'a>;
+    type Output = InnerValueResult<Self, Self>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1 - v2),
-            (v1, v2) => panic!("Type Error! Can not perform - on {:?} and {:?}", v1, v2)
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 - v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "-".to_string()))
         }
     }
 }
 
 impl<'a> Mul for Value<'a> {
-    type Output = Value<'a>;
+    type Output = InnerValueResult<Self, Self>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1 * v2),
-            (v1, v2) => panic!("Type Error! Can not perform * on {:?} and {:?}", v1, v2)
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 * v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "*".to_string()))
         }
     }
 }
 
 impl<'a> Div for Value<'a> {
-    type Output = Value<'a>;
+    type Output = InnerValueResult<Self, Self>;
 
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Value::Value(v1), Value::Value(v2)) => Value::Value(v1 / v2),
-            (v1, v2) => panic!("Type Error! Can not perform / on {:?} and {:?}", v1, v2)
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 / v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "/".to_string()))
         }
     }
 }
 
 impl<'a> Not for Value<'a> {
-    type Output = Value<'a>;
+    type Output = InnerValueResult<Self, Self>;
 
     fn not(self) -> Self::Output {
         match self {
-            Value::Value(v) => Value::Value(!v),
-            v => panic!("Type Error! Can only negate booleans, not {:?}", v)
+            Value::Value(v) => Ok(Value::Value((!v)?)),
+            v => Err(InnerValueError::NegationError(v))
         }
     }
 }
 
-impl<'a> Ord for Value<'a> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self, other) {
-            (Value::Value(v1), Value::Value(v2)) => v1.cmp(v2),
-            (v1, v2) => panic!("Type Error! Can not compare {:?} with {:?}", v1, v2)
-        }
-    }
-}
-
-impl <'a> PartialOrd for Value<'a> {
+impl<'a> PartialOrd for Value<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+        match (self, other) {
+            (Value::Value(v1), Value::Value(v2)) => v1.partial_cmp(v2),
+            _ => None
+        }
     }
 }
-

@@ -6,9 +6,10 @@
 //! This library could be used to write GLL parsers in another way, as long as you stick to required patterns. However,
 //! the library was created with WAGs in mind. As a result, if you only care about pure GLL parsing, there
 //! are probably faster implementations out there that do not have to consider the possibility of the grammar changing at runtime.
-use std::{hash::{Hash, Hasher}, fmt::Debug, rc::Rc, str::from_utf8, collections::HashSet};
+use std::{hash::{Hash, Hasher}, fmt::{Debug, Display}, rc::Rc, str::from_utf8, collections::HashSet, error::Error};
 
-use self::{state::GLLState, value::Value};
+use self::{state::GLLState, value::Value, value::{InnerValueError, ValueResult}};
+use value::ValueError;
 use wagon_ident::Ident;
 
 /// An implementation of the SPPF.
@@ -81,7 +82,7 @@ pub trait Label<'a>: Debug {
 	/// Any code to run when encountering this label.
 	///
 	/// This is called by `GLLState::goto` and is used to make the `goto` from the original paper work.
-	fn code(&self, state: &mut GLLState<'a>);
+	fn code(&self, state: &mut GLLState<'a>) -> ParseResult<'a, ()>;
 	/// Check if the next token in the current state is accepted by this label's first-follow set.
 	fn first(&self, state: &mut GLLState<'a>) -> bool {
 		let fst = self.first_set(state);
@@ -130,13 +131,13 @@ pub trait Label<'a>: Debug {
 	/// Optionally return the weight of this label.
 	///
 	/// This should either calculate the weight for this label, as denoted in the WAGon DSL, or `None`.
-	fn _weight(&self, state: &GLLState<'a>) -> Option<Value<'a>>;
+	fn _weight(&self, state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>>;
 	/// Returns either the weight of this label as calculated by [`_weight`](`Label::_weight`), or `1`.
-	fn weight(&self, state: &GLLState<'a>) -> Value<'a> {
+	fn weight(&self, state: &GLLState<'a>) -> ValueResult<'a, Value<'a>> {
 		if let Some(weight) = self._weight(state) {
 			weight
 		} else {
-			1.into()
+			Ok(1.into())
 		}
 	}
 	/// A string representation of the chunk (likely a GLL block) that this label represents.
@@ -165,8 +166,8 @@ impl<'a> Label<'a> for Terminal<'a> {
         self.is_eps() || state.has_next(self)
     }
 
-    fn code(&self, _: &mut GLLState<'a>) {
-        unreachable!("Should never run this method on terminals");
+    fn code(&self, _: &mut GLLState<'a>) -> ParseResult<'a, ()> {
+        Err(GLLParseError::Fatal("Attempted running the `code` method on a terminal."))
     }
 
     fn is_terminal(&self) -> bool {
@@ -193,8 +194,8 @@ impl<'a> Label<'a> for Terminal<'a> {
 		(Vec::new(), Vec::new())
 	}
 
-	fn _weight(&self, _state: &GLLState<'a>) -> Option<Value<'a>> {
-		unreachable!("Should never run this method on terminals");
+	fn _weight(&self, _state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>> {
+		Some(Err(ValueError::ValueError(InnerValueError::Fatal("Attempted running the `_weight` method on a terminal.".to_string()))))
 	}
 }
 
@@ -323,14 +324,16 @@ impl<'a> GrammarSlot<'a> {
 	}
 
 	/// Compare the weight of this slot with the weight of another.
-	pub fn cmp(&self, other: &Self, state: &GLLState<'a>) -> std::cmp::Ordering {
-		self.curr_block(state).weight(state).cmp(&other.curr_block(state).weight(state))
+	///
+	/// Returns `None` if the comparison is impossible.
+	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
+		let left_weight = self.curr_block(state).weight(state)?;
+		let right_weight = other.curr_block(state).weight(state)?;
+		match left_weight.partial_cmp(&right_weight) {
+		    Some(o) => Ok(o),
+		    None => Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))),
+		}
 	}
-
-	/// See [`PartialOrd`] and [`GrammarSlot::cmp`].
-	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other, state))
-    }
 }
 
 /// Result of the GLL parse.
@@ -354,5 +357,34 @@ pub enum GLLParseError<'a> {
 		pointer: usize,
 		/// What character we expected to see.
 		offender: Terminal<'a>
-	}
+	},
+	/// A [`ValueError`] occurred during parsing.
+	ValueError(ValueError<'a>),
+	Fatal(&'a str)
+}
+
+impl<'a> Display for GLLParseError<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GLLParseError::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {}. Expected {} saw {}", pointer, expected, offender),
+            GLLParseError::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {}, tried reading {:?}", pointer, offender),
+            GLLParseError::ValueError(e) => std::fmt::Display::fmt(&e, f),
+            GLLParseError::Fatal(s) => write!(f, "A fatal error occurred! {}", s),
+        }
+    }
+}
+
+impl Error for GLLParseError<'static> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            GLLParseError::ValueError(e) => Some(e),
+            _ => None
+        }
+    }
+}
+
+impl<'a> From<ValueError<'a>> for GLLParseError<'a> {
+    fn from(value: ValueError<'a>) -> Self {
+        Self::ValueError(value)
+    }
 }
