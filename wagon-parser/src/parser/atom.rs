@@ -31,6 +31,11 @@ impl Dictionary {
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
 /// The base elements of each expression.
+///
+/// The data in here is kind of similar to [`wagon_value::Value`] and `TryFrom` is implemented for it as a result.
+/// 
+/// However, an `Atom` includes additional syntactic data, which is not important (or even not available) for `Value` (for example, an [`Ident`]).
+/// As a result, [`Atom::Ident`], [`Atom::Dict`] and [`Atom::Group`] can not be directly converted and manual implementation is required.
 pub enum Atom {
 	/// An [`Ident`].
 	Ident(Ident),
