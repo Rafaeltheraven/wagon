@@ -6,18 +6,18 @@ use quote::quote;
 use wagon_parser::parser::{symbol::Symbol, terminal::Terminal};
 use proc_macro2::{Literal, TokenStream};
 
-use crate::{CodeGenArgs, CodeGen, CharBytes};
+use crate::{CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError};
 
 impl CodeGen for Symbol {
-	fn gen(self, gen_args: &mut CodeGenArgs) {
-		let ident = gen_args.ident.as_ref().unwrap();
-		let alt = gen_args.alt.as_ref().unwrap();
-		let block = gen_args.block.unwrap();
-		let symbol = gen_args.symbol.unwrap();
-		let label = gen_args.label.as_ref().unwrap();
-		let block_size = gen_args.block_size.unwrap();
-		let found_first = gen_args.found_first.unwrap();
-		let full_args = gen_args.full_args.as_ref().unwrap();
+	fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
+		let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::MissingArg("ident".to_string()))?;
+		let alt = gen_args.alt.as_ref().ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?;
+		let block = gen_args.block.ok_or_else(|| CodeGenError::MissingArg("block".to_string()))?;
+		let symbol = gen_args.symbol.ok_or_else(|| CodeGenError::MissingArg("symbol".to_string()))?;
+		let label = gen_args.label.as_ref().ok_or_else(|| CodeGenError::MissingArg("label".to_string()))?;
+		let block_size = gen_args.block_size.ok_or_else(|| CodeGenError::MissingArg("block_size".to_string()))?;
+		let found_first = gen_args.found_first.ok_or_else(|| CodeGenError::MissingArg("found_first".to_string()))?;
+		let full_args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
 		let state = &mut gen_args.state;
 
 		let first_symbol = block == 0 && symbol == 0;
@@ -51,7 +51,7 @@ impl CodeGen for Symbol {
 						if state.test_next(label.clone()) {
 							#base
 						} else {
-							return;
+							return Ok(());
 						}
 					));
 				} else {
@@ -62,7 +62,7 @@ impl CodeGen for Symbol {
 				}
 				if !found_first {
 					state.add_req_first_attr(label.clone(), i.clone());
-					state.first_queue.get_mut(label).unwrap()[0].0.push(i.clone());
+					state.get_first(label)?[0].0.push(i.clone());
 				}
 				if !matches!(i.to_inner(), wagon_ident::Ident::Unknown(_)) {
 					state.add_req_code_attr(label.clone(), i);
@@ -71,14 +71,14 @@ impl CodeGen for Symbol {
 			},
 			Symbol::Assignment(v) => {
 				for ass in v {
-					ass.into_inner().gen(gen_args);
+					ass.into_inner().gen(gen_args)?;
 				}
 				gen_args.prev_args = Some(Vec::new());
 			},
 			Symbol::Terminal(t) => {
 				match t.into_inner() {
 					Terminal::Regex(_r) => {
-						unimplemented!("Still determining what to do with regexes");
+						return Err(crate::CodeGenError::Fatal("Still determining what to do with regexes".to_string()));
 					},
 					Terminal::LitString(s) => {
 						let bytes = Literal::byte_string(s.as_bytes());
@@ -87,7 +87,7 @@ impl CodeGen for Symbol {
 							let bytes = #bytes;
 						));
 						if !found_first {
-							state.first_queue.get_mut(label).unwrap()[0].1 = Some(CharBytes::Bytes(bytes))
+							state.get_first(label)?[0].1 = Some(CharBytes::Bytes(bytes))
 						}
 						if first_symbol && block_size != 1 {
 							stream.extend(quote!(
@@ -96,7 +96,7 @@ impl CodeGen for Symbol {
 								state.next(bytes).unwrap();
 							));
 							state.add_code(label.clone(), stream);
-							return;
+							return Ok(());
 						}
 						let (dot, pos) = if symbol == block_size-1 {
 							(block+1, 0)
@@ -145,10 +145,11 @@ impl CodeGen for Symbol {
 					);
 					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer);
 				));
-				state.first_queue.get_mut(label).unwrap()[0].1 = Some(CharBytes::Epsilon);
+				state.get_first(label)?[0].1 = Some(CharBytes::Epsilon);
 				gen_args.found_first = Some(true);
 				gen_args.prev_args = Some(Vec::new());
 			},
 		}
+		Ok(())
 	}
 }

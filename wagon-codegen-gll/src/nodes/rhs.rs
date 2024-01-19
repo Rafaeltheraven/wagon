@@ -5,14 +5,14 @@ use quote::quote;
 use wagon_parser::parser::rhs::Rhs;
 
 use wagon_codegen::ToTokensState;
-use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes};
+use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError};
 use std::rc::Rc;
 
 
 impl CodeGen for Rhs {
-    fn gen(mut self, gen_args: &mut CodeGenArgs) {
-        let ident = gen_args.ident.as_ref().unwrap().clone();
-        let alt = gen_args.alt.unwrap();
+    fn gen(mut self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
+        let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::MissingArg("ident".to_string()))?.clone();
+        let alt = gen_args.alt.ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?;
         let mut firsts = Vec::with_capacity(self.chunks.len());
         let weight = std::mem::take(&mut self.weight);
         let blocks = self.blocks();
@@ -20,8 +20,8 @@ impl CodeGen for Rhs {
         gen_args.found_first = Some(false);
         gen_args.prev_args = Some(Vec::new());
         for (j, block) in blocks.into_iter().enumerate() {
-            let args = gen_args.full_args.as_ref().unwrap();
-            let prev_args = gen_args.prev_args.as_ref().unwrap();
+            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
+            let prev_args = gen_args.prev_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("prev_args".to_string()))?;
 
             let label_str = format!("{}_{}_{}", ident, alt, j);
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
@@ -29,7 +29,7 @@ impl CodeGen for Rhs {
             let block_size = block.len();
             let mut str_repr = Vec::with_capacity(block_size);
             if block_size == 0 {
-                gen_args.state.first_queue.get_mut(&label).unwrap()[0].1 = Some(CharBytes::Epsilon);
+                gen_args.state.get_first(&label)?[0].1 = Some(CharBytes::Epsilon);
             } 
             let mut counter: usize = 0;
             for (k, arg) in args.iter().enumerate() {
@@ -68,9 +68,9 @@ impl CodeGen for Rhs {
                     str_repr.push(symbol.to_string());
                 }
                 gen_args.symbol = Some(k);
-        		symbol.gen(gen_args);
+        		symbol.gen(gen_args)?;
         	}
-            let args = gen_args.full_args.as_ref().unwrap();
+            let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
             gen_args.state.str_repr.insert(label.clone(), str_repr);
             if j == blocks_count - 1 {
                 let mut ret_vals = Vec::new();
@@ -97,7 +97,7 @@ impl CodeGen for Rhs {
                 };
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
-                let rule_str = format!("{}_{}", ident, gen_args.alt.unwrap());
+                let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::MissingArg("alt".to_string()))?);
                 let inner_block = quote!(
                     let root = state.get_label_by_uuid(#root_str);
                     let rules = state.get_rule(#rule_str);
@@ -118,6 +118,7 @@ impl CodeGen for Rhs {
             }
             firsts.push(wagon_ident::Ident::Unknown(label_str).into());
 		}
-        gen_args.state.first_queue.get_mut(&ident).unwrap().push((firsts, None))
+        gen_args.state.get_first(&ident)?.push((firsts, None));
+        Ok(())
     }
 }

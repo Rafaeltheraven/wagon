@@ -4,13 +4,13 @@ use wagon_parser::parser::assignment::Assignment;
 use quote::quote;
 
 use wagon_codegen::ToTokensState;
-use crate::{CodeGenState, CodeGenArgs, CodeGen};
+use crate::{CodeGenState, CodeGenArgs, CodeGen, CodeGenResult, CodeGenError};
 
 impl CodeGen for Assignment {
-	fn gen(self, gen_args: &mut CodeGenArgs) {
+	fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
 		let state = &mut gen_args.state;
-		let label = gen_args.label.as_ref().unwrap();
-		let args = gen_args.full_args.as_mut().unwrap();
+		let label = gen_args.label.as_ref().ok_or_else(|| CodeGenError::MissingArg("label".to_string()))?;
+		let args = gen_args.full_args.as_mut().ok_or_else(|| CodeGenError::MissingArg("full_args".to_string()))?;
 
 		let expr = self.expr;
 		let ident = self.ident;
@@ -20,5 +20,6 @@ impl CodeGen for Assignment {
 		state.add_code(label.clone(), quote!(
 			let #ident_label: wagon_gll::value::Value = #expr_stream;
 		));
+		Ok(())
 	}
 }

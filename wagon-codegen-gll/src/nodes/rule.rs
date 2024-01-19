@@ -6,12 +6,12 @@ use proc_macro2::{Ident, Span};
 
 use wagon_parser::parser::rule::Rule;
 
-use crate::{CodeGenArgs, CodeGen};
+use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError};
 use std::rc::Rc;
 
 
 impl CodeGen for Rule {
-   fn gen(self, gen_args: &mut CodeGenArgs) {
+   fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
         match self {
             Rule::Analytic(ident, args, rhs) => {
                 let pointer: Rc<Ident> = Rc::new(Ident::new(&ident, Span::call_site()));
@@ -29,7 +29,7 @@ impl CodeGen for Rule {
                 gen_args.ident = Some(pointer.clone());
             	for (i, alt) in rhs.into_iter().enumerate() {
                     gen_args.alt = Some(i);
-            		alt.into_inner().gen(gen_args);
+            		alt.into_inner().gen(gen_args)?;
             	}
                 let stream = if gen_args.weight_config.no_prune {
                     quote!(
@@ -54,8 +54,10 @@ impl CodeGen for Rule {
                 };
                 gen_args.state.add_code(pointer.clone(), stream);
                 gen_args.state.roots.insert(pointer);
+                Ok(())
             },
             Rule::Generate(_, _, _) => todo!(),
-            Rule::Import(..) | Rule::Exclude(..) => panic!("{:?}", "Encountered import rule during codegen. These should have been converted away.")
-        };    }
+            Rule::Import(..) | Rule::Exclude(..) => Err(CodeGenError::Fatal("Encountered import rule during codegen. These should have been converted away.".to_string()))
+        }  
+    }
 }

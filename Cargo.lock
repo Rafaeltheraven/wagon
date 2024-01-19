@@ -492,6 +492,7 @@ dependencies = [
  "wagon-codegen",
  "wagon-ident",
  "wagon-parser",
+ "wagon-utils",
  "wagon-value",
 ]
 
