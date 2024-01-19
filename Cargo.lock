@@ -492,6 +492,7 @@ dependencies = [
  "wagon-codegen",
  "wagon-ident",
  "wagon-parser",
+ "wagon-value",
 ]
 
 [[package]]
@@ -505,6 +506,7 @@ dependencies = [
  "rand_core",
  "wagon-codegen",
  "wagon-ident",
+ "wagon-value",
 ]
 
 [[package]]
@@ -552,11 +554,19 @@ dependencies = [
  "wagon-lexer",
  "wagon-macros",
  "wagon-utils",
+ "wagon-value",
 ]
 
 [[package]]
 name = "wagon-utils"
 version = "0.1.0"
+
+[[package]]
+name = "wagon-value"
+version = "0.1.0"
+dependencies = [
+ "ordered-float",
+]
 
 [[package]]
 name = "windows-sys"

@@ -16,6 +16,7 @@ wagon-lexer = {workspace = true}
 wagon-ident = {workspace = true}
 wagon-utils = {workspace = true}
 wagon-macros = {workspace = true}
+wagon-value = {workspace = true}
 ordered-float = {workspace = true}
 petgraph = {workspace = true}
 indexmap = {workspace = true}

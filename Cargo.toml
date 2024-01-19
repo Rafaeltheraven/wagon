@@ -8,6 +8,7 @@ members = [
 	"wagon-macros",
 	"wagon-parser",
 	"wagon-utils",
+	"wagon-value",
 ]
 resolver = "2"
 
@@ -38,6 +39,7 @@ wagon-lexer = {path = "./wagon-lexer"}
 wagon-macros = {path = "./wagon-macros"}
 wagon-parser = {path = "./wagon-parser"}
 wagon-utils = {path = "./wagon-utils"}
+wagon-value = {path = "./wagon-value"}
 
 # For tests
 pretty_assertions = "1.4.0"

@@ -4,7 +4,7 @@ use derivative::Derivative;
 
 use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}};
 
-use wagon_codegen::value::Valueable;
+use wagon_value::Valueable;
 
 use super::{GrammarSlot, Terminal};
 

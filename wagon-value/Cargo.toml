@@ -1,0 +1,15 @@
+[package]
+name = "wagon-value"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Dynamic type value object for WAGon."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ordered-float = {workspace = true}

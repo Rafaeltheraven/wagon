@@ -1,10 +1,10 @@
 use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}, error::Error};
 
 use crate::GLLBlockLabel;
-pub use wagon_codegen::value::Value as InnerValue;
-pub use wagon_codegen::value::ValueError as InnerValueError;
-pub use wagon_codegen::value::ValueResult as InnerValueResult;
-use wagon_codegen::value::Valueable;
+pub(crate) use wagon_value::Value as InnerValue;
+pub(crate) use wagon_value::ValueError as InnerValueError;
+pub(crate) use wagon_value::ValueResult as InnerValueResult;
+use wagon_value::Valueable;
 
 #[derive(Debug, Eq, Hash, Clone)]
 /// An extension of [`wagon_codegen::value::Value`] that adds [`GLLBlockLabel`] as a possible type.

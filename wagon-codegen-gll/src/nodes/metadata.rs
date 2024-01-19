@@ -1,4 +1,4 @@
-use wagon_codegen::value::{Valueable, RecursiveValue};
+use wagon_value::{Valueable, RecursiveValue};
 use wagon_parser::parser::metadata::Metadata;
 
 use crate::{CodeGenArgs, CodeGen};

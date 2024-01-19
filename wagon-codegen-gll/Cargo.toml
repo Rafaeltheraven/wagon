@@ -15,6 +15,7 @@ description = "Code Generation methods to create a WAG GLL parser from a WAGon A
 wagon-parser = {workspace = true}
 wagon-ident = {workspace = true}
 wagon-codegen = {workspace = true}
+wagon-value = {workspace = true}
 proc-macro2 = {workspace = true}
 quote = {workspace = true}
 indexmap = {workspace = true}

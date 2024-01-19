@@ -5,9 +5,11 @@ use std::write;
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ToAst, WagNode, WagIx, WagTree, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use wagon_lexer::{math::Math, Spannable};
 
+use wagon_lexer::{math::Math, Spannable};
 use wagon_macros::match_error;
+use wagon_value::{Valueable, Value, ValueError, RecursiveValue};
+
 use ordered_float::NotNan;
 
 #[cfg(test)]
@@ -128,5 +130,27 @@ impl Display for Atom {
 impl Display for Dictionary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}[{}]", self.0, self.1)
+    }
+}
+
+impl<T: Valueable> TryFrom<Atom> for Value<T> {
+    type Error = ValueError<Self>;
+
+    fn try_from(value: Atom) -> Result<Self, Self::Error> {
+        match value {
+            Atom::LitBool(b) => Ok(Self::Bool(b)),
+            Atom::LitNum(i) => Ok(Self::Natural(i)),
+            Atom::LitFloat(f) => Ok(Self::Float(f)),
+            Atom::LitString(s) => Ok(Self::String(s)),
+            other => Err(ValueError::Fatal(format!("Unable to convert atom {} to a Value", other))),
+        }
+    }
+}
+
+impl TryFrom<Atom> for RecursiveValue {
+    type Error = ValueError<Self>;
+
+    fn try_from(value: Atom) -> Result<Self, Self::Error> {
+        Ok(Self::from(Value::try_from(value)?))
     }
 }
