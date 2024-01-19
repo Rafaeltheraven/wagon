@@ -6,7 +6,7 @@
 /// A trait version of [`std::iter::Peekable`].
 mod peek;
 
-use std::str::Chars;
+use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
 
 pub use peek::Peek;
 
@@ -295,5 +295,46 @@ pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Res
             Some(Err(ref e)) => panic!("Got error: {:?}", e),
             None => panic!("Expected a value, but failed")
         }
+    }
+}
+
+#[derive(Debug)]
+/// We failed to convert from some thing to another thing.
+///
+/// A generic error for when doing any [`TryFrom`] type implementations.
+///
+/// # Example
+/// ```
+/// use wagon_utils::ConversionError;
+///
+/// struct A;
+/// impl TryFrom<i32> for A {
+///     type Error = ConversionError<i32, Self>;
+///
+///     fn try_from(value: i32) -> Result<Self, Self::Error> {
+///         Err(ConversionError::new(value))
+///     }
+/// }
+/// ```
+/// 
+pub struct ConversionError<T, U> {
+    /// The thing we want to convert.
+    subject: T,
+    /// Used to hold the type info for the type of [`Valueable`] we are trying to convert to.
+    to: PhantomData<U>
+}
+
+impl<T: Display, U> Display for ConversionError<T, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Failed to convert {} from type {} to value variant {}", self.subject, std::any::type_name::<T>(), std::any::type_name::<U>())
+    }
+}
+
+impl<T: Display + std::fmt::Debug, U: std::fmt::Debug> Error for ConversionError<T, U> {}
+
+impl<T, U> ConversionError<T, U> {
+    /// Create a new `ConversionError`.
+    pub fn new(subject: T) -> Self {
+        Self {subject, to: PhantomData}
     }
 }
