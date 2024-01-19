@@ -25,11 +25,11 @@ pub use result::{ValueError, ValueResult};
 /// # Example
 /// Instead of doing this: 
 /// ```
-/// use wagon_codegen::value::Value;
+/// use wagon_value::Value;
 /// ```
 /// Do this:
 /// ```
-/// use wagon_codegen::value::RecursiveValue as Value;
+/// use wagon_value::RecursiveValue as Value;
 /// ```
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct RecursiveValue(Value<RecursiveValue>);
