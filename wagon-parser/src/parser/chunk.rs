@@ -34,7 +34,7 @@ type RuleConstructor = fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<R
 
 impl Chunk {
 
-	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: RuleConstructor, rules: &mut Vec<SpannableNode<Rule>>) {
+	fn rewrite_ebnf(ebnf: &EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: RuleConstructor, rules: &mut Vec<SpannableNode<Rule>>) {
 		let chunks: Vec<SpannableNode<Rhs>> = match ebnf {
             EbnfType::Some => {
                 let helper_ident = format!("{ident}·p");
@@ -106,32 +106,31 @@ impl Chunk {
     /// At the end, all EBNF operators are replaced by references to the new rules and we return a list of new rules to add to the grammar.
 	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<SpannableNode<Ident>>, span: &Span, rule_func: RuleConstructor, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
 		let mut rules = Vec::new();
-		match self {
-            Self { ebnf: None, .. } => {}
-            Self { ebnf: Some(e), chunk: ChunkP::Unit(u)} => {
-                let yanked = std::mem::replace(u, 
-                    SpannableNode::new(
-                        Symbol::NonTerminal(
-                            SpannableNode::new(Ident::Unknown(ident.clone()), span.clone()), 
-                            args.clone()
-                        ), 
-                        span.clone()
-                    )
-                );
-                Self::rewrite_ebnf(e, ident, args, yanked, span, rule_func, &mut rules);
-                self.ebnf = None;
-            },
-            Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
-                let new_ident = format!("{ident}_{depth}");
-                let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
-                rules.extend(new_rule.rewrite(depth+1, state)?);
-                rules.push(new_rule);
-            	let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident).into_spanned(span.clone()), args.clone()).into_spanned(span.clone());
-            	Self::rewrite_ebnf(e, ident.clone(), args.clone(), symbol, span, rule_func, &mut rules);
-            	self.ebnf = None;
-            	self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident).into_spanned(span.clone()), args).into_spanned(span.clone()));
-            }
-        };
+        if let Some(e) = std::mem::take(&mut self.ebnf) {
+            match self {
+                Self { chunk: ChunkP::Unit(u), ..} => {
+                    let yanked = std::mem::replace(u, 
+                        SpannableNode::new(
+                            Symbol::NonTerminal(
+                                SpannableNode::new(Ident::Unknown(ident.clone()), span.clone()), 
+                                args.clone()
+                            ), 
+                            span.clone()
+                        )
+                    );
+                    Self::rewrite_ebnf(&e, ident, args, yanked, span, rule_func, &mut rules);
+                },
+                Self { chunk: ChunkP::Group(g), ..} => {
+                    let new_ident = format!("{ident}_{depth}");
+                    let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
+                    rules.extend(new_rule.rewrite(depth+1, state)?);
+                    rules.push(new_rule);
+                    let symbol = Symbol::NonTerminal(Ident::Unknown(new_ident).into_spanned(span.clone()), args.clone()).into_spanned(span.clone());
+                    Self::rewrite_ebnf(&e, ident.clone(), args.clone(), symbol, span, rule_func, &mut rules);
+                    self.chunk = ChunkP::Unit(Symbol::NonTerminal(Ident::Unknown(ident).into_spanned(span.clone()), args).into_spanned(span.clone()));
+                }
+            };
+        }
         Ok(rules)
 	}
 

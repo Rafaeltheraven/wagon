@@ -25,6 +25,9 @@ use crate::firstpass::{FirstPassState, Rewrite};
 /// Parse an input string and check if the resulting WAG is valid.
 ///
 /// Given the input string, will either return a full, rewritten, WAG or an error.
+///
+/// # Errors 
+/// Returns a [`WagParseError`] if any error occurs during the parsing or checking stage.
 pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut parser = Parser::new(date);
     let mut wag = parser.parse()?;
@@ -83,7 +86,7 @@ impl<T: Parse + Display> Display for SpannableNode<T> {
 
 impl<T: Parse> From<T> for SpannableNode<T> {
     fn from(value: T) -> Self {
-        Self::new(value, Default::default())
+        Self::new(value, Span::default())
     }
 }
 
@@ -94,11 +97,11 @@ impl<T: Parse> SpannableNode<T> {
 	}
 
     /// Get a reference to the inner node.
-	pub fn to_inner(&self) -> &T {
+	pub const fn to_inner(&self) -> &T {
 		&self.node
 	}
 
-	fn new(node: T, span: Span) -> Self {
+	const fn new(node: T, span: Span) -> Self {
 		Self {node, span}
 	}
 

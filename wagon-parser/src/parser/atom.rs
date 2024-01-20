@@ -24,7 +24,8 @@ pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
 	/// Deconstruct the dictionary into it's [`Ident`] and [`Expression`].
-	#[must_use] pub fn deconstruct(&self) -> (&Ident, &Expression) {
+	#[must_use] 
+	pub const fn deconstruct(&self) -> (&Ident, &Expression) {
 		(&self.0, &self.1)
 	}
 }
@@ -71,7 +72,7 @@ impl Parse for Atom {
 	    match_error!(match lexer.next_result()? {
 	    	#[expect("identifier or dictionary")]
 	        either_token!(Identifier(x)) => {
-	        	if let Ok(inner) = between(lexer, Tokens::MathToken(Math::LBr), Tokens::MathToken(Math::RBr)) {
+	        	if let Ok(inner) = between(lexer, &Tokens::MathToken(Math::LBr), &Tokens::MathToken(Math::RBr)) {
 	        		Ok(Self::Dict(Dictionary(x, inner)))
 	        	} else {
 	        		Ok(Self::Ident(x))
@@ -88,7 +89,7 @@ impl Parse for Atom {
 	        #[expect("string")]
 	        either_token!(LitString(x)) => Ok(Self::LitString(x)),
 	        Tokens::MathToken(Math::LPar) => {
-	        	let resp = between_right(lexer, Tokens::MathToken(Math::RPar))?;
+	        	let resp = between_right(lexer, &Tokens::MathToken(Math::RPar))?;
 	        	Ok(Self::Group(resp))
 	        },
 	    })

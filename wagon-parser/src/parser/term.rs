@@ -97,13 +97,11 @@ impl ToAst for Term {
 impl ToAst for TermP {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         let node = ast.add_node(WagNode::Term(Some(self.op)));
-        let ret = if let Some(next) = self.cont {
+        let ret = self.cont.map_or(node, |next| {
         	let parent = next.to_ast(ast);
         	ast.add_edge(parent, node, ());
         	parent
-        } else {
-        	node
-        };
+        });
         let child = self.right.to_ast(ast);
         ast.add_edge(ret, child, ());
         ret

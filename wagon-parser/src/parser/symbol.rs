@@ -35,7 +35,7 @@ impl Parse for Symbol {
         	Tokens::ProductionToken(Productions::Identifier(_)) => {
                 let ident = SpannableNode::parse(lexer)?;
                 let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::LPar))) {
-                    between_sep(lexer, Tokens::ProductionToken(Productions::LPar), Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
+                    between_sep(lexer, &Tokens::ProductionToken(Productions::LPar), &Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
                 } else {
                     Vec::new()
                 };
@@ -59,12 +59,13 @@ impl Default for Symbol {
 impl Symbol {
 
     /// Check if this symbol is not a non-terminal.
-    pub(crate) fn is_terminal(&self) -> bool {
+    pub(crate) const fn is_terminal(&self) -> bool {
         matches!(self, Self::Terminal(..) | Self::Assignment(..) | Self::Epsilon)
     }
 
     /// Check if this symbol is an [`Assignment`].
-    #[must_use] pub fn is_assignment(&self) -> bool {
+    #[must_use] 
+    pub const fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment(..))
     }
 

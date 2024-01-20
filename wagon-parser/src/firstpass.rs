@@ -66,11 +66,11 @@ impl Display for WagCheckError {
 impl FirstPassState {
 	pub(crate) fn add_parameter(&mut self, nt: String, param: SpannableNode<Ident>) -> FirstPassResult<()> {
 		if let Some(params) = self.parameter_map.get_mut(&nt) {
-			if !params.contains(&param) {
+			if params.contains(&param) {
+				Err(WagCheckError::DuplicateParameters(nt, param))
+			} else {
 				params.insert(param);
 				Ok(())
-			} else {
-				Err(WagCheckError::DuplicateParameters(nt, param))
 			}
 		} else {
 			let mut set = IndexSet::new();

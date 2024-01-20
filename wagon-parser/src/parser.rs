@@ -71,6 +71,9 @@ impl<'source> Parser<'source> {
 	}
 
 	/// Start parsing and return a result.
+	///
+	/// # Errors
+	/// Returns a [`WagParseError`] if any error occurs during parsing.
 	pub fn parse(&mut self) -> ParseResult<Wag> {
 		Wag::parse(&mut self.lexer)
 	}
@@ -116,8 +119,7 @@ impl From<LexingError> for WagParseError {
 impl Error for WagParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Unexpected { .. } => None,
-            Self::Fatal(_) => None,
+            Self::Fatal(_) | Self::Unexpected { .. } => None,
             Self::CheckError(e) => Some(e),
             Self::LexError(e) => Some(e),
             Self::FloatError(e, _) => Some(e)
@@ -134,11 +136,9 @@ impl Display for WagParseError {
 impl MsgAndSpan for WagParseError {
 	fn span(self) -> Span {
 		match self {
-		    Self::Unexpected { span, .. } => span,
-		    Self::Fatal((span, _)) => span,
 		    Self::CheckError(check) => check.span(),
 		    Self::LexError(lex) => lex.span(),
-		    Self::FloatError(_, span) => span,
+		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } => span,
 		}
 	}
 
@@ -160,9 +160,15 @@ impl MsgAndSpan for WagParseError {
 pub trait Parse {
 
 	/// Given a lexer, try to parse a valid instance of this node.
+	///
+	/// # Errors
+	/// Should return a [`WagParseError`] if the parsing fails.
 	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized;
 
 	/// Parse multiple instances of this node, separated by a [`Tokens`].
+	///
+	/// # Errors
+	/// Should return a [`WagParseError`] if the parsing fails.
 	fn parse_sep(lexer: &mut LexerBridge, join: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
@@ -173,6 +179,9 @@ pub trait Parse {
 	}
 
 	/// Parse multiple instances of this node, separated by a [`Tokens`] end ended by a (possibly different) [`Tokens`].
+	///
+	/// # Errors
+	/// Should return a [`WagParseError`] if the parsing fails.
 	fn parse_sep_end(lexer: &mut LexerBridge, join: Tokens, end: Tokens) -> ParseResult<Vec<Self>> where Self: Sized {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
@@ -236,6 +245,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
 	fn test_example_wag() {
 		let input = r#"
 		include activities::other;
@@ -390,12 +400,13 @@ mod tests {
 	}
 
 	#[test]
+	#[allow(clippy::too_many_lines)]
 	fn test_example_wag2() {
-		let input = r#"
+		let input = r"
 		S -> {$x = 0; $y = 0;} X($x, $y);
 		X(*y, &x) -> 'a' {*y = *y + 1; &x = &x + 1;} B;
 		B -> 'b';
-		"#;
+		";
 		let mut lexer = LexerBridge::new(input);
 		let output = Wag::parse(&mut lexer);
 		let expected = unspanned_tree!(Wag {
@@ -596,9 +607,9 @@ mod tests {
 
 	#[test]
 	fn test_simple_rewrite_maybe() {
-		let input = r#"
+		let input = r"
 		A -> X Y?;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -628,9 +639,9 @@ mod tests {
 
 	#[test]
 	fn test_simple_rewrite_many() {
-		let input = r#"
+		let input = r"
 		A -> X Y*;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -663,9 +674,9 @@ mod tests {
 
 	#[test]
 	fn test_simple_rewrite_some() {
-		let input = r#"
+		let input = r"
 		A -> X Y+;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -707,9 +718,9 @@ mod tests {
 
 	#[test]
 	fn test_simple_group() {
-		let input = r#"
+		let input = r"
 		A -> (B C?)+;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -764,9 +775,9 @@ mod tests {
 
 	#[test]
 	fn test_complex_rewrite() {
-		let input = r#"
+		let input = r"
 		A -> ((X Y)+ Z?)+;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -853,9 +864,9 @@ mod tests {
 
 	#[test]
 	fn test_rewrite_group_no_ebnf() {
-		let input = r#"
+		let input = r"
 		A -> (B C);
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();
@@ -883,11 +894,11 @@ mod tests {
 
 	#[test]
 	fn test_rewrite_conflict() {
-		let input = r#"
+		let input = r"
 		A -> B;
 		A -> C;
 		A -> ;
-		"#;
+		";
 		let mut parser = Parser::new(input);
 		let mut output = parser.parse().unwrap();
 		output.rewrite(0, &mut FirstPassState::default()).unwrap();

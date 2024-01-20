@@ -35,14 +35,16 @@ impl Rhs {
 
 	fn parse_weight(lexer: &mut LexerBridge) -> ParseResult<Option<SpannableNode<Expression>>> {
 		match lexer.peek() {
-			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, Tokens::ProductionToken(Productions::LBr), Tokens::MathToken(Math::RBr))?)),
+			Some(Ok(Tokens::ProductionToken(Productions::LBr))) => Ok(Some(between(lexer, &Tokens::ProductionToken(Productions::LBr), &Tokens::MathToken(Math::RBr))?)),
 			_ => Ok(None)
 		}
 	}
 
 	fn parse_chunks(lexer: &mut LexerBridge) -> ParseResult<Vec<SpannableNode<Chunk>>> {
 		let mut resp = Vec::new();
-		if lexer.peek() != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) { // If we immediately encounter a ;, this is an empty rule
+		if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::Semi))) { // If we immediately encounter a ;, this is an empty rule
+			resp.push(SpannableNode::new(Chunk::empty(), lexer.span()));
+		} else {
 			resp.push(SpannableNode::parse(lexer)?);
 			let mut check = lexer.peek();
 			while check.is_some() && check != Some(&Ok(Tokens::ProductionToken(Productions::Alternative))) && check != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) {
@@ -52,8 +54,6 @@ impl Rhs {
 				resp.push(SpannableNode::parse(lexer)?);
 				check = lexer.peek();
 			}
-		} else {
-			resp.push(SpannableNode::new(Chunk::empty(), lexer.span()));
 		}
 		Ok(resp)
 	}
@@ -102,6 +102,9 @@ impl Rhs {
 	/// Split up a rule into GLL-Blocks[^gll]. Represented as a matrix of [`Symbol`]s.
 	///
 	/// Expects all EBNF chunks to have been factored out.
+	///
+	/// # Errors
+	/// Returns an error if [`Chunks::ebnf`] is not `None`.
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
 	pub fn blocks(self) -> ParseResult<Vec<Vec<SpannableNode<Symbol>>>> {

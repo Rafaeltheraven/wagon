@@ -24,10 +24,10 @@ impl Parse for Assignment {
 	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
 		let ident = SpannableNode::parse(lexer)?;
 		let next = lexer.next_result()?;
-		if next != Tokens::MathToken(Math::Assigns) {
-			Err(WagParseError::Unexpected { span: lexer.span(), offender: next, expected: vec![Tokens::MathToken(Math::Assigns).to_string()] })
-		} else {
+		if next == Tokens::MathToken(Math::Assigns) {
 			Ok(Self {ident, expr: SpannableNode::parse(lexer)?})
+		} else {
+			Err(WagParseError::Unexpected { span: lexer.span(), offender: next, expected: vec![Tokens::MathToken(Math::Assigns).to_string()] })
 		}
 	}
 }

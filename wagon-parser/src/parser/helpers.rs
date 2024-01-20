@@ -21,11 +21,11 @@ pub(super) trait TokenMapper {
 
 type ParseFunc<T> = Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>;
 
-fn __between_right<T>(lexer: &mut LexerBridge, right: Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
+fn __between_right<T>(lexer: &mut LexerBridge, right: &Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
 	let resp = fun(lexer)?;
 	let span = lexer.span();
 	let token = lexer.peek_result()?;
-	if token == &right {
+	if token == right {
 		lexer.next();
 		Ok(resp)
 	} else {
@@ -33,10 +33,10 @@ fn __between_right<T>(lexer: &mut LexerBridge, right: Tokens, fun: ParseFunc<T>)
 	}
 }
 
-fn __between<T>(lexer: &mut LexerBridge, left: Tokens, right: Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
+fn __between<T>(lexer: &mut LexerBridge, left: &Tokens, right: &Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
 	let span = lexer.span();
 	let token = lexer.peek_result()?;
-	if token == &left {
+	if token == left {
 		lexer.next();
 		__between_right(lexer, right, fun)
 	} else {
@@ -45,17 +45,17 @@ fn __between<T>(lexer: &mut LexerBridge, left: Tokens, right: Tokens, fun: Parse
 }
 
 /// Parse a node, terminated by a final right [`Tokens`].
-pub(super) fn between_right<T: Parse>(lexer: &mut LexerBridge, right: Tokens) -> ParseResult<T> {
+pub(super) fn between_right<T: Parse>(lexer: &mut LexerBridge, right: &Tokens) -> ParseResult<T> {
 	__between_right(lexer, right, Box::new(|x| T::parse(x)))
 }
 
 /// Parse a node that is wrapped between a left [`Tokens`] and a right [`Tokens`].
-pub(super) fn between<T: Parse>(lexer: &mut LexerBridge, left: Tokens, right: Tokens) -> ParseResult<T> {
+pub(super) fn between<T: Parse>(lexer: &mut LexerBridge, left: &Tokens, right: &Tokens) -> ParseResult<T> {
 	__between(lexer, left, right, Box::new(|x| T::parse(x)))
 }
 
 /// Parse multiple nodes wrapped between left and right [`Tokens`] and separated by (another) [`Tokens`].
-pub(super) fn between_sep<T: Parse>(lexer: &mut LexerBridge, left: Tokens, right: Tokens, sep: Tokens) -> ParseResult<Vec<T>> {
+pub(super) fn between_sep<T: Parse>(lexer: &mut LexerBridge, left: &Tokens, right: &Tokens, sep: Tokens) -> ParseResult<Vec<T>> {
 	__between(lexer, left, right, Box::new(|x| T::parse_sep(x, sep)))
 }
 
