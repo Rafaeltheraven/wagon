@@ -18,6 +18,7 @@ use proc_macro2::{Ident, Literal};
 use quote::quote;
 use indexmap::IndexSet;
 
+use wagon_parser::parser::WagParseError;
 use wagon_parser::parser::{wag::Wag, atom::Atom};
 use wagon_parser::{Span, MsgAndSpan};
 use wagon_codegen::{SpannableIdent, CodeMap};
@@ -87,11 +88,16 @@ pub(crate) enum CodeGenErrorKind {
 	MissingArg(String),
 	/// Expected to have a first set for some ident in [`CodeGenState`] but we do not.
 	MissingFirst(Rc<Ident>),
+	/// An error occurred in [`wagon_parser`].
+	ParseError(WagParseError)
 }
 
 #[derive(Debug)]
+/// Struct for errors that occur during codegen, as well as their span.
 pub struct CodeGenError {
+	/// The type of error the occurred (see [`CodeGenErrorKind`]).
 	kind: CodeGenErrorKind,
+	/// Span for where the error occurred.
 	span: Span
 }
 
@@ -107,7 +113,10 @@ impl CodeGenError {
 
 impl MsgAndSpan for CodeGenError {
     fn span(self) -> Span {
-        self.span
+        match self.kind {
+        	CodeGenErrorKind::ParseError(e) => e.span(),
+        	_ => self.span
+        }
     }
 
     fn msg(&self) -> (String, String) {
@@ -117,6 +126,7 @@ impl MsgAndSpan for CodeGenError {
             CodeGenErrorKind::Fatal(s) => ("Fatal Error".to_string(), s.to_owned()),
             CodeGenErrorKind::MissingArg(s) => ("Missing Argument".to_string(), format!("Expected to see {} but it was None", s)),
             CodeGenErrorKind::MissingFirst(i) => ("Missing First Set".to_string(), format!("Expected to have one for {} but it was None", i)),
+            CodeGenErrorKind::ParseError(e) => e.msg(),
         }
     }
 }
@@ -147,6 +157,12 @@ impl From<ConversionError<Atom, RecursiveValue>> for CodeGenErrorKind {
 impl From<ValueError<RecursiveValue>> for CodeGenErrorKind {
     fn from(value: ValueError<RecursiveValue>) -> Self {
         Self::ValueError(value)
+    }
+}
+
+impl From<WagParseError> for CodeGenError {
+    fn from(value: WagParseError) -> Self {
+        Self::new(CodeGenErrorKind::ParseError(value))
     }
 }
 

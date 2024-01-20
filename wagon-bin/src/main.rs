@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use wagon_parser::MsgAndSpan;
-
 use wagon_parser::parse_and_check;
 use wagon_codegen_gll::gen_parser;
 use wagon_codegen::CodeMap;

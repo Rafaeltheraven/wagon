@@ -97,7 +97,7 @@ pub enum WagParseError {
 	CheckError(WagCheckError),
 	/// A wrapper around [`LexingError`].
 	LexError(LexingError),
-	/// Any other error we are wrapping.
+	/// Expected a float but got a NaN
 	FloatError(FloatIsNan, Span)
 }
 

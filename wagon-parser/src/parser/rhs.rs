@@ -101,12 +101,13 @@ impl Rhs {
 	/// Expects all EBNF chunks to have been factored out.
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
-	pub fn blocks(self) -> Vec<Vec<SpannableNode<Symbol>>> {
+	pub fn blocks(self) -> ParseResult<Vec<Vec<SpannableNode<Symbol>>>> {
 		let mut blocks = Vec::new();
 		let mut curr = Vec::new();
 		for chunk in self.chunks.into_iter() {
+			let span = chunk.span();
 			let symbols = match chunk.into_inner() {
-				Chunk { ebnf: Some(_), .. } => panic!("{:?}", "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out"),
+				Chunk { ebnf: Some(_), .. } => return Err(WagParseError::Fatal((span, "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out".to_string()))),
 				c => c.extract_symbols(), // Deal with groups
 			};
 			for symbol in symbols {
@@ -119,7 +120,7 @@ impl Rhs {
 			}
 		}
 		blocks.push(curr);
-		blocks
+		Ok(blocks)
 	}
 }
 
@@ -177,7 +178,7 @@ mod tests {
 			].wrap_spannable(),
 			vec![]
 		];
-		assert_eq!(blocks, expected);
+		assert_eq!(blocks.unwrap(), expected);
 
 	}
 

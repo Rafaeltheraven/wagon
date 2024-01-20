@@ -18,7 +18,7 @@ impl CodeGen for SpannableNode<Rhs> {
         let alt = gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?;
         let mut firsts = Vec::with_capacity(node.chunks.len());
         let weight = std::mem::take(&mut node.weight);
-        let blocks = node.blocks();
+        let blocks = node.blocks()?;
         let blocks_count = blocks.len();
         gen_args.found_first = Some(false);
         gen_args.prev_args = Some(Vec::new());
