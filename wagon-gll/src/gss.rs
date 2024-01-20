@@ -46,7 +46,8 @@ impl<'a> GSSNode<'a> {
 	}
 
 	/// Get a reference to the [`GrammarSlot`].
-	#[must_use] pub fn get_slot(&self) -> &Rc<GrammarSlot<'a>> {
+	#[must_use] 
+	pub const fn get_slot(&self) -> &Rc<GrammarSlot<'a>> {
 		&self.slot
 	}
 

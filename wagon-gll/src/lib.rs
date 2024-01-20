@@ -82,6 +82,9 @@ pub trait Label<'a>: Debug {
 	/// Any code to run when encountering this label.
 	///
 	/// This is called by `GLLState::goto` and is used to make the `goto` from the original paper work.
+	///
+	/// # Errors
+	/// Should return a `GLLParseError` if an error occurs during the parsing or evaluation of attributes.
 	fn code(&self, state: &mut GLLState<'a>) -> ParseResult<'a, ()>;
 	/// Check if the next token in the current state is accepted by this label's first-follow set.
 	fn first(&self, state: &mut GLLState<'a>) -> bool {
@@ -133,12 +136,11 @@ pub trait Label<'a>: Debug {
 	/// This should either calculate the weight for this label, as denoted in the WAGon DSL, or `None`.
 	fn _weight(&self, state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>>;
 	/// Returns either the weight of this label as calculated by [`_weight`](`Label::_weight`), or `1`.
+	///
+	/// # Errors
+	/// Should return a [`ValueError`] if something goes wrong during the evaluation of the weight.
 	fn weight(&self, state: &GLLState<'a>) -> ValueResult<'a, Value<'a>> {
-		if let Some(weight) = self._weight(state) {
-			weight
-		} else {
-			Ok(1.into())
-		}
+		self._weight(state).map_or_else(|| Ok(1.into()), |weight| weight)
 	}
 	/// A string representation of the chunk (likely a GLL block) that this label represents.
 	fn to_string(&self) -> &str;
@@ -325,14 +327,12 @@ impl<'a> GrammarSlot<'a> {
 
 	/// Compare the weight of this slot with the weight of another.
 	///
-	/// Returns `None` if the comparison is impossible.
+	/// # Errors
+	/// Returns a wrapped [`ValueError::ComparisonError`](`InnerValueError::ComparisonError`) if the comparison is not possible.
 	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
 		let left_weight = self.curr_block(state).weight(state)?;
 		let right_weight = other.curr_block(state).weight(state)?;
-		match left_weight.partial_cmp(&right_weight) {
-		    Some(o) => Ok(o),
-		    None => Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))),
-		}
+		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
 	}
 }
 

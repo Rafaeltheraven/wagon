@@ -68,7 +68,7 @@ impl<'a> GLLState<'a> {
 		let mut sppf_map = HashMap::new();
 		let mut gss_map = HashMap::new();
 		let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).unwrap().clone(), rule_map.get(ROOT_UUID).unwrap().clone(), 0, 0, ROOT_UUID));
-		let gss_root_node = Rc::new(GSSNode::new(root_slot.clone(), 0, Default::default()));
+		let gss_root_node = Rc::new(GSSNode::new(root_slot.clone(), 0, Vec::default()));
 		let sppf_root = sppf.add_node(SPPFNode::Dummy);
 		let gss_root = gss.add_node(gss_root_node.clone());
 		sppf_map.insert(SPPFNode::Dummy, sppf_root);
@@ -83,14 +83,14 @@ impl<'a> GLLState<'a> {
 			context_pointer: gss_root,
 			sppf_pointer: sppf_root, 
 			sppf_root, 
-			todo: Default::default(), 
-			visited: Default::default(), 
-			pop: Default::default(), 
-			gss_map: Default::default(), 
-			sppf_map: Default::default(), 
+			todo: IndexSet::default(), 
+			visited: HashSet::default(), 
+			pop: HashMap::default(), 
+			gss_map, 
+			sppf_map,
 			rule_map,
 			label_map,
-			errors: Default::default(),
+			errors: Vec::default(),
 		};
 		state.add(root_slot, gss_root, 0, sppf_root);
 		state
@@ -105,7 +105,10 @@ impl<'a> GLLState<'a> {
 	/// * `w` => `self.sppf_pointer`.
 	///
 	/// Differently from the paper, this method also takes a list of attributes that are passed along to the `GSS`.
-	pub fn create(&mut self, slot: Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> ParseResult<'a, GSSNodeIndex> {
+	///
+	/// # Errors
+	/// Returns a [`GLLParseError`] if something unexpected happens.
+	pub fn create(&mut self, slot: &Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> ParseResult<'a, GSSNodeIndex> {
 		let candidate = GSSNode::new(slot.clone(), self.input_pointer, args);
 		let v = if let Some(i) = self.gss_map.get(&candidate) {
 			i.to_owned()
@@ -129,10 +132,10 @@ impl<'a> GLLState<'a> {
 		Ok(v)
 	}
 
-	fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
+	fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: &Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
 		for child in self.sppf.neighbors_directed(parent, Outgoing) {
 			match self.sppf.node_weight(child) {
-				Some(SPPFNode::Packed { slot, split, .. }) if *slot == ref_slot && *split == i => return Some(child),
+				Some(SPPFNode::Packed { slot, split, .. }) if slot == ref_slot && *split == i => return Some(child),
 				_ => {} 
 			}
 		}
@@ -143,6 +146,9 @@ impl<'a> GLLState<'a> {
 	///
 	/// This is `get_node_p` from the original paper. Differently from that paper, this also takes a `context_pointer`, which tells the packed node we are
 	/// retrieving/creating where it can find it's context.
+	///
+	/// # Errors
+	/// Returns an error either because something is inexplicably missing in one of the state datastructures, or because the weight evaluation failed.
 	pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex) -> ParseResult<'a, SPPFNodeIndex> {
 		if self.is_special_slot(&slot) {
 			Ok(right)
@@ -159,8 +165,8 @@ impl<'a> GLLState<'a> {
 			};
 			if matches!(left_node, SPPFNode::Dummy) {
 				let i = right_node.left_extend().unwrap();
-				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
-				if self.get_packed_node(node, slot.clone(), i).is_none() {
+				let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer);
+				if self.get_packed_node(node, &slot, i).is_none() {
 					let packed = SPPFNode::Packed { slot, split: i, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, right, None);
@@ -169,8 +175,8 @@ impl<'a> GLLState<'a> {
 				Ok(node)
 			} else {
 				let (i, k) = (left_node.left_extend().unwrap(), left_node.right_extend().unwrap());
-				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
-				if self.get_packed_node(node, slot.clone(), k).is_none() {
+				let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer);
+				if self.get_packed_node(node, &slot, k).is_none() {
 					let packed = SPPFNode::Packed { slot, split: k, context: self.gss_pointer };
 					let ix = self.sppf.add_node(packed);
 					self.sppf.add_edge(ix, left, None);
@@ -192,12 +198,14 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Get the [`GSSNode`] `self.gss_pointer` is currently pointing to.
-	#[must_use] pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
+	#[must_use] 
+	pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
 		self.get_gss_node_unchecked(self.gss_pointer)
 	}
 
 	/// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
-	#[must_use] pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
+	#[must_use] 
+	pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
 		self.get_sppf_node_unchecked(self.sppf_pointer)
 	}
 
@@ -214,12 +222,12 @@ impl<'a> GLLState<'a> {
 		self.find_or_create_sppf(candidate)
 	}
 
-	fn find_or_create_sppf_intermediate(&mut self, slot: Rc<GrammarSlot<'a>>, left: usize, right: usize, context_pointer: GSSNodeIndex) -> SPPFNodeIndex {
+	fn find_or_create_sppf_intermediate(&mut self, slot: &Rc<GrammarSlot<'a>>, left: usize, right: usize, context_pointer: GSSNodeIndex) -> SPPFNodeIndex {
 		let candidate = SPPFNode::Intermediate { 
 			slot: slot.clone(), 
 			left, 
 			right, 
-			ret: Default::default(), 
+			ret: Vec::default(), 
 			context: self.get_gss_node_unchecked(context_pointer).clone(),
 		};
 		self.find_or_create_sppf(candidate)
@@ -260,7 +268,10 @@ impl<'a> GLLState<'a> {
 	/// * `z` => `self.sppf_pointer`
 	///
 	/// Additionally, this method takes a list of attributes that are returned after the non-terminal was parsed.
-	pub fn pop(&mut self, ret_vals: ReturnMap<'a>) -> ParseResult<'a, ()> {
+	///
+	/// # Errors
+	/// Returns an error for the same reasons as [`GLLState::get_node_p`].
+	pub fn pop(&mut self, ret_vals: &ReturnMap<'a>) -> ParseResult<'a, ()> {
 		if self.gss_pointer != self.gss_root {
 			let curr_map = self.pop.get_mut(&self.gss_pointer);
 			if let Some(map) = curr_map {
@@ -286,6 +297,9 @@ impl<'a> GLLState<'a> {
 	/// If the bytes we just consumed are not the expected bytes, we return an error.
 	///
 	/// If no error is returned, we move `self.input_pointer` forward as much as needed.
+	///
+	/// # Errors
+	/// Returns either a [`GLLParseError::TooLong`] or [`GLLParseError::UnexpectedByte`] depending on the expected bytes and state of the input.
 	pub fn next(&mut self, bytes: Terminal<'a>) -> ParseResult<()> {
 		let mut pointer = self.input_pointer;
 		for expected in bytes {
@@ -311,23 +325,20 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Check if, given the current state, the [`Label`](crate::Label)'s first-follow set is accepting.
-	pub fn test_next(&mut self, label: GLLBlockLabel<'a>) -> bool {
+	pub fn test_next(&mut self, label: &GLLBlockLabel<'a>) -> bool {
 		label.first(self)
 	}
 
 	/// Get a specific rule by its uuid.
-	#[must_use] pub fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
+	#[must_use] 
+	pub fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
 		self.rule_map.get(ident).unwrap_or_else(|| panic!("Issue unwrapping rule map. {ident} not in keyset")).clone()
 	}
 
 	/// Get a specific [`Label`](crate::Label) as identified by the given [`Ident`].
 	#[must_use] pub fn get_label(&self, ident: &Ident) -> GLLBlockLabel<'a> {
 		let raw_string = ident.extract_string();
-		if let Some(label) = self.label_map.get(raw_string) {
-			label.clone()
-		} else { // Must evaluate at runtime
-			todo!()
-		}
+		self.label_map.get(raw_string).map_or_else(|| todo!(), std::clone::Clone::clone)
 	}
 
 	/// Get a specific [`Label`](crate::Label) by its uuid.
@@ -356,12 +367,10 @@ impl<'a> GLLState<'a> {
 
 	fn is_special_slot(&self, slot: &GrammarSlot<'a>) -> bool {
 		if slot.dot == 1 && slot.pos == 0 && !slot.is_last(self) {
-			if let Some(r) = slot.rule.first() {
+			slot.rule.first().map_or(false, |r| {
 				let a = self.get_label(r);
-				a.str_parts().len() == 1 && (a.is_terminal() || !a.is_nullable(self, &mut Default::default()))
-			} else {
-				false
-			}
+				a.str_parts().len() == 1 && (a.is_terminal() || !a.is_nullable(self, &mut HashSet::default()))
+			})
 		} else {
 			false
 		}

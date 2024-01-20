@@ -62,14 +62,14 @@ impl<'a> Valueable for Value<'a> {
     fn to_int(&self) -> InnerValueResult<i32, Self> {
         match self {
             Value::Value(v) => Ok(v.to_int()?),
-            o => Ok(i32::from(o.is_truthy()?))
+            o @ Value::Label(_) => Ok(i32::from(o.is_truthy()?))
         }
     }
 
     fn to_float(&self) -> InnerValueResult<f32, Self> {
         match self {
             Value::Value(v) => Ok(v.to_float()?),
-            o => Ok(if o.is_truthy()? { 1.0 } else { 0.0 })
+            o @ Value::Label(_) => Ok(if o.is_truthy()? { 1.0 } else { 0.0 })
         }
     }
 
@@ -83,7 +83,7 @@ impl<'a> Valueable for Value<'a> {
     fn display_numerical(&self) -> InnerValueResult<String, Self> {
         match self {
             Value::Value(v) => Ok(v.display_numerical()?),
-            other => Ok(other.to_int()?.to_string())
+            other @ Value::Label(_) => Ok(other.to_int()?.to_string())
         }
     }
 }
@@ -108,18 +108,21 @@ impl Display for Value<'_> {
 }
 
 impl From<Value<'_>> for i32 { // Can't genericize these because Rust doesn't allow it
+    #[allow(clippy::expect_used)]
     fn from(value: Value) -> Self {
         value.to_int().expect("This conversion can not fail")
     }
 }
 
 impl From<Value<'_>> for f32 {
+    #[allow(clippy::expect_used)]
     fn from(value: Value) -> Self {
         value.to_float().expect("This conversion can not fail")
     }
 }
 
 impl From<Value<'_>> for bool {
+    #[allow(clippy::expect_used)]
     fn from(value: Value) -> Self {
         value.is_truthy().expect("This conversion can not fail")
     }
@@ -137,7 +140,7 @@ impl<'a> TryFrom<Value<'a>> for GLLBlockLabel<'a> {
     fn try_from(value: Value<'a>) -> Result<Self, Self::Error> {
         match value {
             Value::Label(l) => Ok(l),
-            other => Err(ValueError::ConvertToLabel(other))
+            other @ Value::Value(_) => Err(ValueError::ConvertToLabel(other))
         }
     }
 }
@@ -192,7 +195,7 @@ impl<'a> Not for Value<'a> {
     fn not(self) -> Self::Output {
         match self {
             Value::Value(v) => Ok(Value::Value((!v)?)),
-            v => Err(InnerValueError::NegationError(v))
+            v @ Value::Label(_) => Err(InnerValueError::NegationError(v))
         }
     }
 }

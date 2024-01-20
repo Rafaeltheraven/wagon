@@ -505,7 +505,6 @@ dependencies = [
  "ordered-float",
  "petgraph",
  "rand_core",
- "wagon-codegen",
  "wagon-ident",
  "wagon-value",
 ]

@@ -76,14 +76,14 @@ pub enum SPPFNode<'a> {
 
 impl<'a> SPPFNode<'a> {
 
-    pub(crate) fn right_extend(&self) -> Option<usize> {
+    pub(crate) const fn right_extend(&self) -> Option<usize> {
         match self {
             Self::Intermediate { right, .. } | Self::Symbol { right, .. } => Some(*right),
             _ => None
         }
     }
 
-    pub(crate) fn left_extend(&self) -> Option<usize> {
+    pub(crate) const fn left_extend(&self) -> Option<usize> {
         match self {
             Self::Intermediate { left, .. } | Self::Symbol { left, .. } => Some(*left),
             _ => None
@@ -129,23 +129,18 @@ impl<'a> SPPFNode<'a> {
         }
     }
 
-    pub(crate) fn dot_shape(&self) -> &str {
+    pub(crate) const fn dot_shape(&self) -> &str {
         match self {
             SPPFNode::Dummy => "diamond", 
-            SPPFNode::Symbol { .. } => "oval",
+            SPPFNode::Symbol { .. } | SPPFNode::Packed { .. } => "oval",
             SPPFNode::Intermediate { .. } => "box",
-            SPPFNode::Packed { .. } => "oval",
         }
     }
 
     pub(crate) fn get_ret_val(&self, i: AttributeKey) -> Option<&Value<'a>> {
         match self {
             SPPFNode::Intermediate { ret, .. } => {
-                if let Some(v) = ret.get(i) {
-                    v.as_ref()
-                } else {
-                    None
-                }
+                ret.get(i).and_then(|v| v.as_ref())
             },
             _ => panic!("This method should only be called on intermediate nodes")
         }
@@ -179,7 +174,8 @@ impl<'a> SPPF<'a> {
     /// Goes through the entire SPPF and attempts to locate the top-most node that consumes the string from `0` to `input_target`.
     ///
     /// If `input_target` is `None`, we just find the top-most node that consumes from `0`.
-    #[must_use] pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
+    #[must_use] 
+    pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
         let mut roots = Vec::new();
         for ix in self.0.node_indices() {
             let node = self.0.node_weight(ix).unwrap();
