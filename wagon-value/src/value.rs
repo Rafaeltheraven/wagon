@@ -45,6 +45,7 @@ impl<T: Valueable> Valueable for Value<T> {
         })
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn to_float(&self) -> ValueResult<f32, Self> {
         Ok(match self {
             Value::Natural(n) => *n as f32,

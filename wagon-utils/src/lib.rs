@@ -18,6 +18,7 @@ pub use peek::Peek;
 /// let s = "123";
 /// assert_eq!("2", rem_first_and_last_char(s));
 /// ```
+#[must_use]
 pub fn rem_first_and_last_char(value: &str) -> String {
     _rem_last_char(_rem_first_char(value))
 }
@@ -30,6 +31,7 @@ pub fn rem_first_and_last_char(value: &str) -> String {
 /// let s = "123";
 /// assert_eq!("23", rem_first_char(s));
 /// ```
+#[must_use]
 pub fn rem_first_char(value: &str) -> String {
     _rem_first_char(value).as_str().to_string()
 }
@@ -42,6 +44,7 @@ pub fn rem_first_char(value: &str) -> String {
 /// let s = "123";
 /// assert_eq!("12", rem_last_char(s));
 /// ```
+#[must_use]
 pub fn rem_last_char(value: &str) -> String {
     _rem_last_char(value.chars())
 }
@@ -54,6 +57,7 @@ pub fn rem_last_char(value: &str) -> String {
 /// let s = "123";
 /// assert_eq!("3", rem_first_char_n(s, 2));
 /// ```
+#[must_use]
 pub fn rem_first_char_n(value: &str, n: usize) -> String {
     _rem_first_char_n(value, n).as_str().to_string()
 }
@@ -66,6 +70,7 @@ pub fn rem_first_char_n(value: &str, n: usize) -> String {
 /// let s = "   1  2 3      ".to_string();
 /// assert_eq!("123", remove_whitespace(s));
 /// ```
+#[must_use]
 pub fn remove_whitespace(mut s: String) -> String {
     s.retain(|c| !c.is_whitespace());
     s
@@ -78,6 +83,10 @@ pub fn remove_whitespace(mut s: String) -> String {
 ///
 /// let s = "1:2";
 /// assert_eq!(Ok(("1".to_string(), "2".to_string())), split_to_twople(s, ':'));
+/// ```
+///
+/// # Errors
+/// Returns a [`SplitError`] when the function is unable to split the string on the `split` character.
 pub fn split_to_twople(s: &str, split: char) -> Result<(String, String), SplitError> {
     let mut splitted = s.split(split);
     if let Some(left) = splitted.next() {
@@ -88,20 +97,23 @@ pub fn split_to_twople(s: &str, split: char) -> Result<(String, String), SplitEr
     Err(SplitError(s.to_owned(), split))
 }
 
-/// An struct for when [split_to_twople] fails.
+/// An struct for when [`split_to_twople`] fails.
 #[derive(Eq, PartialEq, Debug)]
 pub struct SplitError(String, char);
 
 impl SplitError {
     /// Get the input string that caused the error.
+    #[must_use]
     pub fn get_input(self) -> String {
         self.0
     }
     /// Get the character that we weren't able to split on.
+    #[must_use]
     pub fn get_split(self) -> char {
         self.1
     }
     /// Get both values in a tuple.
+    #[must_use]
     pub fn decompose(self) -> (String, char) {
         (self.0, self.1)
     }
@@ -140,18 +152,15 @@ fn _rem_first_char_n(value: &str, n: usize) -> Chars {
 /// let v = vec![];
 /// assert_eq!("".to_string(), comma_separated_with_or(&v));
 pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
-    match strings.last() {
-        Some(last) => {
-            let len = strings.len();
-            if len == 1 {
-                last.clone()
-            } else {
-                let joined = strings.iter().take(len - 1).map(String::as_str).collect::<Vec<&str>>().join(", ");
-                format!("{} or {}", joined, last)
-            }
-        },
-        None => String::new(),
-    }
+    strings.last().map_or_else(String::new, |last| {
+        let len = strings.len();
+        if len == 1 {
+            last.clone()
+        } else {
+            let joined = strings.iter().take(len - 1).map(String::as_str).collect::<Vec<&str>>().join(", ");
+            format!("{joined} or {last}")
+        }
+    })
 }
 
 /// Given a list of values, attempt to normalize them based on their sum.
@@ -164,6 +173,7 @@ pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
 ///
 /// let v = vec![1.0, 1.0, 2.0];
 /// assert_eq!(vec![0.25, 0.25, 0.5], normalize_to_probabilities(&v))
+#[must_use]
 pub fn normalize_to_probabilities<T: std::ops::Div<Output = T> + for<'a> std::iter::Sum<&'a T>>(input: &Vec<T>) -> Vec<T> where for<'a> &'a T: std::ops::Div<Output = T> {
     let mut output = Vec::with_capacity(input.len());
     let sum: T = input.iter().sum();
@@ -216,6 +226,9 @@ pub trait ResultNext<T, E>: Iterator<Item = Result<T,E>> {
     /// assert_eq!(Ok(1), iter.next_result());
     /// assert_eq!(Err(IterErr::EndErr), iter.next_result());
     /// ```
+    ///
+    /// # Errors
+    /// Should return `Err` if the underlying item is an `Err`, or there are no more items in the iterator.
     fn next_result(&mut self) -> Result<T, E>;
 }
 
@@ -225,6 +238,9 @@ pub trait ResultNext<T, E>: Iterator<Item = Result<T,E>> {
 /// such that `&E: From<UnexpectedEnd>`.
 pub trait ResultPeek<T, E>: Peek + Iterator<Item = Result<T, E>> {
     /// See [`next_result`](`ResultNext::next_result`).
+    ///
+    /// # Errors
+    /// Should return `Err` if the underlying item is an `Err`, or there are no more items in the iterator.
     fn peek_result(&mut self) -> Result<&T, E>;
 }
 
@@ -280,7 +296,7 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
     fn next_unwrap(&mut self) -> T {
         match self.next() {
             Some(Ok(x)) => x,
-            Some(Err(e)) => panic!("Got error: {:?}", e),
+            Some(Err(e)) => panic!("Got error: {e:?}"),
             None => panic!("Expected a value, but failed")
         }
     }
@@ -292,7 +308,7 @@ pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Res
     fn peek_unwrap(&'a mut self) -> &T {
         match self.peek() {
             Some(Ok(ref x)) => x,
-            Some(Err(ref e)) => panic!("Got error: {:?}", e),
+            Some(Err(ref e)) => panic!("Got error: {e:?}"),
             None => panic!("Expected a value, but failed")
         }
     }
@@ -334,7 +350,7 @@ impl<T: Display + std::fmt::Debug, U: std::fmt::Debug> Error for ConversionError
 
 impl<T, U> ConversionError<T, U> {
     /// Create a new `ConversionError`.
-    pub fn new(subject: T) -> Self {
+    pub const fn new(subject: T) -> Self {
         Self {subject, to: PhantomData}
     }
 
