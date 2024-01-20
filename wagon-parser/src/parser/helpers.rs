@@ -19,7 +19,9 @@ pub(super) trait TokenMapper {
 	fn token_to_enum(token: &Tokens) -> Option<Self> where Self: Sized;
 }
 
-fn __between_right<T>(lexer: &mut LexerBridge, right: Tokens, fun: Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>) -> ParseResult<T> {
+type ParseFunc<T> = Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>;
+
+fn __between_right<T>(lexer: &mut LexerBridge, right: Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
 	let resp = fun(lexer)?;
 	let span = lexer.span();
 	let token = lexer.peek_result()?;
@@ -31,7 +33,7 @@ fn __between_right<T>(lexer: &mut LexerBridge, right: Tokens, fun: Box<dyn FnOnc
 	}
 }
 
-fn __between<T>(lexer: &mut LexerBridge, left: Tokens, right: Tokens, fun: Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>) -> ParseResult<T> {
+fn __between<T>(lexer: &mut LexerBridge, left: Tokens, right: Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
 	let span = lexer.span();
 	let token = lexer.peek_result()?;
 	if token == &left {

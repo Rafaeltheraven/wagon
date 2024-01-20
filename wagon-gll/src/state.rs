@@ -394,7 +394,7 @@ impl<'a> GLLState<'a> {
 	/// Print current SPPF graph in graphviz format
     pub fn print_sppf_dot(&mut self, crop: bool) -> String {
     	if crop {
-    		self.sppf.crop(self.find_roots_sppf()).unwrap();
+    		self.sppf.crop(self.find_roots_sppf());
     	}
         self.sppf.to_dot(self)
     }

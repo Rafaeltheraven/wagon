@@ -197,15 +197,12 @@ impl<'a> SPPF<'a> {
     /// Uses Dijkstra's algorithm to find all reachable nodes from a set of nodes and removes the rest.
     ///
     /// Mostly used together with [`find_accepting_roots`](`SPPF::find_accepting_roots`) in order to prune invalid parses.
-    pub fn crop(&mut self, roots: Vec<SPPFNodeIndex>) -> Result<(), ()> {
+    pub fn crop(&mut self, roots: Vec<SPPFNodeIndex>) {
         if !roots.is_empty() {
             let distances = roots.into_iter().flat_map(|x| petgraph::algo::dijkstra(&self.0, x, None, |_| 1).into_keys());
             let reachable: HashSet<SPPFNodeIndex> = distances.collect();
             self.0.retain_nodes(|_, x| reachable.contains(&x));
-            Ok(())
-        } else {
-            Err(())
-        }
+        } 
     }
 
     /// Convert the [`SPPF`] to `.dot` representation.
@@ -247,15 +244,15 @@ impl<'a> SPPF<'a> {
     /// Each resulting SPPF can be seen as a singular valid interpretation of the parse.
     ///
     /// This method simply recursively calls [`deforest_indices`](`SPPF::deforest_indices`) and returns a set of complete [`SPPF`]s that represent these trees.
-    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<SPPF<'a>>, ()> {
-        let trees = self.deforest_indices(roots)?;
+    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Vec<SPPF<'a>> {
+        let trees = self.deforest_indices(roots);
         let mut new_graphs = Vec::with_capacity(trees.len());
         for tree in trees {
             let mut clone = self.clone();
             clone.retain_nodes(|_, x| tree.contains(&x));
             new_graphs.push(clone);
         }
-        Ok(new_graphs)
+        new_graphs
     }
 
     /// Given a forest and some root nodes, attempt to extract sets of nodes that represent unique trees.
@@ -288,7 +285,7 @@ impl<'a> SPPF<'a> {
     /// Once the candidates queue is done, we check if we have any subtrees. If we do, we clone the tree we have currently created and create `n` new
     /// trees, each connected to one of the subtrees. We then add these new trees to the list of trees we want to return. If there are no subtrees, we
     /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
-    pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Result<Vec<HashSet<SPPFNodeIndex>>, ()> {
+    pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Vec<HashSet<SPPFNodeIndex>> {
         let mut trees = Vec::new();
         for root in roots {
             let mut tree = HashSet::new();
@@ -306,7 +303,7 @@ impl<'a> SPPF<'a> {
                     },
                     SPPFNode::Intermediate { .. } => {
                         let children: Vec<SPPFNodeIndex> = self.0.neighbors_directed(ix, Outgoing).collect();
-                        subtrees.extend(self.deforest_indices(children)?);
+                        subtrees.extend(self.deforest_indices(children));
                     },
                 };
             }
@@ -320,7 +317,7 @@ impl<'a> SPPF<'a> {
                 }
             }   
         }
-        Ok(trees)
+        trees
     }
 }
 

@@ -30,9 +30,11 @@ pub enum ChunkP {
 	Group(Vec<SpannableNode<Chunk>>)
 }
 
+type RuleConstructor = fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule;
+
 impl Chunk {
 
-	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule, rules: &mut Vec<SpannableNode<Rule>>) {
+	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: RuleConstructor, rules: &mut Vec<SpannableNode<Rule>>) {
 		let chunks: Vec<SpannableNode<Rhs>> = match ebnf {
             EbnfType::Some => {
                 let helper_ident = format!("{}·p", ident);
@@ -102,7 +104,7 @@ impl Chunk {
     /// If there is no EBNF operator, we do nothing.
     /// If there is, we extract the chunk that it operates on and rewrite it as a new, separate rule. We do this recursively.
     /// At the end, all EBNF operators are replaced by references to the new rules and we return a list of new rules to add to the grammar.
-	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<SpannableNode<Ident>>, span: &Span, rule_func: fn(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>) -> Rule, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
+	pub(crate) fn rewrite(&mut self, ident: String, args: Vec<SpannableNode<Ident>>, span: &Span, rule_func: RuleConstructor, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
 		let mut rules = Vec::new();
 		match self {
             Self { ebnf: None, .. } => {}

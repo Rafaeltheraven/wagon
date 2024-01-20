@@ -61,7 +61,7 @@ impl ParseOption for TermP {
 	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op2::token_to_enum(lexer.peek_result()?) {
 	    	lexer.next();
-	    	Ok(Some(TermP { op, right: SpannableNode::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(|x| Box::new(x)) }))
+	    	Ok(Some(TermP { op, right: SpannableNode::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(Box::new) }))
 	    } else {
 	    	Ok(None)
 	    }
