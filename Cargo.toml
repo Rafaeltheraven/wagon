@@ -43,3 +43,12 @@ wagon-value = {path = "./wagon-value"}
 
 # For tests
 pretty_assertions = "1.4.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+enum_glob_use = "deny"
+pedantic = "deny"
+nursery = "deny"
+unwrap_used = "deny"

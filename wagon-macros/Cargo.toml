@@ -20,3 +20,5 @@ extendable-data = "0.1.5"
 [lib]
 proc-macro = true
 
+[lints]
+workspace = true
