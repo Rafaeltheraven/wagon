@@ -37,7 +37,7 @@ impl Display for ValueError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ValueError::ValueError(e) => e.fmt(f),
-            ValueError::ConvertToLabel(v) => write!(f, "Failed converting {} to label", v),
+            ValueError::ConvertToLabel(v) => write!(f, "Failed converting {v} to label"),
         }
     }
 }
@@ -62,7 +62,7 @@ impl<'a> Valueable for Value<'a> {
     fn to_int(&self) -> InnerValueResult<i32, Self> {
         match self {
             Value::Value(v) => Ok(v.to_int()?),
-            o => Ok(if o.is_truthy()? { 1 } else { 0 })
+            o => Ok(i32::from(o.is_truthy()?))
         }
     }
 
@@ -101,7 +101,7 @@ impl PartialEq for Value<'_> { // For some reason the derive breaks but just cop
 impl Display for Value<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Value(v) => write!(f, "{}", v),
+            Value::Value(v) => write!(f, "{v}"),
             Value::Label(v) => write!(f, "{}", v.to_string()),
         }
     }

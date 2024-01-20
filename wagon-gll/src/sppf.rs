@@ -99,7 +99,7 @@ impl<'a> SPPFNode<'a> {
                 } else {
                     from_utf8(terminal).unwrap()
                 };
-                format!("({},{},{})", term, left, right)
+                format!("({term},{left},{right})")
             },
             SPPFNode::Intermediate { slot, left, right, ret, context } => {
                 let mut attr_map: HashMap<&str, &Value> = HashMap::new();
@@ -118,7 +118,7 @@ impl<'a> SPPFNode<'a> {
                     .iter()
                     .fold(String::new(), |mut output, (key, value)| {
                         use std::fmt::Write as _;
-                        let _ = write!(output, "{}: {}, ", key, value);
+                        let _ = write!(output, "{key}: {value}, ");
                         output
                     });
                 attr_rep.pop();
@@ -179,7 +179,7 @@ impl<'a> SPPF<'a> {
     /// Goes through the entire SPPF and attempts to locate the top-most node that consumes the string from `0` to `input_target`.
     ///
     /// If `input_target` is `None`, we just find the top-most node that consumes from `0`.
-    pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
+    #[must_use] pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
         let mut roots = Vec::new();
         for ix in self.0.node_indices() {
             let node = self.0.node_weight(ix).unwrap();
@@ -206,7 +206,7 @@ impl<'a> SPPF<'a> {
     }
 
     /// Convert the [`SPPF`] to `.dot` representation.
-    pub fn to_dot(&self, state: &GLLState<'a>) -> String {
+    #[must_use] pub fn to_dot(&self, state: &GLLState<'a>) -> String {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {
@@ -216,7 +216,7 @@ impl<'a> SPPF<'a> {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));
                 if let Some(value) = edge.weight() {
-                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().expect("Can always display as numerical")))
+                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().expect("Can always display as numerical")));
                 }
                 res.push('\n');
             }
@@ -226,12 +226,12 @@ impl<'a> SPPF<'a> {
     }
 
     /// Find all the leaves in the [`SPPF`].
-    pub fn find_leafs(&self) -> Vec<SPPFNodeIndex> {
+    #[must_use] pub fn find_leafs(&self) -> Vec<SPPFNodeIndex> {
         let mut leafs = Vec::new();
         for ix in self.0.node_indices() {
             let has_children = self.0.neighbors_directed(ix, Outgoing).next().is_some();
             if !has_children {
-                leafs.push(ix)
+                leafs.push(ix);
             }
         }
         leafs
@@ -244,7 +244,7 @@ impl<'a> SPPF<'a> {
     /// Each resulting SPPF can be seen as a singular valid interpretation of the parse.
     ///
     /// This method simply recursively calls [`deforest_indices`](`SPPF::deforest_indices`) and returns a set of complete [`SPPF`]s that represent these trees.
-    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Vec<SPPF<'a>> {
+    #[must_use] pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Vec<SPPF<'a>> {
         let trees = self.deforest_indices(roots);
         let mut new_graphs = Vec::with_capacity(trees.len());
         for tree in trees {
@@ -285,7 +285,7 @@ impl<'a> SPPF<'a> {
     /// Once the candidates queue is done, we check if we have any subtrees. If we do, we clone the tree we have currently created and create `n` new
     /// trees, each connected to one of the subtrees. We then add these new trees to the list of trees we want to return. If there are no subtrees, we
     /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
-    pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Vec<HashSet<SPPFNodeIndex>> {
+    #[must_use] pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Vec<HashSet<SPPFNodeIndex>> {
         let mut trees = Vec::new();
         for root in roots {
             let mut tree = HashSet::new();

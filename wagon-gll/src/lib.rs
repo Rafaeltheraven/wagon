@@ -215,7 +215,7 @@ impl<'a> Eq for dyn Label<'a>{}
 
 
 #[derive(Debug)]
-/// A GrammarSlot as defined by the original paper.
+/// A `GrammarSlot` as defined by the original paper.
 pub struct GrammarSlot<'a> {
 	/// The non-terminal that this slot represents.
 	label: GLLBlockLabel<'a>,
@@ -260,31 +260,31 @@ impl<'a> GrammarSlot<'a> {
 	}
 
 	/// Is this slot just epsilon?
-	pub fn is_eps(&self) -> bool {
+	#[must_use] pub fn is_eps(&self) -> bool {
 		self.is_empty()
 	}
 
 	/// Have we completely consumed this grammar slot?
 	///
 	/// This is defined as either the dot being at the end (`S -> A•`) or right before the end and the next label is epsilon (`S -> A•ε`) 
-	pub fn is_last(&self, state: &GLLState<'a>) -> bool {
+	#[must_use] pub fn is_last(&self, state: &GLLState<'a>) -> bool {
 		self.dot == self.len() || (self.dot == self.len()-1 && self.curr_block(state).is_eps())
 	}
 
 	/// The length of the rule
-	pub fn len(&self) -> usize {
+	#[must_use] pub fn len(&self) -> usize {
 		self.rule.len()
 	}
 
 	/// Whether this is an empty rule
-	pub fn is_empty(&self) -> bool {
+	#[must_use] pub fn is_empty(&self) -> bool {
 		self.len() == 0
 	}
 
 	/// A string representation of the grammar slot.
 	///
 	/// For example, `S -> A•B` if `self.label = S`, `self.rule = [A, B]` and `self.dot = 1`. 
-	pub fn to_string(&self, state: &GLLState<'a>) -> String {
+	#[must_use] pub fn to_string(&self, state: &GLLState<'a>) -> String {
 		let mut res = String::new();
 		res.push_str(self.label.to_string());
 		if self.dot == self.len() + 1 {
@@ -367,10 +367,10 @@ pub enum GLLParseError<'a> {
 impl<'a> Display for GLLParseError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GLLParseError::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {}. Expected {} saw {}", pointer, expected, offender),
-            GLLParseError::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {}, tried reading {:?}", pointer, offender),
+            GLLParseError::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}"),
+            GLLParseError::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}"),
             GLLParseError::ValueError(e) => std::fmt::Display::fmt(&e, f),
-            GLLParseError::Fatal(s) => write!(f, "A fatal error occurred! {}", s),
+            GLLParseError::Fatal(s) => write!(f, "A fatal error occurred! {s}"),
         }
     }
 }

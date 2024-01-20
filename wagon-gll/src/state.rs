@@ -62,7 +62,7 @@ impl<'a> GLLState<'a> {
 	/// Initialize the state.
 	///
 	/// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule.
-	pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
+	#[must_use] pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> Self {
 		let mut sppf = SPPF::default();
 		let mut gss = GSS::new();
 		let mut sppf_map = HashMap::new();
@@ -157,7 +157,7 @@ impl<'a> GLLState<'a> {
 			} else {
 				(slot.clone(), None)
 			};
-			if let SPPFNode::Dummy = left_node {
+			if matches!(left_node, SPPFNode::Dummy) {
 				let i = right_node.left_extend().unwrap();
 				let node = self.find_or_create_sppf_intermediate(t.clone(), i, j, context_pointer);
 				if self.get_packed_node(node, slot.clone(), i).is_none() {
@@ -192,12 +192,12 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Get the [`GSSNode`] `self.gss_pointer` is currently pointing to.
-	pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
+	#[must_use] pub fn get_current_gss_node(&self) -> &Rc<GSSNode<'a>> {
 		self.get_gss_node_unchecked(self.gss_pointer)
 	}
 
 	/// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
-	pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
+	#[must_use] pub fn get_current_sppf_node(&self) -> &SPPFNode<'a> {
 		self.get_sppf_node_unchecked(self.sppf_pointer)
 	}
 
@@ -316,12 +316,12 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Get a specific rule by its uuid.
-	pub fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
-		self.rule_map.get(ident).unwrap_or_else(|| panic!("Issue unwrapping rule map. {} not in keyset", ident)).clone()
+	#[must_use] pub fn get_rule(&self, ident: &str) -> Rc<Vec<Ident>> {
+		self.rule_map.get(ident).unwrap_or_else(|| panic!("Issue unwrapping rule map. {ident} not in keyset")).clone()
 	}
 
 	/// Get a specific [`Label`](crate::Label) as identified by the given [`Ident`].
-	pub fn get_label(&self, ident: &Ident) -> GLLBlockLabel<'a> {
+	#[must_use] pub fn get_label(&self, ident: &Ident) -> GLLBlockLabel<'a> {
 		let raw_string = ident.extract_string();
 		if let Some(label) = self.label_map.get(raw_string) {
 			label.clone()
@@ -331,17 +331,17 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Get a specific [`Label`](crate::Label) by its uuid.
-	pub fn get_label_by_uuid(&self, label: &str) -> GLLBlockLabel<'a> {
+	#[must_use] pub fn get_label_by_uuid(&self, label: &str) -> GLLBlockLabel<'a> {
 		self.label_map.get(label).unwrap().clone()
 	}
 
 	/// Get an attribute from the node pointed at by `self.gss_pointer`.
-	pub fn get_attribute(&self, i: AttributeKey) -> &Value<'a> {
+	#[must_use] pub fn get_attribute(&self, i: AttributeKey) -> &Value<'a> {
 		self.get_attribute_at_gss_node(self.gss_pointer, i).expect("Not enough attributes passed to NT.")
 	}
 
 	/// Get an attribute from the node pointed at by `self.context_pointer`.
-	pub fn restore_attribute(&self, i: AttributeKey) -> &Value<'a> {
+	#[must_use] pub fn restore_attribute(&self, i: AttributeKey) -> &Value<'a> {
 		self.get_attribute_at_gss_node(self.context_pointer, i).expect("Error restoring context.")
 	}
 
@@ -350,13 +350,13 @@ impl<'a> GLLState<'a> {
 	}
 
 	/// Get an attribute from the return arguments at the node currently pointed to by `self.sppf_pointer`.
-	pub fn get_ret_val(&self, i: AttributeKey) -> Option<&Value<'a>> {
+	#[must_use] pub fn get_ret_val(&self, i: AttributeKey) -> Option<&Value<'a>> {
 		self.sppf.node_weight(self.sppf_pointer).unwrap().get_ret_val(i)
 	}
 
 	fn is_special_slot(&self, slot: &GrammarSlot<'a>) -> bool {
 		if slot.dot == 1 && slot.pos == 0 && !slot.is_last(self) {
-			if let Some(r) = slot.rule.get(0) {
+			if let Some(r) = slot.rule.first() {
 				let a = self.get_label(r);
 				a.str_parts().len() == 1 && (a.is_terminal() || !a.is_nullable(self, &mut Default::default()))
 			} else {
@@ -400,12 +400,12 @@ impl<'a> GLLState<'a> {
     }
 
 	/// Print current GSS graph in graphviz format
-    pub fn print_gss_dot(&self) -> String {
+    #[must_use] pub fn print_gss_dot(&self) -> String {
         format!("{:?}", petgraph::dot::Dot::new(&self.gss))
     }
  	
  	/// Checks whether the current parser state has accepted the string
-    pub fn accepts(&self) -> bool {
+    #[must_use] pub fn accepts(&self) -> bool {
     	!self.find_roots_sppf().is_empty()
     }
 
