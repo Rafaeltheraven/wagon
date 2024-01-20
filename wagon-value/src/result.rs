@@ -5,7 +5,6 @@ use crate::{Value, Valueable};
 /// A result type for operations on a [`Valueable`].
 ///
 /// Either returns something of type `T`. Or a [`ValueError`] over `U`.
-#[allow(clippy::module_name_repetitions)]
 pub type ValueResult<T, U> = Result<T, ValueError<U>>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
