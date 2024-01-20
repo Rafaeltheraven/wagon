@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used)]
 use std::env;
 use std::format;
 use std::fs;
@@ -6,6 +7,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use clap::ArgMatches;
 use wagon_parser::MsgAndSpan;
 use wagon_parser::parse_and_check;
 use wagon_codegen_gll::gen_parser;
@@ -16,7 +18,29 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 fn main() {
-    let args = clap::command!()
+    let args = parse_args();
+    let input_file = args
+        .get_one::<std::path::PathBuf>("filename")
+        .expect("Input file required");
+    let proj_name = args
+        .get_one::<std::path::PathBuf>("project_name")
+        .expect("Project name required");
+    let overwrite = args.get_one::<bool>("overwrite").unwrap_or(&false) == &false;
+    let contents = fs::read_to_string(input_file).expect("Couldn't read file");
+    match parse_and_check(&contents) {
+        Ok(wag) => {
+            match gen_parser(wag) {
+                Ok(code) => write_parser(code, proj_name, overwrite),
+                Err(e) => handle_error(e, input_file.to_str().expect("Input file path was empty"), contents),
+            }
+        },
+        Err(e) => handle_error(e, input_file.to_str().expect("Input file path was empty"), contents),
+    }
+}
+
+#[allow(clippy::cognitive_complexity)]
+fn parse_args() -> ArgMatches {
+    clap::command!()
         .arg(
             clap::arg!(< filename > "The input WAGon grammar file")
                 .value_parser(clap::value_parser!(std::path::PathBuf)),
@@ -26,24 +50,7 @@ fn main() {
                 .value_parser(clap::value_parser!(std::path::PathBuf)),
         )
         .arg(clap::arg!(- - "overwrite" "Delete any existing project with the same name").num_args(0))
-        .get_matches();
-    let input_file = args
-        .get_one::<std::path::PathBuf>("filename")
-        .expect("Input file required");
-    let proj_name = args
-        .get_one::<std::path::PathBuf>("project_name")
-        .expect("Project name required");
-    let overwrite = args.get_one::<bool>("overwrite").unwrap() == &false;
-    let contents = fs::read_to_string(input_file).expect("Couldn't read file");
-    match parse_and_check(&contents) {
-        Ok(wag) => {
-            match gen_parser(wag) {
-                Ok(code) => write_parser(code, proj_name, overwrite),
-                Err(e) => handle_error(e, input_file.to_str().unwrap(), contents),
-            }
-        },
-        Err(e) => handle_error(e, input_file.to_str().unwrap(), contents),
-    }
+        .get_matches()
 }
 
 fn handle_error<T: MsgAndSpan>(err: T, file_path: &str, file: String) {
@@ -60,7 +67,7 @@ fn handle_error<T: MsgAndSpan>(err: T, file_path: &str, file: String) {
         )
         .finish()
         .eprint((file_path, Source::from(file)))
-        .unwrap();
+        .expect("Failed to construct error reporter");
 }
 
 fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
@@ -69,19 +76,19 @@ fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
     create_structure(proj_name, &root_terms, overwrite);
     let path = std::path::Path::new(proj_name).join("src");
     let main_path = path.join("main.rs");
-    let mut file = File::create(&main_path).unwrap();
-    file.write_all(pretty_code(code, &main_path).as_bytes()).unwrap();
+    let mut file = File::create(&main_path).expect("Failed to create main.rs");
+    file.write_all(pretty_code(&code, &main_path).as_bytes()).expect("Failed to write to main.rs");
     let term_path = path.join("terminals");
     let term_file_path = path.join(format!("{}.rs", "terminals"));
-    let mut term_file = File::create(&term_file_path).unwrap();
+    let mut term_file = File::create(&term_file_path).expect("Failed to create terminals.rs");
     let root_terms_idents = root_terms.iter().map(|x| Ident::new(x, Span::call_site()));
-    term_file.write_all(pretty_code(quote!(
+    term_file.write_all(pretty_code(&quote!(
         #![allow(non_snake_case)]
 
         #(pub(crate) mod #root_terms_idents;)*
-    ), &term_file_path).as_bytes()).unwrap();
+    ), &term_file_path).as_bytes()).expect("Failed to write to terminals.rs");
     for (terminal, structs) in subcode {
-        write_terminal(&term_path, terminal, structs);
+        write_terminal(&term_path, &terminal, structs);
     }
 }
 
@@ -89,15 +96,15 @@ fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bo
     let path = std::path::Path::new(proj_name);
     let mut exists = path.exists();
     if exists && overwrite {
-        println!("{:?} already exists. Overwriting!", proj_name);
-        std::fs::remove_dir_all(path).unwrap();
+        println!("{proj_name:?} already exists. Overwriting!");
+        std::fs::remove_dir_all(path).expect("Failed to remove project dir");
         exists = false;
     }
     let term_path = path.join("src").join("terminals");
     if !exists {
         let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
-        Command::new("cargo").args(["new", proj_name.to_str().expect("Project name must be valid unicode")]).output().unwrap();
-        let mut toml = File::create(&path.join("Cargo.toml")).unwrap();
+        Command::new("cargo").args(["new", proj_name.to_str().expect("Project name must be valid unicode")]).output().expect("Failed to invoke cargo");
+        let mut toml = File::create(&path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
         toml.write_all(format!(
 "[package]
 name = \"{}\"
@@ -108,33 +115,32 @@ edition = \"2021\"
 
 [workspace]
 
-[dependencies]", proj_name.display()).as_bytes()).unwrap();
+[dependencies]", proj_name.display()).as_bytes()).expect("Failed to write Cargo.toml");
         Command::new("cargo") 
             .current_dir(path)
             .args(["add", "wagon-gll", "--path", "../wagon-gll"])
             .output()
-            .unwrap();
+            .expect("Failed to add wagon-gll library");
         Command::new("cargo") 
             .current_dir(path)
             .args(["add", "wagon-ident", "--path", "../wagon-ident"])
             .output()
-            .unwrap();
-        Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().unwrap();
-        Command::new("cargo").current_dir(path).args(["add", "rand", "--features", "small_rng"]).output().unwrap();
+            .expect("Failed to add wagon-ident library");
+        Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
         for lib in libs {
-            Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap();
+            Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));
         }
-        std::fs::create_dir(&term_path).unwrap();
+        std::fs::create_dir(&term_path).expect("Failed to create terminals directory");
     }
     for term in terminals {
         let curr_path = term_path.join(term);
         if !curr_path.exists() {
-            std::fs::create_dir(curr_path).unwrap();
+            std::fs::create_dir(curr_path).unwrap_or_else(|_| panic!("Failed to create {term} directory"));
         }
     }
 }
 
-fn pretty_code(code: TokenStream, path: &std::path::Path) -> String {
+fn pretty_code(code: &TokenStream, path: &std::path::Path) -> String {
     let code_string = code.to_string();
     match syn::parse_file(&code_string) {
         Ok(tree) => prettyplease::unparse(&tree),
@@ -145,8 +151,8 @@ fn pretty_code(code: TokenStream, path: &std::path::Path) -> String {
     }
 }
 
-fn write_terminal(root_path: &std::path::Path, terminal: String, structs: Vec<(String, TokenStream)>) {
-    let term_path = root_path.join(&terminal);
+fn write_terminal(root_path: &std::path::Path, terminal: &str, structs: Vec<(String, TokenStream)>) {
+    let term_path = root_path.join(terminal);
     let mut root_term = TokenStream::new();
     let mut sub_structs = Vec::new();
     for (curr_struct, code) in structs {
@@ -154,20 +160,20 @@ fn write_terminal(root_path: &std::path::Path, terminal: String, structs: Vec<(S
             root_term.extend([code]);
         } else {
             sub_structs.push(Ident::new(&curr_struct, Span::call_site()));
-            let curr_path = term_path.join(format!("{}.rs", curr_struct));
-            let mut file = File::create(&curr_path).unwrap();
-            file.write_all(pretty_code(quote!(
+            let curr_path = term_path.join(format!("{curr_struct}.rs"));
+            let mut file = File::create(&curr_path).expect("Failed to create terminal file");
+            file.write_all(pretty_code(&quote!(
                 #![allow(non_snake_case)] 
                 #code
-            ), &curr_path).as_bytes()).unwrap();
+            ), &curr_path).as_bytes()).expect("Failed to write terminal file");
         }
     }
-    let file_path = root_path.join(format!("{}.rs", terminal));
-    let mut file = File::create(&file_path).unwrap();
-    file.write_all(pretty_code(quote!(
+    let file_path = root_path.join(format!("{terminal}.rs"));
+    let mut file = File::create(&file_path).expect("Failed to create terminal.rs file");
+    file.write_all(pretty_code(&quote!(
         #![allow(non_snake_case)]
 
         #(pub(crate) mod #sub_structs;)*
         #root_term
-    ), &file_path).as_bytes()).unwrap();
+    ), &file_path).as_bytes()).expect("Failed to write terminal.rs file");
 }
