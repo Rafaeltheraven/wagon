@@ -95,18 +95,21 @@ impl<T: Valueable> Display for Value<T> {
 
 impl<T: Valueable> From<Value<T>> for i32 {
     fn from(value: Value<T>) -> Self {
+        #[allow(clippy::expect_used)]
         value.to_int().expect("This conversion can not fail")
     }
 }
 
 impl<T: Valueable> From<Value<T>> for f32 {
     fn from(value: Value<T>) -> Self {
+        #[allow(clippy::expect_used)]
         value.to_float().expect("This conversion can not fail")
     }
 }
 
 impl<T: Valueable> From<Value<T>> for bool {
     fn from(value: Value<T>) -> Self {
+        #[allow(clippy::expect_used)]
         value.is_truthy().expect("This conversion can not fail")
     }
 }
