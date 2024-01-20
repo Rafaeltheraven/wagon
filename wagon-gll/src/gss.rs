@@ -28,17 +28,20 @@ pub struct GSSNode<'a> {
 
 impl<'a> GSSNode<'a> {
 	/// Construct a new node.
-	#[must_use] pub fn new(slot: Rc<GrammarSlot<'a>>, inp_pointer: usize, attributes: AttributeMap<'a>) -> Self {
+	#[must_use] 
+	pub fn new(slot: Rc<GrammarSlot<'a>>, inp_pointer: usize, attributes: AttributeMap<'a>) -> Self {
 		Self {slot, inp_pointer, attributes}
 	}
 
 	/// Represent the GSS node in the format `[{self.slot}, {self.inp_pointer}]`.
-	#[must_use] pub fn to_string(&self, state: &GLLState<'a>) -> String {
+	#[must_use] 
+	pub fn to_string(&self, state: &GLLState<'a>) -> String {
 		format!("[{},{}]", self.slot.to_string(state), self.inp_pointer)
 	}
 
 	/// Get an attribute from the attributes list.
-	#[must_use] pub fn get_attribute(&self, i: AttributeKey) -> Option<&Value<'a>> {
+	#[must_use] 
+	pub fn get_attribute(&self, i: AttributeKey) -> Option<&Value<'a>> {
 		self.attributes.get(i)
 	}
 
