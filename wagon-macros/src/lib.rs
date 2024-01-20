@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![allow(clippy::expect_used)]
 //! Procedural macros for use in the WAGon suite of libraries. 
 //!
 //! It would make more sense to put these in the [`wagon-utils`](../wagon_utils/index.html) crate. 
@@ -213,7 +214,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
         syn::Fields::Named(n) => {
                 let mut parameters = Vec::new();
                 let mut args = Vec::new();
-                for field in n.named.into_iter() {
+                for field in n.named {
                     let name = field.ident.expect("Unable to get ident from field");
                     let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
                     parameters.push(quote!(#name: #typ));
@@ -274,11 +275,11 @@ fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::T
     match root {
         syn::Type::Path(mut p) => {
             let mut has_changed = false;
-            for segment in p.path.segments.iter_mut() {
+            for segment in &mut p.path.segments {
                 let ident = segment.ident.to_string();
                 if ident == "SpannableNode" {
                     if let syn::PathArguments::AngleBracketed(b) = &segment.arguments {
-                        for arg in b.args.iter() {
+                        for arg in &b.args {
                             if let syn::GenericArgument::Type(t) = arg {
                                 return (t.clone(), known_custom, true)
                             }
@@ -310,7 +311,7 @@ fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::T
 }
 
 #[proc_macro]
-/// Given a hand-written, complete [wagon-parser::Wag] without any Span information, creates a proper one with dummy Span data.
+/// Given a hand-written, complete [`wagon-parser::Wag`] without any Span information, creates a proper one with dummy Span data.
 pub fn unspanned_tree(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as ExprStruct);
     match unspanned_struct(ast) {
@@ -335,7 +336,7 @@ fn unspanned_enum(ast: ExprCall) -> Result<TokenStream2> {
     let span = ast.span();
     let path = match *ast.func {
         syn::Expr::Path(p) => p.path,
-        other => return Err(syn::Error::new(span, format!("Expected path for an enum. Got {:?}", other))),
+        other => return Err(syn::Error::new(span, format!("Expected path for an enum. Got {other:?}"))),
     };
     let mut path_iter = path.segments.into_iter();
     let main_ident = path_iter.next().expect("Got an empty path").ident;
@@ -348,10 +349,10 @@ fn unspanned_enum(ast: ExprCall) -> Result<TokenStream2> {
         };
         quote!(#main_ident::#func_path)
     } else { // Tuple structs AAAAAAAAAAAAAAAAAAAAA
-        if !IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) {
-            quote!(#main_ident::new_unspanned)
-        } else {
+        if IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) {
             main_ident.into_token_stream()
+        } else {
+            quote!(#main_ident::new_unspanned)
         }
     };
     let mut args = Vec::new();
@@ -393,7 +394,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
         syn::Expr::Lit(l) => Ok(l.to_token_stream()),
         syn::Expr::Tuple(t) => Ok(t.to_token_stream()),
         syn::Expr::Array(a) => Ok(a.to_token_stream()),
-        other => Err(syn::Error::new(span, format!("Unexpected Expression {:?}", other)))
+        other => Err(syn::Error::new(span, format!("Unexpected Expression {other:?}")))
     }
 }
 
@@ -444,7 +445,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 pub fn match_error(stream: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(stream as ExprMatch);
     let mut expected: Vec<TokenStream2> = Vec::new();
-    for arm in ast.arms.iter_mut() {
+    for arm in &mut ast.arms {
         let span = arm.span();
         if let Some(expect) = pop_attr(&mut arm.attrs, "expect") {
             expected.push(quote!(#expect.to_string()));
@@ -485,6 +486,7 @@ fn handle_macro(m: &ExprMacro, span: Span) -> Result<TokenStream2> {
 }
 
 #[cfg(not(feature = "nightly"))]
+#[allow(clippy::unnecessary_wraps)]
 fn handle_macro(m: &ExprMacro, _span: Span) -> Result<TokenStream2> {
     Ok(m.mac.to_token_stream())
 }
@@ -501,24 +503,24 @@ fn pat_to_str(pat: &Pat, span: Span) -> Result<TokenStream2> {
         Pat::Tuple(t) => t.elems.iter().map(|x| pat_to_str(x, span)).collect(),
         Pat::TupleStruct(t) => {
             let mut sub_list: Vec<TokenStream2> = Vec::new();
-            for elem in t.elems.iter() {
+            for elem in &t.elems {
                 if let Pat::Ident(_) = elem {
-                    sub_list.push(quote!(Default::default()))
+                    sub_list.push(quote!(Default::default()));
                 } else {
                     sub_list.push(pat_to_str(elem, span)?);
                 }
             };
             let main = &t.path;
-            if !sub_list.is_empty() {
+            if sub_list.is_empty() {
+                Ok(quote!(#main))
+            } else {
                 let sub: TokenStream2 = sub_list.into_iter().collect();
                 Ok(quote!{#main(#sub)})
-            } else {
-                Ok(quote!(#main))
             }
         },
         Pat::Type(t) => pat_to_str(&t.pat, span),
         Pat::Verbatim(v) => Ok(v.clone()),
         Pat::Wild(_) => Err(syn::Error::new(span, "Match statement already has a wildcard pattern, can not add another!")),
-        p => Err(syn::Error::new(span, format!("Unsupported pattern! {:?}", p))),
+        p => Err(syn::Error::new(span, format!("Unsupported pattern! {p:?}"))),
     }
 }
