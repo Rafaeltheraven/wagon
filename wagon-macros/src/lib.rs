@@ -1,7 +1,8 @@
 #![warn(missing_docs)]
 //! Procedural macros for use in the WAGon suite of libraries. 
-
-//! It would make more sense to put these in the [wagon-utils] crate. But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
+//!
+//! It would make more sense to put these in the [`wagon-utils`](../wagon_utils/index.html) crate. 
+//! But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -11,7 +12,8 @@ use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
 use extendable_data::extendable_data;
 
-/// A procedural macro to extend lexers from a base lexer. Used by [`wagon_lexers::math::Math`](../wagon_lexer/math/enum.Math.html) and [wagon_lexer::productions::Productions](wagon_lexer/productions/enum.Productions.html).
+/// A procedural macro to extend lexers from a base lexer. Used by [`wagon-lexers::math::Math`](../wagon_lexer/math/enum.Math.html) 
+/// and [`wagon_lexer::productions::Productions`](wagon_lexer/productions/enum.Productions.html).
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
@@ -20,7 +22,7 @@ use extendable_data::extendable_data;
 enum Base {
     #[display_override("Identifier")]
     #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| wagon_ident::Ident::detect(lex.slice(), lex.span()))]
-    /// An identifier. Gets parsed to an [wagon-ident::Ident] automatically.
+    /// An identifier. Gets parsed to an [`wagon-ident::Ident`] automatically.
     /// An identifier may be any string of alphanumeric characters, as well as `_`. The string must start with a purely alphabetical character.
     /// The identifier may be prepended by `$`/`&`/`*` to specify what type of identifier it is.
     Identifier(wagon_ident::Ident),
@@ -92,22 +94,21 @@ fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
 }
 
 #[proc_macro_derive(TokenMapper)]
-/// Derive macro for the [wagon-parser::helpers::TokenMapper] trait.
+/// Derive macro for the [`wagon-parser::helpers::TokenMapper`] trait.
 ///
-/// If we have an enum that has fields with the exact same names as that of specific [wagon-lexer::math::Math] tokens.
+/// If we have an enum that has fields with the exact same names as that of specific [`wagon-lexer::math::Math`] tokens.
 /// We can automatically derive this trait to convert those tokens into instances of this enum.
 pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as DeriveInput);
     let span = ast.span();
     let ident = ast.ident;
-    let data = match ast.data {
-        syn::Data::Enum(e) => e,
-        _ => return syn::Error::new(span, "Can only derive TokenMapper for enums").into_compile_error().into()
+    let syn::Data::Enum(data) = ast.data else {
+        return syn::Error::new(span, "Can only derive TokenMapper for enums").into_compile_error().into()
     };
     let mut arms: Vec<TokenStream2> = Vec::with_capacity(data.variants.len());
-    for var in data.variants.into_iter() {
+    for var in data.variants {
         let name = var.ident;
-        arms.push(quote!(Tokens::MathToken(Math::#name) => Some(Self::#name)))
+        arms.push(quote!(Tokens::MathToken(Math::#name) => Some(Self::#name)));
     }
     quote!(
         impl TokenMapper for #ident {
@@ -131,7 +132,7 @@ pub fn new_unspanned(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let data = match ast.data {
         syn::Data::Enum(e) => nonspanned_enum(e),
         syn::Data::Struct(s) => nonspanned_struct(s),
-        _ => return syn::Error::new(span, "Can only derive NonSpanned for enums and structs").into_compile_error().into()
+        syn::Data::Union(_) => return syn::Error::new(span, "Can only derive NonSpanned for enums and structs").into_compile_error().into()
     };
     quote!(
         #orig_stream
@@ -151,8 +152,8 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
             syn::Fields::Named(n) => {
                 let mut parameters = Vec::new();
                 let mut args = Vec::new();
-                for field in n.named.into_iter() {
-                    let name = field.ident.unwrap();
+                for field in n.named {
+                    let name = field.ident.expect("Unable to get ident from field");
                     let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
@@ -213,7 +214,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
                 let mut parameters = Vec::new();
                 let mut args = Vec::new();
                 for field in n.named.into_iter() {
-                    let name = field.ident.unwrap();
+                    let name = field.ident.expect("Unable to get ident from field");
                     let (typ, known_iter, has_changed) = extract_spanned_node_type(field.ty, false);
                     parameters.push(quote!(#name: #typ));
                     if has_changed {
@@ -320,7 +321,7 @@ pub fn unspanned_tree(stream: TokenStream) -> TokenStream {
 
 fn unspanned_struct(ast: ExprStruct) -> Result<TokenStream2> {
     let mut path_iter = ast.path.segments.into_iter();
-    let main_ident = path_iter.next().unwrap().ident;
+    let main_ident = path_iter.next().expect("Got an empty path").ident;
     let mut args = Vec::new();
     for field in ast.fields {
         args.push(handle_expr(field.expr)?);
@@ -337,10 +338,10 @@ fn unspanned_enum(ast: ExprCall) -> Result<TokenStream2> {
         other => return Err(syn::Error::new(span, format!("Expected path for an enum. Got {:?}", other))),
     };
     let mut path_iter = path.segments.into_iter();
-    let main_ident = path_iter.next().unwrap().ident;
+    let main_ident = path_iter.next().expect("Got an empty path").ident;
     let func_path = if let Some(sub_path) = path_iter.next() {
         let ident_string = sub_path.ident.to_string();
-        let func_path = if !IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) && ident_string.chars().next().unwrap().is_uppercase() {
+        let func_path = if !IGNORE_UNSPAN.contains(&main_ident.to_string().as_str()) && ident_string.chars().next().expect("Got an empty ident_string").is_uppercase() {
             format_ident!("new_unspanned_{}", ident_string.to_lowercase())
         } else {
             sub_path.ident
