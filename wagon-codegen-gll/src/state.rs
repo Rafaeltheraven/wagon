@@ -9,6 +9,8 @@ use wagon_codegen::{CodeMap, SpannableIdent};
 
 use crate::{FirstSet, CharBytes, AttrSet, ReqCodeAttrs, ReqWeightAttrs, ReqFirstAttrs, CodeGenResult, CodeGenError, CodeGenErrorKind};
 
+const EMPTY_REPR: (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+
 #[derive(Debug, Default)]
 /// The state object that is passed along to [`ToTokensState::to_tokens`](`wagon_codegen::ToTokensState::to_tokens`)
 pub struct CodeGenState {
@@ -147,128 +149,146 @@ impl CodeGenState {
     }
 
     pub(crate) fn gen_struct_stream(&self) -> CodeGenResult<CodeMap> {
-    	let mut code_map = HashMap::from_iter(self.roots.iter().map(|x| (x.to_string(), Vec::new())));
-    	let empty_repr = (Vec::new(), Vec::new());
+    	let mut code_map: HashMap<String, Vec<(String, TokenStream)>> = self.roots.iter().map(|x| (x.to_string(), Vec::new())).collect();
     	let mut main_stream = TokenStream::new();
-    	for (_i, (id, firsts)) in self.first_queue.iter().enumerate() {
-    		let mut stream = TokenStream::new();
-    		let mut has_eps = false;
-    		let mut first_stream = Vec::new();
-    		for (alt, fin) in firsts {
-    			let byte = match fin {
-			        Some(CharBytes::Bytes(b)) => quote!(Some(#b)),
-			        Some(CharBytes::Epsilon) => {has_eps = true; quote!(Some(&[]))},
-			        None => quote!(None),
-			    };
-			    let mut vec_stream = Vec::new();
-			    for ident in alt {
-			    	let stream = match ident.to_inner() {
-			            wagon_ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)),
-			            other => {
-			            	let i = other.to_ident();
-			            	quote!(#i.into())
-			            }
-			        };
-			        vec_stream.push(stream);
-			    }
-			    first_stream.push(quote!(
-			    	(vec![#(#vec_stream),*], #byte)
-			    ));
-    		}
-    		let first_attr_stream = self.collect_attrs(id, self.get_req_first_attrs(id));
-    		let code_attr_stream = self.collect_attrs(id, self.get_req_code_attrs(id));
-    		let uuid = id.to_string();
-    		let root_uuid = uuid.chars().next().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Got an empty uuid".to_string())))?.to_string();
-    		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Missing str_repr for {id}"))))?;
-    		let str_repr = str_list.join(" ");
-    		let (pop_repr, ctx_repr) = self.attr_repr.get(id).unwrap_or(&empty_repr);
-    		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {id}"))))?;
-    		let weight_stream = if let Some(weight) = self.weight_code.get(id) {
-    			let weight_attrs = self.collect_attrs(id, self.get_req_weight_attrs(id));
-    			quote!(
-    				#(#weight_attrs)*
-    				#(#weight)*
-    			)
-    		} else {
-    			quote!(unreachable!("Weight should never be evaluated for non-zero GLL blocks"))
-    		};
-    		stream.extend(quote!(
-    			#[derive(Debug)]
-    			#[allow(non_camel_case_types)]
-    			pub(crate) struct #id;
-
-    			impl<'a> wagon_gll::Label<'a> for #id {
-    				#[allow(unused_variables)]
-    				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
-    					#(#first_attr_stream)*
-    					vec![#(#first_stream,)*]
-    				}
-    				fn is_eps(&self) -> bool {
-    					#has_eps
-    				}
-    				fn uuid(&self) -> &str {
-    					#uuid
-    				}
-    				#[allow(unused_variables)]
-    				fn code(&self, state: &mut wagon_gll::state::GLLState<'a>) {
-    					#(#code_attr_stream)*
-    					#(#code)*
-    				}
-    				fn to_string(&self) -> &str {
-    					#str_repr
-    				}
-    				fn str_parts(&self) -> Vec<&str> {
-    					vec![#(#str_list,)*]
-    				}
-    				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) {
-    					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
-    				}
-    				#[allow(unused_variables)]
-    				fn _weight(&self, state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
-    					#weight_stream
-    				}
-    			}
-    		));
-    		if Some(id) == self.top.as_ref() {
-    			main_stream.extend(quote!(
-    				#[derive(Debug)]
-		    		struct _S;
-
-		    		impl<'a> wagon_gll::Label<'a> for _S {
-		    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
-							vec![(vec![state.get_label_by_uuid(#uuid)], None)]
-						}
-						fn is_eps(&self) -> bool {
-							false
-						}
-						fn uuid(&self) -> &str {
-							wagon_gll::ROOT_UUID
-						}
-						fn to_string(&self) -> &str {
-							wagon_gll::ROOT_UUID
-						}
-						fn str_parts(&self) -> Vec<&str> {
-							vec![wagon_gll::ROOT_UUID]
-						}
-						fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
-							unreachable!("This should never be called");
-						}
-						fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
-							(Vec::new(), Vec::new())
-						}
-						fn _weight(&self, _state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
-							unreachable!("This should never be called");
-						}
-		    		}
-		    	));
-    		}
-    		if let Some(v) = code_map.get_mut(&root_uuid) {
-    			v.push((uuid, stream));
-    		} else { // just to be sure
-    			code_map.insert(root_uuid, vec![(uuid, stream)]);
-    		}
+    	for (id, firsts) in &self.first_queue {
+    		self.handle_ident(&mut code_map, &mut main_stream, id, firsts)?;
     	}
     	Ok((code_map, main_stream))
+    }
+
+    fn handle_ident(&self, code_map: &mut HashMap<String, Vec<(String, TokenStream)>>, main_stream: &mut TokenStream, id: &Rc<Ident>, firsts: &Vec<FirstSet>) -> CodeGenResult<()> {
+    	let mut stream = TokenStream::new();
+		let mut has_eps = false;
+		let mut first_stream = Vec::new();
+		let empty_repr = &EMPTY_REPR;
+		for (alt, fin) in firsts {
+			let (eps, stream) = Self::handle_first(alt, fin);
+			has_eps = eps;
+			first_stream.push(stream);
+		}
+		let first_attr_stream = self.collect_attrs(id, self.get_req_first_attrs(id));
+		let code_attr_stream = self.collect_attrs(id, self.get_req_code_attrs(id));
+		let uuid = id.to_string();
+		let root_uuid = uuid.chars().next().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Got an empty uuid".to_string())))?.to_string();
+		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Missing str_repr for {id}"))))?;
+		let str_repr = str_list.join(" ");
+		let (pop_repr, ctx_repr) = self.attr_repr.get(id).unwrap_or(empty_repr);
+		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {id}"))))?;
+		#[allow(clippy::option_if_let_else)]
+		let weight_stream = if let Some(weight) = self.weight_code.get(id) {
+			let weight_attrs = self.collect_attrs(id, self.get_req_weight_attrs(id));
+			quote!(
+				#(#weight_attrs)*
+				#(#weight)*
+			)
+		} else {
+			quote!(unreachable!("Weight should never be evaluated for non-zero GLL blocks"))
+		};
+		stream.extend(quote!(
+			#[derive(Debug)]
+			#[allow(non_camel_case_types)]
+			pub(crate) struct #id;
+
+			impl<'a> wagon_gll::Label<'a> for #id {
+				#[allow(unused_variables)]
+				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
+					#(#first_attr_stream)*
+					vec![#(#first_stream,)*]
+				}
+				fn is_eps(&self) -> bool {
+					#has_eps
+				}
+				fn uuid(&self) -> &str {
+					#uuid
+				}
+				#[allow(unused_variables)]
+				fn code(&self, state: &mut wagon_gll::state::GLLState<'a>) {
+					#(#code_attr_stream)*
+					#(#code)*
+				}
+				fn to_string(&self) -> &str {
+					#str_repr
+				}
+				fn str_parts(&self) -> Vec<&str> {
+					vec![#(#str_list,)*]
+				}
+				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) {
+					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
+				}
+				#[allow(unused_variables)]
+				fn _weight(&self, state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
+					#weight_stream
+				}
+			}
+		));
+		if Some(id) == self.top.as_ref() {
+			main_stream.extend(Self::construct_root_stream(&uuid));
+		}
+		if let Some(v) = code_map.get_mut(&root_uuid) {
+			v.push((uuid, stream));
+		} else { // just to be sure
+			code_map.insert(root_uuid, vec![(uuid, stream)]);
+		}
+		Ok(())
+    }
+
+    fn handle_first(alt: &Vec<SpannableIdent>, fin: &Option<CharBytes>) -> (bool, TokenStream) {
+    	let mut ret = false;
+    	let byte = match fin {
+	        Some(CharBytes::Bytes(b)) => quote!(Some(#b)),
+	        Some(CharBytes::Epsilon) => {ret = true; quote!(Some(&[]))},
+	        None => quote!(None),
+	    };
+	    let mut vec_stream = Vec::new();
+	    for ident in alt {
+	    	let stream = match ident.to_inner() {
+	            wagon_ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)),
+	            other => {
+	            	let i = other.to_ident();
+	            	quote!(#i.into())
+	            }
+	        };
+	        vec_stream.push(stream);
+	    }
+	    let stream = quote!(
+	    	(vec![#(#vec_stream),*], #byte)
+	    );
+	    (ret, stream)
+    }
+
+    fn construct_root_stream(uuid: &str) -> TokenStream {
+    	quote!(
+			#[derive(Debug)]
+    		struct _S;
+
+    		impl<'a> wagon_gll::Label<'a> for _S {
+    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
+					vec![(vec![state.get_label_by_uuid(#uuid)], None)]
+				}
+				fn is_eps(&self) -> bool {
+					false
+				}
+				fn uuid(&self) -> &str {
+					wagon_gll::ROOT_UUID
+				}
+				fn to_string(&self) -> &str {
+					wagon_gll::ROOT_UUID
+				}
+				fn str_parts(&self) -> Vec<&str> {
+					vec![wagon_gll::ROOT_UUID]
+				}
+				fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
+					unreachable!("This should never be called");
+				}
+				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
+					(Vec::new(), Vec::new())
+				}
+				fn _weight(&self, _state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
+					unreachable!("This should never be called");
+				}
+    		}
+    	)
     }
 
     pub(crate) fn gen_state_stream(&self) -> CodeGenResult<TokenStream> {

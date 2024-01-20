@@ -9,8 +9,8 @@ use wagon_codegen::ToTokensState;
 use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError, CodeGenErrorKind};
 use std::rc::Rc;
 
-
 impl CodeGen for SpannableNode<Rhs> {
+    #[allow(clippy::too_many_lines)] // I have no clue how to take this method apart
     fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
         let span = self.span();
         let mut node = self.into_inner();
@@ -107,15 +107,15 @@ impl CodeGen for SpannableNode<Rhs> {
                     let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
                     candidates.push(std::rc::Rc::new(slot));
                 );
-                let stream = if !gen_args.weight_config.no_first {
+                let stream = if gen_args.weight_config.no_first {
+                    inner_block
+                } else {
                     quote!(
                        let fst = state.get_label_by_uuid(#label_str);
                        if state.test_next(fst) {
                            #inner_block 
                        } 
                     )
-                } else {
-                    inner_block
                 };
                 gen_args.state.add_code(ident.clone(), stream);
             }

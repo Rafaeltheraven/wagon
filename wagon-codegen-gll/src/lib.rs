@@ -38,6 +38,14 @@ type ReqCodeAttrs = AttrSet;
 type ReqWeightAttrs = AttrSet;
 type ReqFirstAttrs = AttrSet;
 
+type Alt = usize;
+type Block = usize;
+type Symbol = usize;
+type BlockSize = usize;
+
+type PrevArgs = Vec<SpannableIdent>;
+type FullArgs = IndexSet<SpannableIdent>;
+
 #[derive(Default)]
 /// Configuration options for the final GLL parser.
 pub(crate) struct WeightConfig {
@@ -62,14 +70,14 @@ pub(crate) struct CodeGenArgs {
 	pub(crate) state: CodeGenState,
 	pub(crate) fst: Option<bool>,
 	pub(crate) ident: Option<Rc<Ident>>,
-	pub(crate) alt: Option<usize>,
-	pub(crate) block: Option<usize>,
-	pub(crate) symbol: Option<usize>,
+	pub(crate) alt: Option<Alt>,
+	pub(crate) block: Option<Block>,
+	pub(crate) symbol: Option<Symbol>,
 	pub(crate) label: Option<Rc<Ident>>,
-	pub(crate) block_size: Option<usize>,
+	pub(crate) block_size: Option<BlockSize>,
 	pub(crate) found_first: Option<bool>,
-	pub(crate) full_args: Option<IndexSet<SpannableIdent>>,
-	pub(crate) prev_args: Option<Vec<SpannableIdent>>,
+	pub(crate) full_args: Option<FullArgs>,
+	pub(crate) prev_args: Option<PrevArgs>,
 	pub(crate) weight_config: WeightConfig
 }
 
@@ -103,10 +111,10 @@ pub struct CodeGenError {
 
 impl CodeGenError {
 	fn new(kind: CodeGenErrorKind) -> Self {
-		Self {kind, span: Default::default()}
+		Self {kind, span: Span::default()}
 	}
 
-	fn new_spanned(kind: CodeGenErrorKind, span: Span) -> Self {
+	const fn new_spanned(kind: CodeGenErrorKind, span: Span) -> Self {
 		Self {kind, span}
 	}
 }
@@ -173,6 +181,9 @@ trait CodeGen {
 }
 
 /// Given a [`Wag`], create a GLL parser and return a [`CodeMap`] representing this parser.
+///
+/// # Errors
+/// Will return a [`CodeGenError`] if anything goes wrong during codegen (usually unwrapping things).
 pub fn gen_parser(wag: Wag) -> CodeGenResult<CodeMap> {
 	let mut args = CodeGenArgs::default();
 	wag.gen(&mut args)?;
