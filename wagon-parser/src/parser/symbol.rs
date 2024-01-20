@@ -68,11 +68,13 @@ impl Symbol {
         matches!(self, Self::Assignment(..))
     }
 
+    #[cfg(test)]
     /// Create a symbol which is just a [`Terminal::LitString`] representing the input parameter.
     pub(crate) fn simple_terminal(ident: &str) -> Self {
         Self::Terminal(SpannableNode::new(Terminal::LitString(ident.to_string()), 0..ident.len()))
     }
 
+    #[cfg(test)]
     /// Create a symbol which is just a non-terminal [`Ident::Unknown`] with no arguments, representing the input parameter.
     pub (crate) fn simple_ident(ident: &str) -> Self {
         Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), 0..ident.len()), Vec::new())

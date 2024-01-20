@@ -9,7 +9,7 @@ use crate::either_token;
 use wagon_lexer::{math::Math, Spannable};
 use wagon_macros::match_error;
 use wagon_utils::ConversionError;
-use wagon_value::{Valueable, Value, ValueError, RecursiveValue};
+use wagon_value::{Valueable, Value, RecursiveValue};
 
 use ordered_float::NotNan;
 

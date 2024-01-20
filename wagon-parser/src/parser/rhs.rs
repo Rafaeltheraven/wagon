@@ -58,6 +58,7 @@ impl Rhs {
 		Ok(resp)
 	}
 
+	#[cfg(test)]
 	/// Automatically create an empty rule with no weight.
 	pub(crate) fn empty() -> Self {
 		Self {
@@ -78,6 +79,7 @@ impl Rhs {
 		}, span)
 	}
 
+	#[cfg(test)]
 	/// Automatically create a rule which is just an ident. See [`Chunk::simple_ident`].
 	pub(crate) fn simple_ident(ident: &str) -> Self {
 		Self {
@@ -88,6 +90,7 @@ impl Rhs {
 		}
 	}
 
+	#[cfg(test)]
 	/// Automatically create a rule which is just a terminal. See [`Chunk::simple_terminal`].
 	pub(crate) fn simple_terminal(term: &str) -> Self {
 		Self {

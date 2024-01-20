@@ -134,13 +134,14 @@ impl Chunk {
 	}
 
     /// Check if this chunk is a terminal
-    pub(crate) fn is_terminal(&self) -> bool {
-        match &self.chunk {
-            ChunkP::Unit(s) => s.node.is_terminal(),
-            ChunkP::Group(_) => false,
-        }
-    }
+    // pub(crate) fn is_terminal(&self) -> bool {
+    //     match &self.chunk {
+    //         ChunkP::Unit(s) => s.node.is_terminal(),
+    //         ChunkP::Group(_) => false,
+    //     }
+    // }
 
+    #[cfg(test)]
     /// Automatically create a `Chunk` that is just a terminal. See [`Symbol::simple_terminal`].
     pub(crate) fn simple_terminal(term: &str) -> Self {
         Self { 
@@ -149,6 +150,7 @@ impl Chunk {
         }
     }
 
+    #[cfg(test)]
     /// Automatically create a `Chunk` that is just an ident. See [`Symbol::simple_ident`].
     pub(crate) fn simple_ident(ident: &str) -> Self {
         Self {
