@@ -6,7 +6,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use wagon_parser::parser::WagParseError;
+use wagon_parser::MsgAndSpan;
+
 use wagon_parser::parse_and_check;
 use wagon_codegen_gll::gen_parser;
 use wagon_codegen::CodeMap;
@@ -37,13 +38,16 @@ fn main() {
     let contents = fs::read_to_string(input_file).expect("Couldn't read file");
     match parse_and_check(&contents) {
         Ok(wag) => {
-            write_parser(gen_parser(wag), proj_name, overwrite)
+            match gen_parser(wag) {
+                Ok(code) => write_parser(code, proj_name, overwrite),
+                Err(e) => handle_error(e, input_file.to_str().unwrap(), contents),
+            }
         },
         Err(e) => handle_error(e, input_file.to_str().unwrap(), contents),
     }
 }
 
-fn handle_error(err: WagParseError, file_path: &str, file: String) {
+fn handle_error<T: MsgAndSpan>(err: T, file_path: &str, file: String) {
     use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
     let mut colors = ColorGenerator::new();
     let a = colors.next();
