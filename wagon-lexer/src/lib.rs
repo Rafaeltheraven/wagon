@@ -72,11 +72,11 @@ pub type LexResult = Result<Tokens, LexingError>;
 impl Display for LexingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexingError::UnknownError => write!(f, "Encountered unknown error!"),
-            LexingError::UnexpectedCharacter(c, _) => write!(f, "Encountered unexpected character {}", c),
-            LexingError::UnexpectedEOF(_) => write!(f, "Got EOF but expected more characters!"),
-            LexingError::ParseIntError(p, _) => p.fmt(f),
-            LexingError::ParseFloatError(p, _) => p.fmt(f),
+            Self::UnknownError => write!(f, "Encountered unknown error!"),
+            Self::UnexpectedCharacter(c, _) => write!(f, "Encountered unexpected character {c}"),
+            Self::UnexpectedEOF(_) => write!(f, "Got EOF but expected more characters!"),
+            Self::ParseIntError(p, _) => p.fmt(f),
+            Self::ParseFloatError(p, _) => p.fmt(f),
         }
     }
 }
@@ -86,11 +86,8 @@ impl Error for LexingError {}
 impl Spannable for LexingError {
     fn span(&self) -> Span {
         match self {
-            LexingError::UnknownError => Span::default(),
-            LexingError::UnexpectedCharacter(_, s) => s.to_owned(),
-            LexingError::UnexpectedEOF(s) => s.to_owned(),
-            LexingError::ParseIntError(_, s) => s.to_owned(),
-            LexingError::ParseFloatError(_, s) => s.to_owned(),
+            Self::UnknownError => Span::default(),
+            Self::UnexpectedCharacter(_, s) | Self::UnexpectedEOF(s) | Self::ParseIntError(_, s) | Self::ParseFloatError(_, s) => s.to_owned(),
         }
     }
 }
@@ -127,7 +124,7 @@ impl Iterator for MetaLexer<'_> {
 }
 
 impl<'source> MetaLexer<'source> {
-	fn new(lexer: logos::Lexer<'source, Metadata>) -> Self {
+	const fn new(lexer: logos::Lexer<'source, Metadata>) -> Self {
 		Self{lexer, peeked: VecDeque::new()}
 	}
 }
@@ -164,9 +161,9 @@ pub enum Tokens {
 impl fmt::Display for Tokens {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Tokens::ProductionToken(t) => t.fmt(f),
-            Tokens::MathToken(t) => t.fmt(f),
-            Tokens::MetadataToken(t) => t.fmt(f)
+            Self::ProductionToken(t) => t.fmt(f),
+            Self::MathToken(t) => t.fmt(f),
+            Self::MetadataToken(t) => t.fmt(f)
         }
     }
 }
@@ -178,6 +175,7 @@ impl Default for Tokens {
 }
 
 /// A struct which automatically switches between the different lexers based on context.
+#[allow(clippy::option_option)]
 pub struct LexerBridge<'source> {
 	lexer: Lexer<'source>,
 	counter: u16,
@@ -186,8 +184,8 @@ pub struct LexerBridge<'source> {
 }
 
 impl<'source> LexerBridge<'source> {
-	/// Initialize the LexerBridge
-	pub fn new(s: &'source str) -> Self {
+	/// Initialize the `LexerBridge`
+	#[must_use] pub fn new(s: &'source str) -> Self {
 		let lexer = Lexer::new(s);
 		let counter = 0;
 		let in_meta = matches!(lexer, Lexer::Metadata(_));
@@ -196,7 +194,7 @@ impl<'source> LexerBridge<'source> {
 	}
 
 	/// Inspect what part of the input string the lexer is currently at
-	pub fn slice(&self) -> &str {
+	#[must_use] pub fn slice(&self) -> &str {
 		match &self.lexer {
 		    Lexer::Productions(l) => l.slice(),
 		    Lexer::Math(l) => l.slice(),
@@ -228,7 +226,7 @@ impl<'source> LexerBridge<'source> {
 		Lexer::Metadata(MetaLexer::new(curr.morph()))
 	}
 
-	/// Make the LexerBridge use the [Math] lexer.
+	/// Make the `LexerBridge` use the [Math] lexer.
 	pub fn morph_to_math(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(prod) => Self::_morph_to_math(prod),
@@ -237,7 +235,7 @@ impl<'source> LexerBridge<'source> {
 		});
 	}
 
-	/// Make the LexerBridge use the [Productions] lexer.
+	/// Make the `LexerBridge` use the [Productions] lexer.
 	pub fn morph_to_productions(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(_) => lexer,
@@ -246,7 +244,7 @@ impl<'source> LexerBridge<'source> {
 		});
 	}
 
-	/// Make the LexerBridge use the [Metadata] lexer.
+	/// Make the `LexerBridge` use the [Metadata] lexer.
 	pub fn morph_to_metadata(&mut self) {
 		replace_with_or_abort(&mut self.lexer, |lexer| match lexer {
 			Lexer::Productions(prod) => Self::_morph_to_metadata(prod),
@@ -267,18 +265,12 @@ pub trait Spannable {
 impl<'source> Peek for LexerBridge<'source> {
 
     fn peek(&mut self) -> Option<&Self::Item> {
-    	let next = match self.peeked.take() {
-	        Some(x) => x,
-	        None => self.next()
-	    };
+    	let next = self.peeked.take().map_or_else(|| self.next(), |x| x);
 	    self.peeked.get_or_insert(next).as_ref()
     }
 
     fn peek_mut(&mut self) -> Option<&mut Self::Item> {
-        let next = match self.peeked.take() {
-	        Some(x) => x,
-	        None => self.next()
-	    };
+        let next = self.peeked.take().map_or_else(|| self.next(), |x| x);
 	    self.peeked.get_or_insert(next).as_mut()
     }
 }
@@ -295,10 +287,7 @@ impl<'source> ResultNext<Tokens, LexingError> for LexerBridge<'source> {
 
 impl<'source> ResultPeek<Tokens, LexingError> for LexerBridge<'source> {
     fn peek_result(&mut self) -> Result<&Tokens, LexingError> {
-    	let next = match self.peeked.take() { // Gotta copy this over to please the borrow checker
-	        Some(x) => x,
-	        None => self.next()
-	    };
+    	let next = self.peeked.take().map_or_else(|| self.next(), |x| x);
 	    let slice = self.slice().to_string();
     	let span = self.span();
 	    let peek = self.peeked.get_or_insert(next).as_ref();
@@ -334,56 +323,58 @@ trait TypeDetect {
 impl<'source> Iterator for LexerBridge<'source> {
 	type Item = Result<Tokens, LexingError>;
 	fn next(&mut self) -> Option<Self::Item> {
-        use Tokens::*;
+        use Tokens::{MathToken, MetadataToken, ProductionToken};
         type MorphFunc<'source> = Option<Box<dyn Fn(&mut LexerBridge<'source>)>>;
-        match self.peeked.take() {
-        	Some(v) => v,
-        	None => {
-        		let (morph_func, item): (MorphFunc, Option<Result<Tokens, LexingError>>) = match &mut self.lexer {
-		            Lexer::Productions(prod) => {
-		            	let result = prod.next();
-		                let ret_func: MorphFunc = match result {
-		                	Some(Ok(Productions::LBr)) | Some(Ok(Productions::LCur)) => Some(Box::new(Self::morph_to_math)),
-		                	_ => None
-		                };
-		                (ret_func, result.map(|prod| prod.map(ProductionToken)))
-		            },
-		            Lexer::Math(math) => {
-		            	let result = math.next();
-		                let ret_func: MorphFunc = match result {
-		                	Some(Ok(Math::LBr)) => {self.counter += 1; None},
-		                	Some(Ok(Math::RCur)) => Some(Box::new(Self::morph_to_productions)),
-		                	Some(Ok(Math::RBr)) if self.counter == 0 => Some(Box::new(Self::morph_to_productions)),
-		                	Some(Ok(Math::Semi)) if self.in_meta => Some(Box::new(Self::morph_to_metadata)),
-		                	Some(Ok(Math::RBr)) => {self.counter -= 1; None},
-		                	_ => None
-		                };
-		                (ret_func, result.map(|math| math.map(MathToken)))
-		            },
-		            Lexer::Metadata(meta) => {
-		            	let result = meta.next();
-		            	let ret_func: MorphFunc = match result {
-		            		Some(Ok(Metadata::Delim)) => {
-		            			self.in_meta = false;
-		            			Some(Box::new(Self::morph_to_productions))
-		            		},
-		            		Some(Ok(Metadata::Key(_))) => Some(Box::new(Self::morph_to_math)),
-		            		_ => None
-		            	};
-		            	(ret_func, result.map(|m| m.map(MetadataToken)))
-		            },
-		        };
-		        if let Some(fun) = morph_func {
-		        	fun(self)
-		        }
-		        item
-        	}
-        }
+        if let Some(v) = self.peeked.take() {
+        	v
+        } else {
+        	let (morph_func, item): (MorphFunc, Option<Result<Tokens, LexingError>>) = match &mut self.lexer {
+	            Lexer::Productions(prod) => {
+	            	let result = prod.next();
+	                let ret_func: MorphFunc = match result {
+	                	Some(Ok(Productions::LBr | Productions::LCur)) => Some(Box::new(Self::morph_to_math)),
+	                	_ => None
+	                };
+	                (ret_func, result.map(|prod| prod.map(ProductionToken)))
+	            },
+	            Lexer::Math(math) => {
+	            	let result = math.next();
+	                let ret_func: MorphFunc = match result {
+	                	Some(Ok(Math::LBr)) => {self.counter += 1; None},
+	                	Some(Ok(Math::RCur)) => Some(Box::new(Self::morph_to_productions)),
+	                	Some(Ok(Math::RBr)) if self.counter == 0 => Some(Box::new(Self::morph_to_productions)),
+	                	Some(Ok(Math::Semi)) if self.in_meta => Some(Box::new(Self::morph_to_metadata)),
+	                	Some(Ok(Math::RBr)) => {self.counter -= 1; None},
+	                	_ => None
+	                };
+	                (ret_func, result.map(|math| math.map(MathToken)))
+	            },
+	            Lexer::Metadata(meta) => {
+	            	let result = meta.next();
+	            	let ret_func: MorphFunc = match result {
+	            		Some(Ok(Metadata::Delim)) => {
+	            			self.in_meta = false;
+	            			Some(Box::new(Self::morph_to_productions))
+	            		},
+	            		Some(Ok(Metadata::Key(_))) => Some(Box::new(Self::morph_to_math)),
+	            		_ => None
+	            	};
+	            	(ret_func, result.map(|m| m.map(MetadataToken)))
+	            },
+	        };
+	        if let Some(fun) = morph_func {
+	        	fun(self);
+	        }
+	        item
+	    }
     }
 }
 
 #[cfg(test)]
 /// A helper method to assert that a lexer will encounter a given list of tokens.
+///
+/// # Panics
+/// This assert panics if it reaches the end of the tokenstream before it's done checking all expected tokens.
 pub fn assert_lex<'a, Token>(
     source: &'a Token::Source,
     tokens: &[Result<Token, Token::Error>],

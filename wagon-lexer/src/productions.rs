@@ -20,10 +20,10 @@ pub enum ImportType {
 impl TypeDetect for ImportType {
 	fn detect(inp: &str, span: logos::Span) -> Result<Self, LexingError> {
 	    match inp.chars().last() {
-	    	Some('-') => Ok(ImportType::Basic),
-	    	Some('=') => Ok(ImportType::Full),
-	    	Some('<') => Ok(ImportType::Recursive),
-	    	Some('/') => Ok(ImportType::Exclude),
+	    	Some('-') => Ok(Self::Basic),
+	    	Some('=') => Ok(Self::Full),
+	    	Some('<') => Ok(Self::Recursive),
+	    	Some('/') => Ok(Self::Exclude),
 	    	Some(x) => Err(LexingError::UnexpectedCharacter(x.to_string(), span)),
 	    	None => Err(LexingError::UnexpectedEOF(span))
 	    }
@@ -50,15 +50,16 @@ pub enum EbnfType {
 impl TypeDetect for EbnfType {
 	fn detect(inp: &str, span: logos::Span) -> Result<Self, LexingError> {
 	    match inp.chars().next() {
-	    	Some('+') => Ok(EbnfType::Some),
-	    	Some('*') => Ok(EbnfType::Many),
-	    	Some('?') => Ok(EbnfType::Maybe),
+	    	Some('+') => Ok(Self::Some),
+	    	Some('*') => Ok(Self::Many),
+	    	Some('?') => Ok(Self::Maybe),
 	    	Some(x)   => Err(LexingError::UnexpectedCharacter(x.to_string(), span)),
 	    	None      => Err(LexingError::UnexpectedEOF(span))
 	    }
 	}
 }
 
+#[derive(Eq)]
 #[inherit_from_base]
 /// Lexer for the grammar DSL.
 pub enum Productions {
@@ -184,6 +185,6 @@ mod tests {
 			Ok(Productions::Identifier(Ident::Unknown("S".to_string()))),
 			Ok(Productions::Alternative)
 		];
-		assert_lex(s, expect)
+		assert_lex(s, expect);
 	}
 }

@@ -3,6 +3,7 @@ use crate::{Logos, LexingError};
 use logos_display::{Debug, Display};
 use wagon_macros::inherit_from_base;
 
+#[derive(Eq)]
 #[inherit_from_base(filter(Identifier, LitString, LBr, RBr, LCur, RCur, LPar, RPar, Colon, Comma))]
 /// Lexer for the Metadata DSL.
 pub enum Metadata {
@@ -41,7 +42,7 @@ mod tests {
 			Ok(Metadata::Semi)
 		];
 		assert_lex(s, expect);
-		assert_lex(s2, expect2)
+		assert_lex(s2, expect2);
 	}
 
 }
