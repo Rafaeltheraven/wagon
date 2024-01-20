@@ -5,6 +5,7 @@ use crate::{Value, Valueable};
 /// A result type for operations on a [`Valueable`].
 ///
 /// Either returns something of type `T`. Or a [`ValueError`] over `U`.
+#[allow(clippy::module_name_repetitions)]
 pub type ValueResult<T, U> = Result<T, ValueError<U>>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -27,8 +28,8 @@ pub enum ValueError<T: Valueable> {
 impl<T: Valueable> Error for ValueError<T> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ValueError::FloatIsNan(e) => Some(e),
-            ValueError::IntConversionError(e) => Some(e),
+            Self::FloatIsNan(e) => Some(e),
+            Self::IntConversionError(e) => Some(e),
             _ => None
         }
     }
@@ -37,12 +38,12 @@ impl<T: Valueable> Error for ValueError<T> {
 impl<T: Valueable> Display for ValueError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValueError::Fatal(s) => write!(f, "{}", s),
-            ValueError::OperationError(v1, v2, o) => write!(f, "Can not perform {} on values of type {:?} and {:?}", o, v1, v2),
-            ValueError::FloatIsNan(e) => e.fmt(f),
-            ValueError::IntConversionError(e) => e.fmt(f),
-            ValueError::NegationError(v) => write!(f, "Can not negate value of type {:?}", v),
-            ValueError::ComparisonError(v1, v2) => write!(f, "Can not compare value of type {:?} with value of type {:?}", v1, v2),
+            Self::Fatal(s) => write!(f, "{s}"),
+            Self::OperationError(v1, v2, o) => write!(f, "Can not perform {o} on values of type {v1:?} and {v2:?}"),
+            Self::FloatIsNan(e) => e.fmt(f),
+            Self::IntConversionError(e) => e.fmt(f),
+            Self::NegationError(v) => write!(f, "Can not negate value of type {v:?}"),
+            Self::ComparisonError(v1, v2) => write!(f, "Can not compare value of type {v1:?} with value of type {v2:?}"),
         }
     }
 }
@@ -63,11 +64,11 @@ impl<T: Valueable + From<Value<T>>> From<ValueError<Value<T>>> for ValueError<T>
     fn from(value: ValueError<Value<T>>) -> Self {
         match value {
             ValueError::Fatal(f) => Self::Fatal(f),
-            ValueError::OperationError(v1, v2, o) => Self::OperationError(T::from(v1.clone()), T::from(v2.clone()), o),
+            ValueError::OperationError(v1, v2, o) => Self::OperationError(T::from(v1), T::from(v2), o),
             ValueError::FloatIsNan(e) => Self::FloatIsNan(e),
             ValueError::IntConversionError(e) => Self::IntConversionError(e),
-            ValueError::NegationError(v) => Self::NegationError(T::from(v.clone())),
-            ValueError::ComparisonError(v1, v2) => Self::ComparisonError(T::from(v1.clone()), T::from(v2.clone())),
+            ValueError::NegationError(v) => Self::NegationError(T::from(v)),
+            ValueError::ComparisonError(v1, v2) => Self::ComparisonError(T::from(v1), T::from(v2)),
         }
     }
 }

@@ -47,14 +47,14 @@ impl ToValue<Self> for RecursiveValue {
 }
 
 impl std::ops::Deref for RecursiveValue {
-    type Target = Value<RecursiveValue>;
+    type Target = Value<Self>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl From<Value<RecursiveValue>> for RecursiveValue {
+impl From<Value<Self>> for RecursiveValue {
     fn from(value: Value<Self>) -> Self {
         Self(value)
     }

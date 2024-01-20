@@ -6,14 +6,29 @@ use crate::{Value, ValueResult};
 /// Registering this newtype as `Valueable` means that it supports all common operations associated with a `Value`.
 pub trait Valueable: std::fmt::Debug + std::fmt::Display + PartialEq + std::hash::Hash + Eq + Clone {
     /// Is this value seen as `true` or `false`?
+    ///
+    /// # Errors
+    /// Should return an error if this value can not be converted into a `bool`.
     fn is_truthy(&self) -> ValueResult<bool, Self>;
     /// Convert the value to a regular [`i32`].
+    ///
+    /// # Errors
+    /// Should return an error if this value can not be converted into an `i32`.
     fn to_int(&self) -> ValueResult<i32, Self>;
     /// Convert the value to a regular [`f32`].
+    ///
+    /// # Errors
+    /// Should return an error if this value can not be converted into an `f32`.
     fn to_float(&self) -> ValueResult<f32, Self>;
     /// Calculate this value to the power of another.
+    ///
+    /// # Errors
+    /// Should return an error if this value can not be raised to the value of `rhs` or if an overflow occurs.
     fn pow(&self, rhs: &Self) -> ValueResult<Self, Self>;
     /// Get a string representation of the value, as if it were a number. 
+    ///
+    /// # Errors
+    /// Should return an error if this value can not be displayed as a number
     fn display_numerical(&self) -> ValueResult<String, Self>;
 }
 
