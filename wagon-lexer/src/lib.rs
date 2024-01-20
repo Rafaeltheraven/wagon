@@ -51,7 +51,7 @@ use replace_with::replace_with_or_abort;
 pub use logos::Span;
 
 /// An Enum for any errors that may occur during lexing.
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub enum LexingError {
 	/// Error for any unknown reason. Usually when a character is encountered that can not be lexed.
 	#[default]

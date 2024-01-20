@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
 
-use wagon_lexer::{LexerBridge};
+use wagon_lexer::LexerBridge;
 pub use wagon_lexer::{Span, Spannable};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
 use crate::ast::ToAst;
