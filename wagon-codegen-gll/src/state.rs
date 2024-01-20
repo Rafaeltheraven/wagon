@@ -11,7 +11,7 @@ use crate::{FirstSet, CharBytes, AttrSet, ReqCodeAttrs, ReqWeightAttrs, ReqFirst
 
 #[derive(Debug, Default)]
 /// The state object that is passed along to [`ToTokensState::to_tokens`](`wagon_codegen::ToTokensState::to_tokens`)
-pub(crate) struct CodeGenState {
+pub struct CodeGenState {
 	/// A queue of NTs to follow to fill the first set, per alt. Optionally, if we exhaust the queue for an alt we add the final T to the first set.
 	pub(crate) first_queue: HashMap<Rc<Ident>, Vec<FirstSet>>,
 	/// The body of the `code` method for some non-terminal.
@@ -179,10 +179,10 @@ impl CodeGenState {
     		let code_attr_stream = self.collect_attrs(id, self.get_req_code_attrs(id));
     		let uuid = id.to_string();
     		let root_uuid = uuid.chars().next().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Got an empty uuid".to_string())))?.to_string();
-    		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Missing str_repr for {}", id))))?;
+    		let str_list = self.str_repr.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Missing str_repr for {id}"))))?;
     		let str_repr = str_list.join(" ");
     		let (pop_repr, ctx_repr) = self.attr_repr.get(id).unwrap_or(&empty_repr);
-    		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {}", id))))?;
+    		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {id}"))))?;
     		let weight_stream = if let Some(weight) = self.weight_code.get(id) {
     			let weight_attrs = self.collect_attrs(id, self.get_req_weight_attrs(id));
     			quote!(
@@ -283,7 +283,7 @@ impl CodeGenState {
 	    			label_map.insert(#str_repr, #label_id);
 	    		));
     			for (j, (alt, _)) in alts.iter().enumerate() {
-    				let rule_id = format!("{}_{}", id, j);
+    				let rule_id = format!("{id}_{j}");
     				let rule_var = format_ident!("alt_{}", rule_id);
     				stream.extend(quote!(
     					let #rule_var = std::rc::Rc::new(vec![#(#alt,)*]);

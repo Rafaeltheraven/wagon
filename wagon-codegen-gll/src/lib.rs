@@ -124,8 +124,8 @@ impl MsgAndSpan for CodeGenError {
         	CodeGenErrorKind::AtomConversionError(e) => ("Conversion Error".to_string(), e.to_string()),
             CodeGenErrorKind::ValueError(e) => ("Value Error".to_string(), e.to_string()),
             CodeGenErrorKind::Fatal(s) => ("Fatal Error".to_string(), s.to_owned()),
-            CodeGenErrorKind::MissingArg(s) => ("Missing Argument".to_string(), format!("Expected to see {} but it was None", s)),
-            CodeGenErrorKind::MissingFirst(i) => ("Missing First Set".to_string(), format!("Expected to have one for {} but it was None", i)),
+            CodeGenErrorKind::MissingArg(s) => ("Missing Argument".to_string(), format!("Expected to see {s} but it was None")),
+            CodeGenErrorKind::MissingFirst(i) => ("Missing First Set".to_string(), format!("Expected to have one for {i} but it was None")),
             CodeGenErrorKind::ParseError(e) => e.msg(),
         }
     }
@@ -134,7 +134,7 @@ impl MsgAndSpan for CodeGenError {
 impl std::fmt::Display for CodeGenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	let (head, text) = self.msg();
-        write!(f, "{}: {}", head, text)
+        write!(f, "{head}: {text}")
     }
 }
 

@@ -21,7 +21,7 @@ impl CodeGen for Metadata {
                         span
                     )
                 )?
-            )
+            );
         }
         if let Some(atom) = self.mappings.remove("min_weight") {
             let span = atom.span();
@@ -36,7 +36,7 @@ impl CodeGen for Metadata {
                         x.into(), 
                         span
                     )
-                )?
+                )?;
         }
         if let Some(atom) = self.mappings.remove("first_set") {
             let span = atom.span();
@@ -51,7 +51,7 @@ impl CodeGen for Metadata {
                         x.into(), 
                         span
                     )
-                ))?
+                ))?;
         }
         Ok(())
     }

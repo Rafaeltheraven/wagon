@@ -25,13 +25,13 @@ impl CodeGen for SpannableNode<Symbol> {
 
 		let first_symbol = block == 0 && symbol == 0;
 		let uuid: String = ident.to_string();
-		let rule_uuid = format!("{}_{}", uuid, alt);
+		let rule_uuid = format!("{uuid}_{alt}");
 		match node {
 			Symbol::NonTerminal(i, args) => {
 				let next_block = block + 1;
 				let args_idents = args.iter().map(|x| x.to_inner().to_ident());
 				let mut full_args_idents = Vec::with_capacity(full_args.len());
-				for arg in full_args.iter() {
+				for arg in full_args {
 					state.add_req_code_attr(label.clone(), arg.clone());
 					full_args_idents.push(arg.to_inner().to_ident());
 				}
@@ -90,7 +90,7 @@ impl CodeGen for SpannableNode<Symbol> {
 							let bytes = #bytes;
 						));
 						if !found_first {
-							state.get_first(label)?[0].1 = Some(CharBytes::Bytes(bytes))
+							state.get_first(label)?[0].1 = Some(CharBytes::Bytes(bytes));
 						}
 						if first_symbol && block_size != 1 {
 							stream.extend(quote!(

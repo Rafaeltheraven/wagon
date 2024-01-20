@@ -26,7 +26,7 @@ impl CodeGen for SpannableNode<Rhs> {
             let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
             let prev_args = gen_args.prev_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("prev_args".to_string()), span.clone()))?;
 
-            let label_str = format!("{}_{}_{}", ident, alt, j);
+            let label_str = format!("{ident}_{alt}_{j}");
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
             gen_args.state.first_queue.insert(label.clone(), vec![(Vec::with_capacity(block.len()), None)]);
             let block_size = block.len();
@@ -77,7 +77,7 @@ impl CodeGen for SpannableNode<Rhs> {
             gen_args.state.str_repr.insert(label.clone(), str_repr);
             if j == blocks_count - 1 {
                 let mut ret_vals = Vec::new();
-                for arg in args.iter() {
+                for arg in args {
                     match arg.to_inner() {
                         wagon_ident::Ident::Synth(_) => {
                             let arg_ident = arg.to_inner().to_ident();
