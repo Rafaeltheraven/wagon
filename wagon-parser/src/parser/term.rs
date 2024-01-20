@@ -61,7 +61,7 @@ impl ParseOption for TermP {
 	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op2::token_to_enum(lexer.peek_result()?) {
 	    	lexer.next();
-	    	Ok(Some(TermP { op, right: SpannableNode::parse(lexer)?, cont: TermP::parse_option(lexer)?.map(Box::new) }))
+	    	Ok(Some(Self { op, right: SpannableNode::parse(lexer)?, cont: Self::parse_option(lexer)?.map(Box::new) }))
 	    } else {
 	    	Ok(None)
 	    }
@@ -133,10 +133,10 @@ impl Display for TermP {
 impl Display for Op2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Op2::Mul => write!(f, "*"),
-            Op2::Div => write!(f, "/"),
-            Op2::Floor => write!(f, "//"),
-            Op2::Mod => write!(f, "%"),
+            Self::Mul => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+            Self::Floor => write!(f, "//"),
+            Self::Mod => write!(f, "%"),
         }
     }
 }
@@ -144,10 +144,10 @@ impl Display for Op2 {
 impl ToTokens for Op2 {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         match self {
-            Op2::Mul => tokens.extend(quote!(*)),
-            Op2::Div => tokens.extend(quote!(/)),
-            Op2::Floor => unimplemented!("Not sure how to do this yet"),
-            Op2::Mod => tokens.extend(quote!(%)),
+            Self::Mul => tokens.extend(quote!(*)),
+            Self::Div => tokens.extend(quote!(/)),
+            Self::Floor => unimplemented!("Not sure how to do this yet"),
+            Self::Mod => tokens.extend(quote!(%)),
         }
     }
 }

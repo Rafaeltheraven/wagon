@@ -94,7 +94,9 @@ macro_rules! any_token {
 
 /// Check if there's a `;` token, return an error otherwise.
 pub(super) fn check_semi(lexer: &mut LexerBridge) -> Result<(), WagParseError> {
-	if lexer.next_if(|x| matches!(x, Ok(any_token!(Semi)))).is_none() {
+	if lexer.next_if(|x| matches!(x, Ok(wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::Semi)
+| wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::Semi) |
+wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Semi)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_result()?, expected: string_vec![Tokens::ProductionToken(Productions::Semi)] })
     } else {
     	Ok(())

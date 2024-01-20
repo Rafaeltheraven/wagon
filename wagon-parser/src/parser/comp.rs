@@ -105,13 +105,13 @@ impl Display for Comparison {
 impl Display for CompOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompOp::Eq => write!(f, "=="),
-            CompOp::Neq => write!(f, "!="),
-            CompOp::Lte => write!(f, "<="),
-            CompOp::Lt => write!(f, "<"),
-            CompOp::Gte => write!(f, ">="),
-            CompOp::Gt => write!(f, ">"),
-            CompOp::In => write!(f, "in"),
+            Self::Eq => write!(f, "=="),
+            Self::Neq => write!(f, "!="),
+            Self::Lte => write!(f, "<="),
+            Self::Lt => write!(f, "<"),
+            Self::Gte => write!(f, ">="),
+            Self::Gt => write!(f, ">"),
+            Self::In => write!(f, "in"),
         }
     }
 }
@@ -119,13 +119,13 @@ impl Display for CompOp {
 impl ToTokens for CompOp {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         match self {
-            CompOp::Eq => tokens.extend(quote!(==)),
-            CompOp::Neq => tokens.extend(quote!(!=)),
-            CompOp::Lte => tokens.extend(quote!(<=)),
-            CompOp::Lt => tokens.extend(quote!(<)),
-            CompOp::Gte => tokens.extend(quote!(>=)),
-            CompOp::Gt => tokens.extend(quote!(>)),
-            CompOp::In => unimplemented!("Should be a special case!"),
+            Self::Eq => tokens.extend(quote!(==)),
+            Self::Neq => tokens.extend(quote!(!=)),
+            Self::Lte => tokens.extend(quote!(<=)),
+            Self::Lt => tokens.extend(quote!(<)),
+            Self::Gte => tokens.extend(quote!(>=)),
+            Self::Gt => tokens.extend(quote!(>)),
+            Self::In => unimplemented!("Should be a special case!"),
         };
     }
 }

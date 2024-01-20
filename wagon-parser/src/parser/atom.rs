@@ -24,7 +24,7 @@ pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
 	/// Deconstruct the dictionary into it's [`Ident`] and [`Expression`].
-	pub fn deconstruct(&self) -> (&Ident, &Expression) {
+	#[must_use] pub fn deconstruct(&self) -> (&Ident, &Expression) {
 		(&self.0, &self.1)
 	}
 }
@@ -98,18 +98,18 @@ impl Parse for Atom {
 impl ToAst for Atom {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         match self {
-            Atom::Ident(x) => ast.add_node(WagNode::Atom(AtomNode::Ident(x))),
-            Atom::LitBool(x) => ast.add_node(WagNode::Atom(AtomNode::LitBool(x))),
-            Atom::LitNum(x) => ast.add_node(WagNode::Atom(AtomNode::LitNum(x))),
-            Atom::LitFloat(x) => ast.add_node(WagNode::Atom(AtomNode::LitFloat(x))),
-            Atom::LitString(x) => ast.add_node(WagNode::Atom(AtomNode::LitString(x))),
-            Atom::Dict(Dictionary(i, e)) => {
+            Self::Ident(x) => ast.add_node(WagNode::Atom(AtomNode::Ident(x))),
+            Self::LitBool(x) => ast.add_node(WagNode::Atom(AtomNode::LitBool(x))),
+            Self::LitNum(x) => ast.add_node(WagNode::Atom(AtomNode::LitNum(x))),
+            Self::LitFloat(x) => ast.add_node(WagNode::Atom(AtomNode::LitFloat(x))),
+            Self::LitString(x) => ast.add_node(WagNode::Atom(AtomNode::LitString(x))),
+            Self::Dict(Dictionary(i, e)) => {
             	let node = ast.add_node(WagNode::Atom(AtomNode::Dict(i)));
             	let child = e.to_ast(ast);
             	ast.add_edge(node, child, ());
             	node
             },
-            Atom::Group(g) => {
+            Self::Group(g) => {
             	let node = ast.add_node(WagNode::Atom(AtomNode::Group));
             	let child = g.to_ast(ast);
             	ast.add_edge(node, child, ());
@@ -122,13 +122,13 @@ impl ToAst for Atom {
 impl Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Atom::Ident(x) => write!(f, "{}", x),
-            Atom::Dict(x) => write!(f, "{}", x),
-            Atom::LitBool(x) => write!(f, "{}", x),
-            Atom::LitNum(x) => write!(f, "{}", x),
-            Atom::LitFloat(x) => write!(f, "{}", x),
-            Atom::LitString(x) => write!(f, "\"{}\"", x),
-            Atom::Group(x) => write!(f, "({})", x),
+            Self::Ident(x) => write!(f, "{x}"),
+            Self::Dict(x) => write!(f, "{x}"),
+            Self::LitBool(x) => write!(f, "{x}"),
+            Self::LitNum(x) => write!(f, "{x}"),
+            Self::LitFloat(x) => write!(f, "{x}"),
+            Self::LitString(x) => write!(f, "\"{x}\""),
+            Self::Group(x) => write!(f, "({x})"),
         }
     }
 }
@@ -157,6 +157,6 @@ impl TryFrom<Atom> for RecursiveValue {
     type Error = ConversionError<Atom, Self>;
 
     fn try_from(value: Atom) -> Result<Self, Self::Error> {
-        Ok(Self::from(Value::try_from(value).map_err(|x| x.convert())?))
+        Ok(Self::from(Value::try_from(value).map_err(wagon_utils::ConversionError::convert)?))
     }
 }

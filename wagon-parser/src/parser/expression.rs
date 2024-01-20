@@ -57,8 +57,8 @@ impl Expression {
 impl ToAst for Expression {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         match self {
-            Expression::Subproc(s) => ast.add_node(WagNode::SubProc(s.into_inner())),
-            Expression::If { this, then, r#else } => {
+            Self::Subproc(s) => ast.add_node(WagNode::SubProc(s.into_inner())),
+            Self::If { this, then, r#else } => {
             	let node = ast.add_node(WagNode::If);
             	if let Some(expr) = r#else {
             		let child = (*expr).to_ast(ast);
@@ -70,7 +70,7 @@ impl ToAst for Expression {
             	ast.add_edge(node, this_node, ());
             	node
             },
-            Expression::Disjunct(d) => {
+            Self::Disjunct(d) => {
             	let node = ast.add_node(WagNode::Disjunct);
             	let child = d.to_ast(ast);
             	ast.add_edge(node, child, ());
@@ -83,15 +83,15 @@ impl ToAst for Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expression::Subproc(s) => write!(f, "$({})", s),
-            Expression::If { this, then, r#else } => {
+            Self::Subproc(s) => write!(f, "$({s})"),
+            Self::If { this, then, r#else } => {
             	if let Some(e) = r#else {
-            		write!(f, "if {} {{ {} }} else {{ {} }}", this, then, e)
+            		write!(f, "if {this} {{ {then} }} else {{ {e} }}")
             	} else {
-            		write!(f, "if {} {{ {} }}", this, then)
+            		write!(f, "if {this} {{ {then} }}")
             	}
             },
-            Expression::Disjunct(d) => write!(f, "{}", d),
+            Self::Disjunct(d) => write!(f, "{d}"),
         }
     }
 }

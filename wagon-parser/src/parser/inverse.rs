@@ -39,13 +39,13 @@ impl Parse for Inverse {
 impl ToAst for Inverse {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         match self {
-            Inverse::Not(b) => {
+            Self::Not(b) => {
                 let node = ast.add_node(WagNode::Inverse(InverseNode::Not));
                 let child = (*b).to_ast(ast);
                 ast.add_edge(node, child, ());
                 node
             },
-            Inverse::Comparison(c) => {
+            Self::Comparison(c) => {
                 let node = ast.add_node(WagNode::Inverse(InverseNode::Comparison));
                 let child = c.to_ast(ast);
                 ast.add_edge(node, child, ());
@@ -58,8 +58,8 @@ impl ToAst for Inverse {
 impl Display for Inverse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Inverse::Not(i) => write!(f, "not {}", i),
-            Inverse::Comparison(c) => write!(f, "{}", c),
+            Self::Not(i) => write!(f, "not {i}"),
+            Self::Comparison(c) => write!(f, "{c}"),
         }
     }
 }

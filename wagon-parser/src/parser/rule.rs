@@ -14,7 +14,7 @@ use wagon_macros::new_unspanned;
 #[cfg_attr(test, new_unspanned)]
 /// A single rule in the WAG grammar. 
 ///
-/// A rule is of the form: [`Ident`] {ARROW} [`Rhs`] | ['Rhs'] | ...;
+/// A rule is of the form: [`Ident`] {ARROW} [`Rhs`] | [`Rhs`] | ...;
 pub enum Rule {
     /// An analytic rule (`->`).
 	Analytic(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>),
@@ -39,7 +39,7 @@ impl Parse for Rule {
         let ident = match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::Identifier(wagon_ident::Ident::Unknown(s))) => Ok(s),
         })?;
-        let args = if let Some(Ok(Tokens::ProductionToken(Productions::LPar))) = lexer.peek() {
+        let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::LPar))) {
             between_sep(lexer, Tokens::ProductionToken(Productions::LPar), Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
         } else {
             Vec::new()
@@ -84,14 +84,14 @@ Ident format:
 
 */
 /// Convert every [`Chunk`] for every alternative into it's own separate `Rule`.
-impl Rewrite<Vec<SpannableNode<Rule>>> for SpannableNode<Rule> {
-    fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<SpannableNode<Rule>>> {
+impl Rewrite<Vec<Self>> for SpannableNode<Rule> {
+    fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<Self>> {
         match &mut self.node {
             Rule::Analytic(s, args, rhs) => {
                 let mut rules = Vec::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
-                        let ident = format!("{}·{}·{}", s, i, j);
+                        let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
                         rules.extend(chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?);
                     }
@@ -105,7 +105,7 @@ impl Rewrite<Vec<SpannableNode<Rule>>> for SpannableNode<Rule> {
                 let mut rules = Vec::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
-                        let ident = format!("{}·{}·{}", s, i, j);
+                        let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
                         rules.extend(chunk_node.rewrite(ident, args.clone(), span, Rule::Generate, depth, state)?);
                     }

@@ -29,6 +29,6 @@ impl ToAst for Disjunct {
 
 impl Display for Disjunct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" and "))
+        write!(f, "{}", self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(" and "))
     }
 }

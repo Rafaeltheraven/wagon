@@ -39,8 +39,8 @@ impl Parse for Metadata {
                             }
                         })
                     }
-                })?
+                })?;
         }
-        Ok(Metadata { includes, mappings })
+        Ok(Self { includes, mappings })
     }
 }

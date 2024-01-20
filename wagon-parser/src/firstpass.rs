@@ -20,7 +20,7 @@ pub(crate) struct FirstPassState {
 /// After rewriting/typechecking, we either return something or we have a [`WagCheckError`].
 pub type FirstPassResult<T> = Result<T, WagCheckError>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 /// Any error that can occur during the rewriting/checking process.
 pub enum WagCheckError {
 	/// A rule wants multiple parameters, but they are the exact same.
@@ -43,15 +43,15 @@ impl Error for WagCheckError{}
 impl MsgAndSpan for WagCheckError {
 	fn msg(&self) -> (String, String) {
 		match self {
-		    WagCheckError::DuplicateParameters(nt, i) => ("Duplicate Parameter!".to_string(), format!("Nonterminal {} uses parameter {} multiple times. This makes no sense.", nt, i)),
-    		WagCheckError::DisparateParameters { terminal, offender, expected, ..} => ("Disparate Parameters!".to_string(), format!("Instance of terminal {} uses parameters {:?} while it was defined earlier as {:?}. This is unsupported", terminal, offender, expected)),
+		    Self::DuplicateParameters(nt, i) => ("Duplicate Parameter!".to_string(), format!("Nonterminal {nt} uses parameter {i} multiple times. This makes no sense.")),
+    		Self::DisparateParameters { terminal, offender, expected, ..} => ("Disparate Parameters!".to_string(), format!("Instance of terminal {terminal} uses parameters {offender:?} while it was defined earlier as {expected:?}. This is unsupported")),
 		}
 	}
 
 	fn span(self) -> Span {
 		match self {
-		    WagCheckError::DuplicateParameters(_, i) => i.span(),
-    		WagCheckError::DisparateParameters { span, .. } => span,
+		    Self::DuplicateParameters(_, i) => i.span(),
+    		Self::DisparateParameters { span, .. } => span,
 		}
 	}
 }
@@ -59,7 +59,7 @@ impl MsgAndSpan for WagCheckError {
 impl Display for WagCheckError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	let (head, msg) = self.msg();
-    	write!(f, "{}: {}", head, msg)
+    	write!(f, "{head}: {msg}")
     }
 }
 

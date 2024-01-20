@@ -53,7 +53,7 @@ impl Rhs {
 				check = lexer.peek();
 			}
 		} else {
-			resp.push(SpannableNode::new(Chunk::empty(), lexer.span()))
+			resp.push(SpannableNode::new(Chunk::empty(), lexer.span()));
 		}
 		Ok(resp)
 	}
@@ -107,7 +107,7 @@ impl Rhs {
 	pub fn blocks(self) -> ParseResult<Vec<Vec<SpannableNode<Symbol>>>> {
 		let mut blocks = Vec::new();
 		let mut curr = Vec::new();
-		for chunk in self.chunks.into_iter() {
+		for chunk in self.chunks {
 			let span = chunk.span();
 			let symbols = match chunk.into_inner() {
 				Chunk { ebnf: Some(_), .. } => return Err(WagParseError::Fatal((span, "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out".to_string()))),

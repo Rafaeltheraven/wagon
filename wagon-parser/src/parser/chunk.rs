@@ -37,7 +37,7 @@ impl Chunk {
 	fn rewrite_ebnf(ebnf: &mut EbnfType, ident: String, args: Vec<SpannableNode<Ident>>, symbol: SpannableNode<Symbol>, span: &Span, rule_func: RuleConstructor, rules: &mut Vec<SpannableNode<Rule>>) {
 		let chunks: Vec<SpannableNode<Rhs>> = match ebnf {
             EbnfType::Some => {
-                let helper_ident = format!("{}·p", ident);
+                let helper_ident = format!("{ident}·p");
                 rules.push(SpannableNode::new(rule_func(helper_ident.clone(), args.clone(),
                     vec![
                         SpannableNode::new(Rhs {
@@ -122,7 +122,7 @@ impl Chunk {
                 self.ebnf = None;
             },
             Self { ebnf: Some(e), chunk: ChunkP::Group(g)} => {
-                let new_ident = format!("{}_{}", ident, depth);
+                let new_ident = format!("{ident}_{depth}");
                 let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
                 rules.extend(new_rule.rewrite(depth+1, state)?);
                 rules.push(new_rule);
@@ -183,7 +183,7 @@ impl Chunk {
             Self {
                 ebnf: None,
                 chunk: ChunkP::Unit(SpannableNode::new(Symbol::Epsilon, span.clone()))
-            }, span.clone()
+            }, span
         )
     }
 
@@ -194,7 +194,7 @@ impl Chunk {
             Self {chunk: ChunkP::Group(g), ..} => {
                 let mut ret = Vec::with_capacity(g.len());
                 for chunk in g {
-                    ret.extend(chunk.into_inner().extract_symbols())
+                    ret.extend(chunk.into_inner().extract_symbols());
                 }
                 ret
             }

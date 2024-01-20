@@ -5,7 +5,7 @@ use wagon_lexer::productions::EbnfType;
 use crate::parser::{metadata::Metadata, rule::Arrow, terminal::Terminal, inverse::InverseNode, comp::CompOp, sum::Op1, term::Op2, atom::AtomNode};
 use wagon_ident::Ident;
 
-pub(crate) enum WagNode {
+pub enum WagNode {
 	Root(Metadata),
 	Rule(String, Arrow),
 	Rhs(bool),
@@ -27,11 +27,11 @@ pub(crate) enum WagNode {
 	Empty,
 }
 
-pub(crate) type WagIx = NodeIndex<DefaultIx>;
+pub type WagIx = NodeIndex<DefaultIx>;
 
-pub(crate) type WagTree = Graph<WagNode, (), Directed, DefaultIx>;
+pub type WagTree = Graph<WagNode, (), Directed, DefaultIx>;
 
-pub(crate) trait ToAst {
+pub trait ToAst {
 	fn to_ast(self, ast: &mut WagTree) -> WagIx;
 	fn add_vec_children<T: ToAst>(node: WagNode, children: Vec<T>, ast: &mut WagTree) -> WagIx {
 		let node = ast.add_node(node);

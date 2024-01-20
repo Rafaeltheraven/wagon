@@ -27,8 +27,8 @@ impl Parse for Terminal {
 impl Display for Terminal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Terminal::Regex(r) => write!(f, "/{}/", r),
-            Terminal::LitString(s) => write!(f, "'{}'", s),
+            Self::Regex(r) => write!(f, "/{r}/"),
+            Self::LitString(s) => write!(f, "'{s}'"),
         }
     }
 }

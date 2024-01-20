@@ -72,7 +72,7 @@ impl Rewrite<()> for Wag {
             for new_rule in rule.rewrite(depth, state)? {
                 handle_conflict(new_rule, &mut map)?;
             }
-            handle_conflict(rule, &mut map)?
+            handle_conflict(rule, &mut map)?;
         }
         self.grammar.extend(map.into_values());
         Ok(())

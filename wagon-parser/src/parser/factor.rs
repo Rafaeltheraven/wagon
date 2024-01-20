@@ -29,7 +29,7 @@ impl Parse for Factor {
 		if &Tokens::MathToken(Math::Pow) == lexer.peek_result()? {
 			lexer.next();
 			Ok(
-				Factor::Power {
+				Self::Power {
 					left, 
 					right: Box::new(SpannableNode::parse(lexer)?)
 				}
@@ -43,8 +43,8 @@ impl Parse for Factor {
 impl ToAst for Factor {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         match self {
-            Factor::Primary(a) => a.to_ast(ast),
-            Factor::Power { left, right } => {
+            Self::Primary(a) => a.to_ast(ast),
+            Self::Power { left, right } => {
             	let node = ast.add_node(WagNode::Factor);
             	let right_node = (*right).to_ast(ast);
             	let left_node = left.to_ast(ast);
@@ -59,8 +59,8 @@ impl ToAst for Factor {
 impl Display for Factor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Factor::Primary(p) => write!(f, "{}", p),
-            Factor::Power { left, right } => write!(f, "{}^{}", left, right),
+            Self::Primary(p) => write!(f, "{p}"),
+            Self::Power { left, right } => write!(f, "{left}^{right}"),
         }
     }
 }

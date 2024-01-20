@@ -34,7 +34,7 @@ impl Parse for Symbol {
         match lexer.peek_result()? {
         	Tokens::ProductionToken(Productions::Identifier(_)) => {
                 let ident = SpannableNode::parse(lexer)?;
-                let args = if let Some(Ok(Tokens::ProductionToken(Productions::LPar))) = lexer.peek() {
+                let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::LPar))) {
                     between_sep(lexer, Tokens::ProductionToken(Productions::LPar), Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
                 } else {
                     Vec::new()
@@ -64,7 +64,7 @@ impl Symbol {
     }
 
     /// Check if this symbol is an [`Assignment`].
-    pub fn is_assignment(&self) -> bool {
+    #[must_use] pub fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment(..))
     }
 
@@ -89,10 +89,10 @@ impl Symbol {
 impl ToAst for Symbol {
     fn to_ast(self, ast: &mut WagTree) -> WagIx {
         match self {
-            Symbol::NonTerminal(i, _) => ast.add_node(WagNode::Ident(i.into_inner())),
-            Symbol::Terminal(t) => ast.add_node(WagNode::Terminal(t.into_inner())),
-            Symbol::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
-            Symbol::Epsilon => ast.add_node(WagNode::Empty)
+            Self::NonTerminal(i, _) => ast.add_node(WagNode::Ident(i.into_inner())),
+            Self::Terminal(t) => ast.add_node(WagNode::Terminal(t.into_inner())),
+            Self::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
+            Self::Epsilon => ast.add_node(WagNode::Empty)
         }
     }
 }
@@ -100,10 +100,10 @@ impl ToAst for Symbol {
 impl Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Symbol::NonTerminal(i, _) => write!(f, "{}", i),
-            Symbol::Assignment(i) => write!(f, "{}", i.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("; ")),
-            Symbol::Terminal(i) => write!(f, "{}", i),
-            Symbol::Epsilon => write!(f, "ε"),
+            Self::NonTerminal(i, _) => write!(f, "{i}"),
+            Self::Assignment(i) => write!(f, "{}", i.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join("; ")),
+            Self::Terminal(i) => write!(f, "{i}"),
+            Self::Epsilon => write!(f, "ε"),
         }
     }
 }

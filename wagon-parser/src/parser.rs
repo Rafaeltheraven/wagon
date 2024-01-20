@@ -64,7 +64,7 @@ pub struct Parser<'source> {
 
 impl<'source> Parser<'source> {
 	/// Given an input string, construct a parser.
-	pub fn new(data: &'source str) -> Self {
+	#[must_use] pub fn new(data: &'source str) -> Self {
 		Self {
 			lexer: LexerBridge::new(data)
 		}
@@ -116,40 +116,40 @@ impl From<LexingError> for WagParseError {
 impl Error for WagParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            WagParseError::Unexpected { .. } => None,
-            WagParseError::Fatal(_) => None,
-            WagParseError::CheckError(e) => Some(e),
-            WagParseError::LexError(e) => Some(e),
-            WagParseError::FloatError(e, _) => Some(e)
+            Self::Unexpected { .. } => None,
+            Self::Fatal(_) => None,
+            Self::CheckError(e) => Some(e),
+            Self::LexError(e) => Some(e),
+            Self::FloatError(e, _) => Some(e)
         }
     }
 }
 impl Display for WagParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	let (head, msg) = self.msg();
-    	write!(f, "{}: {}", head, msg)
+    	write!(f, "{head}: {msg}")
     }
 }
 
 impl MsgAndSpan for WagParseError {
 	fn span(self) -> Span {
 		match self {
-		    WagParseError::Unexpected { span, .. } => span,
-		    WagParseError::Fatal((span, _)) => span,
-		    WagParseError::CheckError(check) => check.span(),
-		    WagParseError::LexError(lex) => lex.span(),
-		    WagParseError::FloatError(_, span) => span,
+		    Self::Unexpected { span, .. } => span,
+		    Self::Fatal((span, _)) => span,
+		    Self::CheckError(check) => check.span(),
+		    Self::LexError(lex) => lex.span(),
+		    Self::FloatError(_, span) => span,
 		}
 	}
 
 	fn msg(&self) -> (String, String) {
 		match self {
-		    WagParseError::Unexpected { span, offender, expected } => ("Unexpected Token".to_string(), 
-		    	format!{"Encountered token {:?} at position {:?}. Expected {:#?}", offender, span, comma_separated_with_or(expected)}),
-	        WagParseError::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
-	        WagParseError::CheckError(err) => err.msg(),
-    		WagParseError::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
-    		WagParseError::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string())
+		    Self::Unexpected { span, offender, expected } => ("Unexpected Token".to_string(), 
+		    	format!("Encountered token {:?} at position {:?}. Expected {:#?}", offender, span, comma_separated_with_or(expected))),
+	        Self::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
+	        Self::CheckError(err) => err.msg(),
+    		Self::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
+    		Self::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string())
 		}
 	}
 }
@@ -167,7 +167,7 @@ pub trait Parse {
 		let mut res = Vec::new();
 		res.push(Self::parse(lexer)?);
 		while lexer.next_if(|x| x.as_ref() == Ok(&join)).is_some() {
-			res.push(Self::parse(lexer)?)
+			res.push(Self::parse(lexer)?);
 		}
 		Ok(res)
 	}

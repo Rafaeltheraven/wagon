@@ -71,7 +71,7 @@ impl<T: Parse + Eq> Eq for SpannableNode<T> {}
 
 impl<T: Parse + std::hash::Hash> std::hash::Hash for SpannableNode<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.node.hash(state)
+        self.node.hash(state);
     }
 }
 
@@ -119,19 +119,19 @@ pub(crate) trait WrapSpannable<T: Parse, U> {
 
 impl<T: Parse, U: IntoIterator<Item = SpannableNode<T>> + FromIterator<SpannableNode<T>>, Y: IntoIterator<Item = T>> WrapSpannable<T, U> for Y {
 	fn wrap_spannable(self) -> U {
-		self.into_iter().map(|x| x.wrap_spannable()).collect()
+		self.into_iter().map(WrapSpannable::wrap_spannable).collect()
 	}
 } 
 
 impl<T: Parse> WrapSpannable<T, Option<SpannableNode<T>>> for Option<T> {
     fn wrap_spannable(self) -> Option<SpannableNode<T>> {
-		self.map(|x| x.wrap_spannable())
+		self.map(WrapSpannable::wrap_spannable)
 	}
 }
 
 impl<T: Parse> WrapSpannable<T, Option<Box<SpannableNode<T>>>> for Option<Box<T>> {
     fn wrap_spannable(self) -> Option<Box<SpannableNode<T>>> {
-        self.map(|x| x.wrap_spannable())
+        self.map(WrapSpannable::wrap_spannable)
     }
 }
 
@@ -167,7 +167,7 @@ impl<T: Parse, U: std::cmp::Ord> WrapSpannable<T, BTreeMap<U, SpannableNode<T>>>
 
 impl<T: Parse> Spannable for SpannableNode<T> {
     fn span(&self) -> Span {
-        self.span.to_owned()
+        self.span.clone()
     }
 
     fn set_span(&mut self, span: Span) {

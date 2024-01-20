@@ -52,7 +52,7 @@ impl ParseOption for SumP {
 	fn parse_option(lexer: &mut LexerBridge) -> ParseResult<Option<Self>> where Self: Sized {
 	    if let Some(op) = Op1::token_to_enum(lexer.peek_result()?) {
 	    	lexer.next();
-	    	Ok(Some(SumP { op, right: SpannableNode::parse(lexer)?, cont: SumP::parse_option(lexer)?.map(Box::new) }))
+	    	Ok(Some(Self { op, right: SpannableNode::parse(lexer)?, cont: Self::parse_option(lexer)?.map(Box::new) }))
 	    } else {
 	    	Ok(None)
 	    }
@@ -120,8 +120,8 @@ impl Display for SumP {
 impl Display for Op1 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Op1::Add => write!(f, "+"),
-            Op1::Sub => write!(f, "-"),
+            Self::Add => write!(f, "+"),
+            Self::Sub => write!(f, "-"),
         }
     }
 }
@@ -129,8 +129,8 @@ impl Display for Op1 {
 impl ToTokens for Op1 {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         match self {
-            Op1::Add => tokens.extend(quote!(+)),
-            Op1::Sub => tokens.extend(quote!(-)),
+            Self::Add => tokens.extend(quote!(+)),
+            Self::Sub => tokens.extend(quote!(-)),
         }
     }
 }
