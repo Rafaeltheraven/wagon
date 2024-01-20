@@ -22,11 +22,9 @@ impl<U> ToTokensState<U> for TermP {
     fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
         let op = &self.op;
         let right = self.right.to_tokens(state, label.clone(), attr_fun);
-        if let Some(cont) = &self.cont {
+        self.cont.as_ref().map_or_else(|| quote!(#op #right), |cont| {
             let cont_stream = cont.to_tokens(state, label, attr_fun);
             quote!(#op #right #cont_stream)
-        } else {
-            quote!(#op #right)
-        }
+        })
     }
 }
