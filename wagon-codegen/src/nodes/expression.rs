@@ -8,7 +8,7 @@ use super::{Rc, ToTokensState};
 impl<U> ToTokensState<U> for Expression {
     fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
         match self {
-            Expression::Subproc(s) => {
+            Self::Subproc(s) => {
                 quote!(
                     {
                         let out = subprocess::Exec::shell(#s).stdout(subprocess::Redirection::Pipe).capture().expect("Was unable to capture shell output").stdout_str();
@@ -17,7 +17,7 @@ impl<U> ToTokensState<U> for Expression {
                     }
                 )
             },
-            Expression::If { this, then, r#else } => {
+            Self::If { this, then, r#else } => {
                 let this_stream = this.to_tokens(state, label.clone(), attr_fun);
                 let then_stream = then.to_tokens(state, label.clone(), attr_fun);
                 let if_stream = quote!(
@@ -36,7 +36,7 @@ impl<U> ToTokensState<U> for Expression {
                     if_stream
                 }
             },
-            Expression::Disjunct(d) => {
+            Self::Disjunct(d) => {
                 d.to_tokens(state, label, attr_fun)
             },
         }

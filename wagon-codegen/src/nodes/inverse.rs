@@ -8,13 +8,13 @@ use wagon_parser::parser::inverse::Inverse;
 impl<U> ToTokensState<U> for Inverse {
     fn to_tokens(&self, state: &mut U, label: Rc<Ident>, attr_fun: fn(&mut U, Rc<Ident>, SpannableIdent)) -> TokenStream {
         match self {
-            Inverse::Not(i) => {
+            Self::Not(i) => {
                 let i_stream = i.to_tokens(state, label, attr_fun);
                 quote!(
                     !#i_stream
                 )
             },
-            Inverse::Comparison(c) => {
+            Self::Comparison(c) => {
                 c.to_tokens(state, label, attr_fun)
             },
         }

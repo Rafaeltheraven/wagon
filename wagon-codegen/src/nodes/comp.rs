@@ -13,8 +13,8 @@ impl<U> ToTokensState<U> for Comparison {
         if let Some(comp_op) = &self.comp {
             let left = self.sum.to_tokens(state, label.clone(), attr_fun);
             let op  = &comp_op.op;
-            let right = comp_op.right.to_tokens(state, label.clone(), attr_fun);
-            if let CompOp::In = op {
+            let right = comp_op.right.to_tokens(state, label, attr_fun);
+            if matches!(op, CompOp::In) {
                 quote!(
                     #left.contains(#right)
                 )
