@@ -57,10 +57,12 @@ pub(super) fn between_sep<T: Parse>(lexer: &mut LexerBridge, left: &Tokens, righ
 #[macro_export] 
 macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {
-        wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) | wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
+        wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) 
+        | wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
     };
     ($variant:ident) => {
-    	wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) | wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
+    	wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) 
+    	| wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
     };
 }
 
@@ -68,10 +70,12 @@ macro_rules! either_token {
 #[macro_export]
 macro_rules! either_token_ref {
 	($variant:ident($($arg:tt)*)) => {
-        &wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) | &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
+        &wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant($($arg)*)) 
+        | &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant($($arg)*))
     };
     ($variant:ident) => {
-    	&wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) | &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
+    	&wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::$variant) 
+    	| &wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::$variant)
     };
 }
 
@@ -79,27 +83,29 @@ macro_rules! either_token_ref {
 #[macro_export] 
 macro_rules! any_token {
     ($variant:ident($($arg:tt)*)) => {
-        either_token!($variant) | wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant($($arg)*))
+        either_token!($variant) 
+        | wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant($($arg)*))
     };
     ($variant:ident) => {
-    	either_token!($variant) | wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant)
+    	either_token!($variant) 
+    	| wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::$variant)
     };
 }
 
+#[allow(clippy::unnested_or_patterns)]
 /// Check if there's a `;` token, return an error otherwise.
 pub(super) fn check_semi(lexer: &mut LexerBridge) -> Result<(), WagParseError> {
-	if lexer.next_if(|x| matches!(x, Ok(wagon_lexer::Tokens::ProductionToken(wagon_lexer::productions::Productions::Semi)
-| wagon_lexer::Tokens::MathToken(wagon_lexer::math::Math::Semi) |
-wagon_lexer::Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Semi)))).is_none() {
+	if lexer.next_if(|x| matches!(x, Ok(any_token!(Semi)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_result()?, expected: string_vec![Tokens::ProductionToken(Productions::Semi)] })
     } else {
     	Ok(())
     }
 }
 
+#[allow(clippy::unnested_or_patterns)]
 /// Check if there's a `:` token, return an error otherwise.
 pub(super) fn check_colon(lexer: &mut LexerBridge) -> Result<(), WagParseError> {
-	if lexer.next_if(|x| matches!(x, Ok(either_token!(Colon)))).is_none() {
+	if lexer.next_if(|x| matches!(x, Ok(any_token!(Colon)))).is_none() {
     	Err(WagParseError::Unexpected { span: lexer.span(), offender: lexer.next_result()?, expected: string_vec![Tokens::ProductionToken(Productions::Colon)] })
     } else {
     	Ok(())

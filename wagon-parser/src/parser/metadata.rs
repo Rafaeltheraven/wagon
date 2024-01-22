@@ -1,4 +1,5 @@
-use crate::parser::helpers::check_semi;
+use crate::parser::helpers::{check_semi, check_colon};
+use wagon_ident::Ident;
 use wagon_macros::match_error;
 use std::collections::BTreeMap;
 
@@ -23,7 +24,8 @@ impl Parse for Metadata {
         let mut mappings = BTreeMap::new();
         while let Some(Ok(Tokens::MetadataToken(_))) = lexer.peek() {
                 match_error!(match lexer.next_result()? {
-                    Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Key(s)) => {
+                    Tokens::MetadataToken(wagon_lexer::metadata::Metadata::Identifier(Ident::Unknown(s))) => {
+                        check_colon(lexer)?;
                         let atom = SpannableNode::parse(lexer)?;
                         check_semi(lexer)?;
                         mappings.insert(s, atom);

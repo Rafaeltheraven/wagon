@@ -139,10 +139,12 @@ enum Lexer<'source> {
 impl<'source> Lexer<'source> {
 	fn new(s: &'source str) -> Self {
 		let mut meta_lexer = MetaLexer::new(Metadata::lexer(s));
-		if matches!(meta_lexer.peek(), Some(Err(LexingError::UnknownError))) {
-			Self::Productions(Productions::lexer(s))
-		} else {
+		let fst = matches!(meta_lexer.peek(), Some(Ok(Metadata::Identifier(_))));
+		let snd = matches!(meta_lexer.peek(), Some(Ok(Metadata::Colon)));
+		if fst && snd {
 			Self::Metadata(meta_lexer)
+		} else {
+			Self::Productions(Productions::lexer(s))
 		}
 	}
 }
@@ -356,7 +358,7 @@ impl<'source> Iterator for LexerBridge<'source> {
 	            			self.in_meta = false;
 	            			Some(Box::new(Self::morph_to_productions))
 	            		},
-	            		Some(Ok(Metadata::Key(_))) => Some(Box::new(Self::morph_to_math)),
+	            		Some(Ok(Metadata::Colon)) => Some(Box::new(Self::morph_to_math)),
 	            		_ => None
 	            	};
 	            	(ret_func, result.map(|m| m.map(MetadataToken)))
@@ -446,6 +448,7 @@ mod tests {
 		let s = r#"
 		include some::path;
 		left: "right";
+		true_val: true;
 		===================
 		S -> [2] A;
 		"#;
@@ -455,8 +458,11 @@ mod tests {
 			Ok(MetadataToken(Metadata::Include)),
 			Ok(MetadataToken(Metadata::Path("some::path".to_string()))),
 			Ok(MetadataToken(Metadata::Semi)),
-			Ok(MetadataToken(Metadata::Key("left".to_string()))),
+			Ok(MetadataToken(Metadata::Identifier("left".into()))),
 			Ok(MathToken(Math::LitString("right".to_string()))),
+			Ok(MathToken(Math::Semi)),
+			Ok(MetadataToken(Metadata::Identifier("true_val".into()))),
+			Ok(MathToken(Math::LitBool(true))),
 			Ok(MathToken(Math::Semi)),
 			Ok(MetadataToken(Metadata::Delim)),
 			Ok(ProductionToken(Productions::Identifier(Unknown("S".to_string())))),
