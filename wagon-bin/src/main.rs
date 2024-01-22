@@ -73,8 +73,8 @@ fn handle_error<T: MsgAndSpan>(err: T, file_path: &str, file: String) {
 
 fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
     let (subcode, code) = data;
-    let root_terms = subcode.keys().collect();
-    create_structure(proj_name, &root_terms, overwrite);
+    let root_terms: Vec<&String> = subcode.keys().collect();
+    let do_cargo = create_structure(proj_name, &root_terms, overwrite);
     let path = std::path::Path::new(proj_name).join("src");
     let main_path = path.join("main.rs");
     let mut file = File::create(&main_path).expect("Failed to create main.rs");
@@ -91,9 +91,12 @@ fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
     for (terminal, structs) in subcode {
         write_terminal(&term_path, &terminal, structs);
     }
+    if do_cargo {
+        create_cargo(proj_name);
+    }
 }
 
-fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bool) {
+fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bool) -> bool {
     let path = std::path::Path::new(proj_name);
     let mut exists = path.exists();
     if exists && overwrite {
@@ -101,12 +104,24 @@ fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bo
         std::fs::remove_dir_all(path).expect("Failed to remove project dir");
         exists = false;
     }
-    let term_path = path.join("src").join("terminals");
-    if !exists {
-        let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
-        Command::new("cargo").args(["new", proj_name.to_str().expect("Project name must be valid unicode")]).output().expect("Failed to invoke cargo");
-        let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
-        toml.write_all(format!(
+    let src_path = path.join("src");
+    let term_path = src_path.join("terminals");
+    std::fs::create_dir_all(src_path).expect("Failed to create project directory");
+    std::fs::create_dir(&term_path).expect("Failed to create terminals directory");
+    for term in terminals {
+        let curr_path = term_path.join(term);
+        if !curr_path.exists() {
+            std::fs::create_dir(curr_path).unwrap_or_else(|_| panic!("Failed to create {term} directory"));
+        }
+    }
+    !exists
+}
+
+fn create_cargo(proj_name: &PathBuf) {
+    let path = std::path::Path::new(proj_name);
+    let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
+    let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
+    toml.write_all(format!(
 "[package]
 name = \"{}\"
 version = \"1.0.0\"
@@ -117,27 +132,19 @@ edition = \"2021\"
 [workspace]
 
 [dependencies]", proj_name.display()).as_bytes()).expect("Failed to write Cargo.toml");
-        Command::new("cargo") 
-            .current_dir(path)
-            .args(["add", "wagon-gll", "--path", "../wagon-gll"])
-            .output()
-            .expect("Failed to add wagon-gll library");
-        Command::new("cargo") 
-            .current_dir(path)
-            .args(["add", "wagon-ident", "--path", "../wagon-ident"])
-            .output()
-            .expect("Failed to add wagon-ident library");
-        Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
-        for lib in libs {
-            Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));
-        }
-        std::fs::create_dir(&term_path).expect("Failed to create terminals directory");
-    }
-    for term in terminals {
-        let curr_path = term_path.join(term);
-        if !curr_path.exists() {
-            std::fs::create_dir(curr_path).unwrap_or_else(|_| panic!("Failed to create {term} directory"));
-        }
+    Command::new("cargo") 
+        .current_dir(path)
+        .args(["add", "wagon-gll", "--path", "../wagon-gll"])
+        .output()
+        .expect("Failed to add wagon-gll library");
+    Command::new("cargo") 
+        .current_dir(path)
+        .args(["add", "wagon-ident", "--path", "../wagon-ident"])
+        .output()
+        .expect("Failed to add wagon-ident library");
+    Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
+    for lib in libs {
+        Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));
     }
 }
 
