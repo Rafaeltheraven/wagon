@@ -51,7 +51,10 @@ pub trait Label<'a>: Debug {
 	///
 	/// There is a possibility that this will change in the future, as the meaning of the first set in the context of WAGs is re-evaluated.
 	/// But for now, it remains in it's current functional state.
-	fn first_set(&self, state: &GLLState<'a>) -> Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>;
+	///
+	/// # Errors
+	/// Will return an error if we fail to retrieve the label somewhere.
+	fn first_set(&self, state: &GLLState<'a>) -> ParseResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>>;
 	/// Any code to run when encountering this label.
 	///
 	/// This is called by `GLLState::goto` and is used to make the `goto` from the original paper work.
@@ -60,48 +63,48 @@ pub trait Label<'a>: Debug {
 	/// Should return a `GLLParseError` if an error occurs during the parsing or evaluation of attributes.
 	fn code(&self, state: &mut GLLState<'a>) -> ParseResult<'a, ()>;
 	/// Check if the next token in the current state is accepted by this label's first-follow set.
-	fn first(&self, state: &mut GLLState<'a>) -> bool {
-		let fst = self.first_set(state);
+	fn first(&self, state: &mut GLLState<'a>) -> ParseResult<'a, bool> {
+		let fst = self.first_set(state)?;
 		for (alt, fin) in fst {
 			let mut check_fin = true;
 			for sub in alt {
-				if sub.first(state) {
-					return true;
-				} else if !sub.is_nullable(state, &mut HashSet::new()) {
+				if sub.first(state)? {
+					return Ok(true);
+				} else if !sub.is_nullable(state, &mut HashSet::new())? {
 					check_fin = false;
 				    break;
 				}
 			}
 			if check_fin {
 				if let Some(last) = fin {
-					return last.is_empty() || state.has_next(last)
+					return Ok(last.is_empty() || state.has_next(last))
 				}
 			}
 		}
-		false
+		Ok(false)
 	}
 	/// Is this label a terminal?
 	fn is_terminal(&self) -> bool {
 		false
 	}
 	/// Could this label resolve to epsilon?
-	fn is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> bool {
+	fn is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
 		if self.is_eps() {
-			true
+			Ok(true)
 		} else {
 			let str_repr = self.uuid();
 			if !seen.contains(str_repr) {
 				seen.insert(str_repr.into());
-				let fst = self.first_set(state);
+				let fst = self.first_set(state)?;
 				for (alt, _) in fst {
 					if let Some(sub) = alt.into_iter().next() {
-						if sub.is_nullable(state, seen) {
-							return true
+						if sub.is_nullable(state, seen)? {
+							return Ok(true)
 						}
 					}
 				}
 			}
-			false
+			Ok(false)
 		}
 	}
 	/// Optionally return the weight of this label.
@@ -133,12 +136,12 @@ impl<'a> Label<'a> for Terminal<'a> {
         self.is_empty()
     }
 
-    fn first_set(&self, _: &GLLState<'a>) -> Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)> {
-        vec![(Vec::new(), Some(*self))]
+    fn first_set(&self, _: &GLLState<'a>) -> ParseResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>> {
+        Ok(vec![(Vec::new(), Some(*self))])
     }
 
-    fn first(&self, state: &mut GLLState<'a>) -> bool {
-        self.is_eps() || state.has_next(self)
+    fn first(&self, state: &mut GLLState<'a>) -> ParseResult<'a, bool> {
+        Ok(self.is_eps() || state.has_next(self))
     }
 
     fn code(&self, _: &mut GLLState<'a>) -> ParseResult<'a, ()> {
@@ -161,8 +164,8 @@ impl<'a> Label<'a> for Terminal<'a> {
         from_utf8(self).expect("Terminal was non-ut8")
     }
 
-    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> bool {
-        self.is_eps()
+    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
+        Ok(self.is_eps())
     }
 
     fn uuid(&self) -> &str {
