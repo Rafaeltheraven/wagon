@@ -6,21 +6,32 @@
 //! This library could be used to write GLL parsers in another way, as long as you stick to required patterns. However,
 //! the library was created with WAGs in mind. As a result, if you only care about pure GLL parsing, there
 //! are probably faster implementations out there that do not have to consider the possibility of the grammar changing at runtime.
-use std::{hash::{Hash, Hasher}, fmt::{Debug, Display}, rc::Rc, str::from_utf8, collections::HashSet, error::Error};
+use gss::{GSSNodeIndex, GSSNode};
+use petgraph::prelude::EdgeIndex;
+use wagon_utils::comma_separated_with_or_str;
+use std::{hash::{Hash, Hasher}, fmt::{Debug, Display}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, error::Error, mem::Discriminant};
 
-use self::{state::GLLState, value::Value, value::{InnerValueError, ValueResult}};
+use self::{value::Value, value::{InnerValueError, ValueResult}};
+use sppf::{SPPFNodeIndex, SPPFNode};
 use value::ValueError;
 use wagon_ident::Ident;
 
 /// An implementation of the SPPF.
 pub mod sppf;
-/// An implementation of the global state. This is the main object that runs the parser.
-pub mod state;
 /// An implementation of the GSS.
 pub mod gss;
-mod descriptor;
 /// An extension of [`wagon_codegen::value::Value`] to deal with some GLL specific elements.
 pub mod value;
+
+mod label;
+/// An implementation of the global state. This is the main object that runs the parser.
+mod state;
+mod descriptor;
+mod slot;
+
+pub use label::Label;
+pub use state::GLLState;
+pub use slot::GrammarSlot;
 
 /// A single byte in a [`Terminal`].
 pub type TerminalBit<'a> = &'a u8;
@@ -41,300 +52,6 @@ pub type AttributeMap<'a> = Vec<Value<'a>>;
 pub type ReturnMap<'a> = Vec<Option<Value<'a>>>;
 /// The key for the [`AttributeMap`].
 pub type AttributeKey = usize;
-
-/// The main trait all elements in a GLL grammar should implement.
-///
-/// Every single element, both non-terminals and terminals are defined as a "Label". 
-/// This trait defines methods that those labels should implement. For [`Terminal`]s, it is
-/// already implemented, but non-terminals should be implemented specifically based on how they should
-/// operate.
-pub trait Label<'a>: Debug {
-	/// Is this Label epsilon?
-	fn is_eps(&self) -> bool {
-		false
-	}
-	/// Returns the first-follow set of the label.
-	///
-	/// Encoded as a vector of tuples. The outer vector represents all the alternatives of this label, 
-	/// while the inner vector represents all other labels that we need to check the first set from (since they may be epsilon or not).
-	/// 
-	/// After we have exhausted the inner vector, if the optional [`Terminal`] is not `None` then we can stop after checking whether the current
-	/// character is this terminal.
-	///
-	/// # Example
-	/// Assume we have the following rules: 
-	/// ```ignore
-	/// S -> A B 'b' | B;
-	/// A -> 'a';
-	/// B -> 'b'
-	/// ```
-	/// The result of this method for S should then be:
-	///
-	/// `[([A, B], 'b'), ([], 'b')]`
-	///
-	/// # Why calculate this at runtime?
-	/// The possible existence of weights makes it so that the first-follow set of any non-terminal can change at any point. 
-	/// As such, we must calculate the set at runtime, depending on the context. This is the main cause of inefficiency in this library.
-	///
-	/// There is a possibility that this will change in the future, as the meaning of the first set in the context of WAGs is re-evaluated.
-	/// But for now, it remains in it's current functional state.
-	fn first_set(&self, state: &GLLState<'a>) -> Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>;
-	/// Any code to run when encountering this label.
-	///
-	/// This is called by `GLLState::goto` and is used to make the `goto` from the original paper work.
-	///
-	/// # Errors
-	/// Should return a `GLLParseError` if an error occurs during the parsing or evaluation of attributes.
-	fn code(&self, state: &mut GLLState<'a>) -> ParseResult<'a, ()>;
-	/// Check if the next token in the current state is accepted by this label's first-follow set.
-	fn first(&self, state: &mut GLLState<'a>) -> bool {
-		let fst = self.first_set(state);
-		for (alt, fin) in fst {
-			let mut check_fin = true;
-			for sub in alt {
-				if sub.first(state) {
-					return true;
-				} else if !sub.is_nullable(state, &mut HashSet::new()) {
-					check_fin = false;
-				    break;
-				}
-			}
-			if check_fin {
-				if let Some(last) = fin {
-					return last.is_empty() || state.has_next(last)
-				}
-			}
-		}
-		false
-	}
-	/// Is this label a terminal?
-	fn is_terminal(&self) -> bool {
-		false
-	}
-	/// Could this label resolve to epsilon?
-	fn is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> bool {
-		if self.is_eps() {
-			true
-		} else {
-			let str_repr = self.uuid();
-			if !seen.contains(str_repr) {
-				seen.insert(str_repr.into());
-				let fst = self.first_set(state);
-				for (alt, _) in fst {
-					if let Some(sub) = alt.into_iter().next() {
-						if sub.is_nullable(state, seen) {
-							return true
-						}
-					}
-				}
-			}
-			false
-		}
-	}
-	/// Optionally return the weight of this label.
-	///
-	/// This should either calculate the weight for this label, as denoted in the WAGon DSL, or `None`.
-	fn _weight(&self, state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>>;
-	/// Returns either the weight of this label as calculated by [`_weight`](`Label::_weight`), or `1`.
-	///
-	/// # Errors
-	/// Should return a [`ValueError`] if something goes wrong during the evaluation of the weight.
-	fn weight(&self, state: &GLLState<'a>) -> ValueResult<'a, Value<'a>> {
-		self._weight(state).map_or_else(|| Ok(1.into()), |weight| weight)
-	}
-	/// A string representation of the chunk (likely a GLL block) that this label represents.
-	fn to_string(&self) -> &str;
-	/// The chunk represented by [`Label::to_string`], but split by symbol into a vector.
-	fn str_parts(&self) -> Vec<&str>;
-	/// A unique identifier for this label.
-	fn uuid(&self) -> &str;
-	/// A tuple of string representations for any associated attributes.
-	///
-	/// The first element is a vector of all the inherited or local attributes. The second elements is a vector
-	/// of all currently synthesized attributes.
-	fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>);
-}
-
-impl<'a> Label<'a> for Terminal<'a> {
-    fn is_eps(&self) -> bool {
-        self.is_empty()
-    }
-
-    fn first_set(&self, _: &GLLState<'a>) -> Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)> {
-        vec![(Vec::new(), Some(*self))]
-    }
-
-    fn first(&self, state: &mut GLLState<'a>) -> bool {
-        self.is_eps() || state.has_next(self)
-    }
-
-    fn code(&self, _: &mut GLLState<'a>) -> ParseResult<'a, ()> {
-        Err(GLLParseError::Fatal("Attempted running the `code` method on a terminal."))
-    }
-
-    fn is_terminal(&self) -> bool {
-        true
-    }
-
-    fn to_string(&self) -> &str {
-        from_utf8(self).unwrap()
-    }
-
-    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> bool {
-        self.is_eps()
-    }
-
-    fn uuid(&self) -> &str {
-        self.to_string()
-    }
-
-	fn str_parts(&self) -> Vec<&str> { 
-		vec![self.to_string()]
-	}
-
-	fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
-		(Vec::new(), Vec::new())
-	}
-
-	fn _weight(&self, _state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>> {
-		Some(Err(ValueError::ValueError(InnerValueError::Fatal("Attempted running the `_weight` method on a terminal.".to_string()))))
-	}
-}
-
-impl<'a> Hash for dyn Label<'a> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.uuid().hash(state);
-    }
-}
-
-impl<'a> PartialEq for dyn Label<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid() == other.uuid()
-    }
-}
-
-impl<'a> Eq for dyn Label<'a>{}
-
-
-#[derive(Debug)]
-/// A `GrammarSlot` as defined by the original paper.
-pub struct GrammarSlot<'a> {
-	/// The non-terminal that this slot represents.
-	label: GLLBlockLabel<'a>,
-	/// The specific alternative of that non-terminal that this slot represents.
-	rule: Rc<Vec<Ident>>,
-	/// The location of the `•` inside this rule.
-	dot: usize,
-	/// The position of the pointer inside this rule (may be seperate from the dot)
-	pos: usize,
-	/// A unique identifier for this slot.
-	uuid: &'a str
-}
-
-impl<'a> Eq for GrammarSlot<'a> {}
-
-impl<'a> PartialEq for GrammarSlot<'a> {
-    fn eq(&self, other: &Self) -> bool {
-    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same except when probabilistic
-    		self.label.to_string() == other.label.to_string()
-    	} else {
-    		self.uuid == other.uuid && self.dot == other.dot && self.pos == other.pos
-    	}
-    }
-}
-
-impl<'a> Hash for GrammarSlot<'a> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-    	if self.is_complete() {
-    		self.label.to_string().hash(state);
-    	} else {
-    		self.uuid.hash(state);
-        	self.dot.hash(state);
-        	self.pos.hash(state);
-    	}
-    }
-}
-
-impl<'a> GrammarSlot<'a> {
-	/// Construct a new slot.
-	pub fn new(label: GLLBlockLabel<'a>, rule: Rc<Vec<Ident>>, dot: usize, pos: usize, uuid: &'a str) -> Self {
-		Self {label, rule, dot, pos, uuid}
-	}
-
-	/// Is this slot just epsilon?
-	#[must_use] pub fn is_eps(&self) -> bool {
-		self.is_empty()
-	}
-
-	/// Have we completely consumed this grammar slot?
-	///
-	/// This is defined as either the dot being at the end (`S -> A•`) or right before the end and the next label is epsilon (`S -> A•ε`) 
-	#[must_use] pub fn is_last(&self, state: &GLLState<'a>) -> bool {
-		self.dot == self.len() || (self.dot == self.len()-1 && self.curr_block(state).is_eps())
-	}
-
-	/// The length of the rule
-	#[must_use] pub fn len(&self) -> usize {
-		self.rule.len()
-	}
-
-	/// Whether this is an empty rule
-	#[must_use] pub fn is_empty(&self) -> bool {
-		self.len() == 0
-	}
-
-	/// A string representation of the grammar slot.
-	///
-	/// For example, `S -> A•B` if `self.label = S`, `self.rule = [A, B]` and `self.dot = 1`. 
-	#[must_use] pub fn to_string(&self, state: &GLLState<'a>) -> String {
-		let mut res = String::new();
-		res.push_str(self.label.to_string());
-		if self.dot == self.len() + 1 {
-			return res
-		}
-		res.push_str(" -> ");
-		for (i, r) in self.rule.iter().enumerate() {
-			let label = state.get_label(r);
-			if i == self.dot {
-				let parts = label.str_parts();
-				for (j, s) in parts.iter().enumerate() {
-					if j == self.pos {
-						res.push('•');
-					}
-					res.push_str(s);
-				}
-			} else {
-				res.push_str(label.to_string());
-			}
-		}
-		if self.is_last(state) {
-			res.push('•');
-		};
-		res
-	}
-
-	/// Get the label for the part of the rule we are currently at as defined by the dot.
-	fn curr_block(&self, state: &GLLState<'a>) -> GLLBlockLabel<'a> {
-		state.get_label(&self.rule[self.dot])
-	}
-
-	/// Have we completely parsed this rule?
-	///
-	/// This is defined as the dot being 1 higher than the length of the rule.
-	fn is_complete(&self) -> bool {
-		self.dot == self.len()+1
-	}
-
-	/// Compare the weight of this slot with the weight of another.
-	///
-	/// # Errors
-	/// Returns a wrapped [`ValueError::ComparisonError`](`InnerValueError::ComparisonError`) if the comparison is not possible.
-	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
-		let left_weight = self.curr_block(state).weight(state)?;
-		let right_weight = other.curr_block(state).weight(state)?;
-		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
-	}
-}
 
 /// Result of the GLL parse.
 pub type ParseResult<'a, T> = Result<T, GLLParseError<'a>>;
@@ -358,19 +75,52 @@ pub enum GLLParseError<'a> {
 		/// What character we expected to see.
 		offender: Terminal<'a>
 	},
+	/// Data was not utf8 compatible.
+	Utf8Error(Utf8Error),
 	/// A [`ValueError`] occurred during parsing.
 	ValueError(ValueError<'a>),
+	/// Tried to get a rule that does not exists.
+	UnknownRule(&'a str),
+	/// Tried to get a label that does not exist.
+	UnknownLabel(&'a str),
+	/// The non-terminal identified by [`ROOT_UUID`] could not be found.
+	MissingRoot,
+	/// An SPPF node that we expect to exist in the graph is inexplicably missing.
+	MissingSPPFNode(SPPFNodeIndex),
+	/// We expected a specific type of SPPF Node, but got another.
+	IncorrectSPPFType(Vec<&'a str>, Discriminant<SPPFNode<'a>>),
+	/// A GSS node that we expect to exist in the graph is inexplicably missing.
+	MissingGSSNode(GSSNodeIndex),
+	/// A GSS edge is inexplicably missing.
+	MissingGSSEdge(EdgeIndex),
+	/// An attribute that is expected to have been passed does not exist.
+	MissingAttribute(AttributeKey, Rc<GSSNode<'a>>),
+	/// An attribute that is expected to be in the context does not exist.
+	MissingContext(AttributeKey, Rc<GSSNode<'a>>),
+	/// Tried to do something with a completed slot
+	CompletedSlot(String),
 	/// Any generic fatal error for which we have no specific variant.
-	Fatal(&'a str)
+	Fatal(&'a str),
 }
 
 impl<'a> Display for GLLParseError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GLLParseError::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}"),
-            GLLParseError::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}"),
-            GLLParseError::ValueError(e) => std::fmt::Display::fmt(&e, f),
-            GLLParseError::Fatal(s) => write!(f, "A fatal error occurred! {s}"),
+            Self::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}."),
+            Self::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}."),
+            Self::Utf8Error(e) => std::fmt::Display::fmt(&e, f),
+            Self::UnknownRule(s) => write!(f, "No rule with id {s} exists in the state object."),
+            Self::UnknownLabel(s) => write!(f, "No label with id {s} exists in the state object."),
+            Self::ValueError(e) => std::fmt::Display::fmt(&e, f),
+            Self::MissingRoot => write!(f, "{ROOT_UUID} could not be found."),
+            Self::MissingSPPFNode(i) => write!(f, "Expected to find SPPF node {i:?} in the graph, but it was not there."),
+            Self::IncorrectSPPFType(e, c) => write!(f, "Expected SPPFNode of type {}, got {c:?}", comma_separated_with_or_str(e)),
+            Self::MissingGSSNode(i) => write!(f, "Expected to find GSS node {i:?} in the graph, but it was not there."),
+            Self::MissingGSSEdge(i) => write!(f, "Expected to find GSS edge {i:?} in the graph, but it was not there."),
+            Self::MissingAttribute(i, g) => write!(f, "The {i}th attribute is not at GSS node {g:?}"),
+            Self::MissingContext(i, g) => write!(f, "The {i}th attribute is not in the context of GSS node {g:?}"),
+            Self::CompletedSlot(s) => write!(f, "Tried to access completed slot {s} as if it were not completed."),
+            Self::Fatal(s) => write!(f, "A fatal error occurred! {s}."),
         }
     }
 }
@@ -378,7 +128,8 @@ impl<'a> Display for GLLParseError<'a> {
 impl Error for GLLParseError<'static> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            GLLParseError::ValueError(e) => Some(e),
+            Self::ValueError(e) => Some(e),
+            Self::Utf8Error(e) => Some(e),
             _ => None
         }
     }
@@ -389,3 +140,29 @@ impl<'a> From<ValueError<'a>> for GLLParseError<'a> {
         Self::ValueError(value)
     }
 }
+
+impl<'a> From<Utf8Error> for GLLParseError<'a> {
+    fn from(value: Utf8Error) -> Self {
+        Self::Utf8Error(value)
+    }
+}
+
+/// Result type for any operations on the finished state that can error.
+pub type ProcessResult<T> = Result<T, GLLProcessError>;
+
+/// Errors that can occur when processing the finished state object.
+#[derive(Debug)]
+pub enum GLLProcessError {
+	/// An SPPF node that we expect to exist in the graph is inexplicably missing.
+	MissingSPPFNode(SPPFNodeIndex),
+}
+
+impl Display for GLLProcessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+        	Self::MissingSPPFNode(i) => write!(f, "Expected to find SPPF node {i:?} in the graph, but it was not there."),
+        }
+    }
+}
+
+impl Error for GLLProcessError {}

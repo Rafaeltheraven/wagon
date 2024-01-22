@@ -141,6 +141,7 @@ fn _rem_first_char_n(value: &str, n: usize) -> Chars {
 }
 
 /// Given a vector of strings, return a string that has all the values joined by a `,`. Except for the last which is joined by ` or `.
+///
 /// # Example
 /// ```
 /// use wagon_utils::comma_separated_with_or;
@@ -151,6 +152,7 @@ fn _rem_first_char_n(value: &str, n: usize) -> Chars {
 /// assert_eq!("1".to_string(), comma_separated_with_or(&v));
 /// let v = vec![];
 /// assert_eq!("".to_string(), comma_separated_with_or(&v));
+/// ```
 pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
     strings.last().map_or_else(String::new, |last| {
         let len = strings.len();
@@ -158,6 +160,27 @@ pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
             last.clone()
         } else {
             let joined = strings.iter().take(len - 1).map(String::as_str).collect::<Vec<&str>>().join(", ");
+            format!("{joined} or {last}")
+        }
+    })
+}
+
+/// Same as [`comma_separated_with_or`], but takes a vector of `&str` instead.
+///
+/// # Example
+/// ```
+/// use wagon_utils::comma_separated_with_or_str;
+///
+/// let v = vec!["1", "2", "3"];
+/// assert_eq!("1, 2 or 3".to_string(), comma_separated_with_or_str(&v));
+/// ```
+pub fn comma_separated_with_or_str(strings: &Vec<&str>) -> String {
+    strings.last().map_or_else(String::new, |last| {
+        let len = strings.len();
+        if len == 1 {
+            (*last).to_string()
+        } else {
+            let joined = strings.iter().take(len - 1).copied().collect::<Vec<&str>>().join(", ");
             format!("{joined} or {last}")
         }
     })
@@ -293,6 +316,7 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
     ///
     /// # Panics
     /// Panics if the next element is either `None` or an `Err`.
+    #[allow(clippy::panic)]
     fn next_unwrap(&mut self) -> T {
         match self.next() {
             Some(Ok(x)) => x,
@@ -305,6 +329,7 @@ pub trait UnsafeNext<T, E: std::fmt::Debug>: Iterator<Item = Result<T, E>> {
 /// Same as [`UnsafeNext`] but intended for iterators that allow peeking (such as [`Peekable`](`std::iter::Peekable`)).
 pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Result<T, E>> {
     /// See [`next_unwrap`](`UnsafeNext::next_unwrap`).
+    #[allow(clippy::panic)]
     fn peek_unwrap(&'a mut self) -> &T {
         match self.peek() {
             Some(Ok(ref x)) => x,

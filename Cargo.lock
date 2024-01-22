@@ -506,6 +506,7 @@ dependencies = [
  "petgraph",
  "rand_core",
  "wagon-ident",
+ "wagon-utils",
  "wagon-value",
 ]
 

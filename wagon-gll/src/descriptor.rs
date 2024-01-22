@@ -1,4 +1,4 @@
-use std::{rc::Rc, hash::{Hash}};
+use std::{rc::Rc, hash::Hash};
 use super::{GrammarSlot, gss::GSSNodeIndex, sppf::SPPFNodeIndex};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]

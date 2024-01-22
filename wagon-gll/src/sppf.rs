@@ -2,7 +2,7 @@ use std::{rc::Rc, str::from_utf8, collections::{HashMap, HashSet}, ops::{DerefMu
 use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}, Incoming, Outgoing, visit::EdgeRef};
 use derivative::Derivative;
 
-use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}};
+use crate::{state::GLLState, value::{Value, ValueError}, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}, ParseResult, GLLParseError, ProcessResult, GLLProcessError};
 
 use wagon_value::Valueable;
 
@@ -76,28 +76,28 @@ pub enum SPPFNode<'a> {
 
 impl<'a> SPPFNode<'a> {
 
-    pub(crate) const fn right_extend(&self) -> Option<usize> {
+    pub(crate) fn right_extend(&self) -> ParseResult<'a, usize> {
         match self {
-            Self::Intermediate { right, .. } | Self::Symbol { right, .. } => Some(*right),
-            _ => None
+            Self::Intermediate { right, .. } | Self::Symbol { right, .. } => Ok(*right),
+            other => Err(crate::GLLParseError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) const fn left_extend(&self) -> Option<usize> {
+    pub(crate) fn left_extend(&self) -> ParseResult<'a, usize> {
         match self {
-            Self::Intermediate { left, .. } | Self::Symbol { left, .. } => Some(*left),
-            _ => None
+            Self::Intermediate { left, .. } | Self::Symbol { left, .. } => Ok(*left),
+            other => Err(crate::GLLParseError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) fn to_string(&self, state: &GLLState<'a>) -> String {
-        match self {
+    pub(crate) fn to_string(&self, state: &GLLState<'a>) -> ParseResult<'a, String> {
+        Ok(match self {
             SPPFNode::Dummy => "D".to_string(),
             SPPFNode::Symbol { terminal, left, right } => {
                 let term = if terminal.is_empty() {
                     "ε"
                 } else {
-                    from_utf8(terminal).unwrap()
+                    from_utf8(terminal)?
                 };
                 format!("({term},{left},{right})")
             },
@@ -107,7 +107,7 @@ impl<'a> SPPFNode<'a> {
                 let (from_ret, from_ctx) = label.attr_rep_map();
                 let ret_len = from_ret.len();
                 for (i, attr) in from_ctx.iter().enumerate() {
-                    attr_map.insert(attr, context.get_attribute(i + ret_len).unwrap());
+                    attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLParseError::MissingContext(i + ret_len, context.clone()))?);
                 }
                 for (i, attr) in from_ret.iter().enumerate() {
                     if let Some(Some(v)) = ret.get(i) {
@@ -126,7 +126,7 @@ impl<'a> SPPFNode<'a> {
                 format!("({},{},{},<{}>)", slot.to_string(state), left, right, attr_rep)
             },
             SPPFNode::Packed { slot, split, .. } => format!("({}, {})", slot.to_string(state), split),
-        }
+        })
     }
 
     pub(crate) const fn dot_shape(&self) -> &str {
@@ -137,19 +137,19 @@ impl<'a> SPPFNode<'a> {
         }
     }
 
-    pub(crate) fn get_ret_val(&self, i: AttributeKey) -> Option<&Value<'a>> {
+    pub(crate) fn get_ret_val(&self, i: AttributeKey) -> ParseResult<'a, Option<&Value<'a>>> {
         match self {
             SPPFNode::Intermediate { ret, .. } => {
-                ret.get(i).and_then(|v| v.as_ref())
+                Ok(ret.get(i).and_then(|v| v.as_ref()))
             },
-            _ => panic!("This method should only be called on intermediate nodes")
+            other => Err(GLLParseError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) fn add_ret_vals(&mut self, atts: &mut ReturnMap<'a>) {
+    pub(crate) fn add_ret_vals(&mut self, atts: &mut ReturnMap<'a>) -> ParseResult<'a, ()> {
         match self {
-            SPPFNode::Intermediate { ret, .. } => ret.append(atts),
-            _ => panic!("This method should only be called on intermediate nodes")
+            SPPFNode::Intermediate { ret, .. } => {ret.append(atts); Ok(())},
+            other => Err(GLLParseError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
         }
     }
 }
@@ -174,11 +174,16 @@ impl<'a> SPPF<'a> {
     /// Goes through the entire SPPF and attempts to locate the top-most node that consumes the string from `0` to `input_target`.
     ///
     /// If `input_target` is `None`, we just find the top-most node that consumes from `0`.
+    ///
+    /// # Panics
+    /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
+    /// This should be fundamentally impossible.
     #[must_use] 
     pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
         let mut roots = Vec::new();
         for ix in self.0.node_indices() {
-            let node = self.0.node_weight(ix).unwrap();
+            #[allow(clippy::expect_used)]
+            let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
             let has_parents = self.0.neighbors_directed(ix, Incoming).next().is_some();
             match node {
                 SPPFNode::Intermediate { slot, left, right, .. } if !has_parents && slot.dot == slot.rule.len()+1 && left == &0 && (input_target.is_none() || input_target.is_some_and(|x| &x == right)) => roots.push(ix),
@@ -202,23 +207,31 @@ impl<'a> SPPF<'a> {
     }
 
     /// Convert the [`SPPF`] to `.dot` representation.
-    #[must_use] pub fn to_dot(&self, state: &GLLState<'a>) -> String {
+    ///
+    /// # Errors
+    /// This method will return a [`GLLParseError`] if it fails to represent either a [`SPPFNode`] or a [`Value`] as a string properly.
+    ///
+    /// # Panics
+    /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
+    /// This should be fundamentally impossible.
+    pub fn to_dot(&self, state: &GLLState<'a>) -> ParseResult<'a, String>  {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {
-            let node = self.0.node_weight(ix).unwrap();
-            res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(state), node.dot_shape()));
+            #[allow(clippy::expect_used)]
+            let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
+            res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(state)?, node.dot_shape()));
             for edge in self.0.edges_directed(ix, Outgoing) {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));
                 if let Some(value) = edge.weight() {
-                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().expect("Can always display as numerical")));
+                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().map_err(ValueError::from)?));
                 }
                 res.push('\n');
             }
         }
         res.push('}');
-        res
+        Ok(res)
     }
 
     /// Find all the leaves in the [`SPPF`].
@@ -240,15 +253,18 @@ impl<'a> SPPF<'a> {
     /// Each resulting SPPF can be seen as a singular valid interpretation of the parse.
     ///
     /// This method simply recursively calls [`deforest_indices`](`SPPF::deforest_indices`) and returns a set of complete [`SPPF`]s that represent these trees.
-    #[must_use] pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> Vec<SPPF<'a>> {
-        let trees = self.deforest_indices(roots);
+    ///
+    /// # Errors
+    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actyally exist in the graph.
+    pub fn deforest(self, roots: Vec<SPPFNodeIndex>) -> ProcessResult<Vec<SPPF<'a>>> {
+        let trees = self.deforest_indices(roots)?;
         let mut new_graphs = Vec::with_capacity(trees.len());
         for tree in trees {
             let mut clone = self.clone();
             clone.retain_nodes(|_, x| tree.contains(&x));
             new_graphs.push(clone);
         }
-        new_graphs
+        Ok(new_graphs)
     }
 
     /// Given a forest and some root nodes, attempt to extract sets of nodes that represent unique trees.
@@ -281,14 +297,17 @@ impl<'a> SPPF<'a> {
     /// Once the candidates queue is done, we check if we have any subtrees. If we do, we clone the tree we have currently created and create `n` new
     /// trees, each connected to one of the subtrees. We then add these new trees to the list of trees we want to return. If there are no subtrees, we
     /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
-    #[must_use] pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> Vec<HashSet<SPPFNodeIndex>> {
+    ///
+    /// # Errors 
+    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actyally exist in the graph.
+    pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> ProcessResult<Vec<HashSet<SPPFNodeIndex>>> {
         let mut trees = Vec::new();
         for root in roots {
             let mut tree = HashSet::new();
             let mut candidates = vec![root];
             let mut subtrees = Vec::new();
             while let Some(ix) = candidates.pop() {
-                let node = self.0.node_weight(ix).unwrap();
+                let node = self.0.node_weight(ix).ok_or(GLLProcessError::MissingSPPFNode(ix))?;
                 tree.insert(ix);
                 match node {
                     SPPFNode::Dummy => {},
@@ -299,7 +318,7 @@ impl<'a> SPPF<'a> {
                     },
                     SPPFNode::Intermediate { .. } => {
                         let children: Vec<SPPFNodeIndex> = self.0.neighbors_directed(ix, Outgoing).collect();
-                        subtrees.extend(self.deforest_indices(children));
+                        subtrees.extend(self.deforest_indices(children)?);
                     },
                 };
             }
@@ -313,7 +332,7 @@ impl<'a> SPPF<'a> {
                 }
             }   
         }
-        trees
+        Ok(trees)
     }
 }
 
