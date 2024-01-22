@@ -192,9 +192,9 @@ impl CodeGenState {
 
 			impl<'a> wagon_gll::Label<'a> for #id {
 				#[allow(unused_variables)]
-				fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
+				fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
 					#(#first_attr_stream)*
-					vec![#(#first_stream,)*]
+					Ok(vec![#(#first_stream,)*])
 				}
 				fn is_eps(&self) -> bool {
 					#has_eps
@@ -203,9 +203,10 @@ impl CodeGenState {
 					#uuid
 				}
 				#[allow(unused_variables)]
-				fn code(&self, state: &mut wagon_gll::state::GLLState<'a>) {
+				fn code(&self, state: &mut wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, ()> {
 					#(#code_attr_stream)*
 					#(#code)*
+					Ok(())
 				}
 				fn to_string(&self) -> &str {
 					#str_repr
@@ -217,7 +218,7 @@ impl CodeGenState {
 					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
 				}
 				#[allow(unused_variables)]
-				fn _weight(&self, state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
+				fn _weight(&self, state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
 					#weight_stream
 				}
 			}
@@ -243,7 +244,7 @@ impl CodeGenState {
 	    let mut vec_stream = Vec::new();
 	    for ident in alt {
 	    	let stream = match ident.to_inner() {
-	            wagon_ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)),
+	            wagon_ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)?),
 	            other => {
 	            	let i = other.to_ident();
 	            	quote!(#i.into())
@@ -263,8 +264,8 @@ impl CodeGenState {
     		struct _S;
 
     		impl<'a> wagon_gll::Label<'a> for _S {
-    			fn first_set(&self, state: &wagon_gll::state::GLLState<'a>) -> Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)> {
-					vec![(vec![state.get_label_by_uuid(#uuid)], None)]
+    			fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+					Ok(vec![(vec![state.get_label_by_uuid(#uuid)?], None)])
 				}
 				fn is_eps(&self) -> bool {
 					false
@@ -278,13 +279,13 @@ impl CodeGenState {
 				fn str_parts(&self) -> Vec<&str> {
 					vec![wagon_gll::ROOT_UUID]
 				}
-				fn code(&self, _: &mut wagon_gll::state::GLLState<'a>) {
+				fn code(&self, _: &mut wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, ()> {
 					unreachable!("This should never be called");
 				}
 				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 					(Vec::new(), Vec::new())
 				}
-				fn _weight(&self, _state: &wagon_gll::state::GLLState<'a>) -> Option<wagon_gll::value::Value<'a>> {
+				fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
 					unreachable!("This should never be called");
 				}
     		}
@@ -345,7 +346,7 @@ impl CodeGenState {
     			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
     			#stream
-    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map);
+    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map).unwrap();
     			state.main();
     			println!("{}", state.print_sppf_dot(crop));
     			assert!(state.accepts());

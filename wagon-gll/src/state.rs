@@ -42,7 +42,7 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 ///#    fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 ///#        (Vec::new(), Vec::new())
 ///#    }
-///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>>{
+///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
 ///#        unreachable!("This should never be called");
 ///#    }
 /// }
