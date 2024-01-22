@@ -1,6 +1,6 @@
 use crate::firstpass::{FirstPassState, FirstPassResult, WagCheckError};
 
-use super::{Parse, ParseResult, LexerBridge, Rewrite, SpannableNode, ToAst, WagNode, WagIx, WagTree, Spannable, Peek};
+use super::{Parse, ParseResult, LexerBridge, Rewrite, SpannableNode, Spannable, Peek};
 use super::metadata::Metadata;
 use super::rule::Rule;
 use indexmap::IndexMap;
@@ -26,18 +26,6 @@ impl Parse for Wag {
         	grammar.push(SpannableNode::parse(lexer)?);
         }
         Ok(Self {metadata, grammar})
-    }
-}
-
-impl ToAst for Wag {
-
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = ast.add_node(WagNode::Root(self.metadata.into_inner()));
-        for child in self.grammar {
-            let child_ix = child.to_ast(ast);
-            ast.add_edge(node, child_ix, ());
-        }
-        node
     }
 }
 

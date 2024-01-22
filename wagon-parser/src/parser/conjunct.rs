@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode};
 use wagon_lexer::math::Math;
 
 use super::inverse::Inverse;
@@ -18,13 +18,6 @@ impl Parse for Conjunct {
         Ok(Self(SpannableNode::parse_sep(lexer, Tokens::MathToken(Math::Or))?))
     }
 
-}
-
-impl ToAst for Conjunct {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = WagNode::Conjunct;
-        Self::add_vec_children(node, self.0, ast)
-    }
 }
 
 impl Display for Conjunct {

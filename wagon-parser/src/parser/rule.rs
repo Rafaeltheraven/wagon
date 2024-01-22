@@ -1,4 +1,4 @@
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, ToAst, WagNode, WagIx, WagTree, helpers::{check_semi, between_sep}, Rewrite, SpannableNode, Peek, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, helpers::{check_semi, between_sep}, Rewrite, SpannableNode, Peek, ResultNext};
 use wagon_lexer::{productions::{ImportType, Productions}, Spannable};
 use crate::firstpass::{FirstPassState, FirstPassResult};
 
@@ -24,14 +24,6 @@ pub enum Rule {
 	Import(String, ImportType, String),
     /// An import exclude rule (`</`).
 	Exclude(String, Vec<SpannableNode<String>>)
-}
-
-#[derive(PartialEq, Debug)]
-pub(crate) enum Arrow {
-    Analytic,
-    Generate,
-    Import(ImportType, String),
-    Exclude
 }
 
 impl Parse for Rule {
@@ -121,26 +113,6 @@ impl Rewrite<Vec<Self>> for SpannableNode<Rule> {
             },
             Rule::Import(..) => todo!(),
             Rule::Exclude(..) => todo!(),
-        }
-    }
-}
-
-impl ToAst for Rule {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        match self {
-            Self::Analytic(s, _, v) => {
-                let node = WagNode::Rule(s, Arrow::Analytic);
-                Self::add_vec_children(node, v, ast)
-            },
-            Self::Generate(s, _, v) => {
-                let node = WagNode::Rule(s, Arrow::Generate);
-                Self::add_vec_children(node, v, ast)
-            },
-            Self::Import(s, i, s2) => ast.add_node(WagNode::Rule(s, Arrow::Import(i, s2))),
-            Self::Exclude(s, v) => {
-                let node = WagNode::Rule(s, Arrow::Exclude);
-                Self::add_vec_children(node, v, ast)
-            }
         }
     }
 }

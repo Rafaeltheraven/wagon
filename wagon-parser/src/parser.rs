@@ -40,7 +40,6 @@ mod ident;
 use std::{error::Error, fmt::Display, write};
 use self::wag::Wag;
 use crate::firstpass::{WagCheckError, Rewrite};
-use crate::ast::{ToAst, WagNode, WagIx, WagTree};
 use crate::{SpannableNode, MsgAndSpan};
 
 use ordered_float::FloatIsNan;

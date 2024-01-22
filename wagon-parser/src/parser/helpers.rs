@@ -1,17 +1,11 @@
 use wagon_lexer::productions::Productions;
 use wagon_utils::string_vec;
-use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, ToAst, WagNode, WagIx, WagTree, ResultNext, Peek, ResultPeek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, ResultNext, Peek, ResultPeek};
 
 impl Parse for String {
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
         Ok(lexer.next_result()?.to_string())
     }
-}
-
-impl ToAst for String {
-	fn to_ast(self, ast: &mut WagTree) -> WagIx {
-		ast.add_node(WagNode::Generic(self))
-	}
 }
 
 /// A helper trait to quickly convert from any [`Tokens`] into an instance of something else.

@@ -9,8 +9,6 @@
 pub mod parser;
 /// The checker
 pub mod firstpass;
-/// A module for converting a parsed tree into a [petgraph] compatible AST with less information.
-mod ast;
 
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -19,7 +17,6 @@ use std::fmt::Display;
 use wagon_lexer::LexerBridge;
 pub use wagon_lexer::{Span, Spannable};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
-use crate::ast::ToAst;
 use crate::firstpass::{FirstPassState, Rewrite};
 
 /// Parse an input string and check if the resulting WAG is valid.
@@ -184,12 +181,6 @@ impl<T: Parse> Parse for SpannableNode<T> {
     	let node = T::parse(lexer)?;
     	let span = start..lexer.span().end;
         Ok(Self::new(node, span))
-    }
-}
-
-impl<T: Parse + ToAst> ToAst for SpannableNode<T> {
-    fn to_ast(self, ast: &mut crate::ast::WagTree) -> crate::ast::WagIx {
-        self.node.to_ast(ast)
     }
 }
 

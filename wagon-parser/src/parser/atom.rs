@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::write;
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ToAst, WagNode, WagIx, WagTree, expression::Expression, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
 
@@ -55,17 +55,6 @@ pub enum Atom {
 	Group(SpannableNode<Expression>)
 }
 
-#[derive(PartialEq, Debug)]
-pub(crate) enum AtomNode {
-	Ident(Ident),
-	Dict(Ident),
-	LitBool(bool),
-	LitNum(i32),
-	LitFloat(NotNan<f32>),
-	LitString(String),
-	Group
-}
-
 impl Parse for Atom {
 
 	fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> {
@@ -94,30 +83,6 @@ impl Parse for Atom {
 	        },
 	    })
 	}
-}
-
-impl ToAst for Atom {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        match self {
-            Self::Ident(x) => ast.add_node(WagNode::Atom(AtomNode::Ident(x))),
-            Self::LitBool(x) => ast.add_node(WagNode::Atom(AtomNode::LitBool(x))),
-            Self::LitNum(x) => ast.add_node(WagNode::Atom(AtomNode::LitNum(x))),
-            Self::LitFloat(x) => ast.add_node(WagNode::Atom(AtomNode::LitFloat(x))),
-            Self::LitString(x) => ast.add_node(WagNode::Atom(AtomNode::LitString(x))),
-            Self::Dict(Dictionary(i, e)) => {
-            	let node = ast.add_node(WagNode::Atom(AtomNode::Dict(i)));
-            	let child = e.to_ast(ast);
-            	ast.add_edge(node, child, ());
-            	node
-            },
-            Self::Group(g) => {
-            	let node = ast.add_node(WagNode::Atom(AtomNode::Group));
-            	let child = g.to_ast(ast);
-            	ast.add_edge(node, child, ());
-            	node
-            },
-        }
-    }
 }
 
 impl Display for Atom {

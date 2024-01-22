@@ -2,7 +2,7 @@
 use crate::WrapSpannable;
 use crate::firstpass::{FirstPassResult, FirstPassState};
 use wagon_lexer::{productions::{Productions, EbnfType}, Span};
-use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, ToAst, WagNode, WagIx, WagTree, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, ResultPeek, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, ResultPeek, ResultNext};
 
 #[cfg(test)]
 use wagon_macros::new_unspanned;
@@ -230,19 +230,4 @@ impl Parse for Chunk {
 			Ok(Self {chunk, ebnf: None})
 		}
 	}
-}
-
-impl ToAst for Chunk {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-    	let node = WagNode::Chunk(self.ebnf);
-    	match self.chunk {
-	        ChunkP::Unit(c) => {
-	        	let ix = ast.add_node(node);
-	        	let child = c.to_ast(ast);
-	        	ast.add_edge(ix, child, ());
-	        	ix
-	        },
-	        ChunkP::Group(g) => Self::add_vec_children(node, g, ast),
-	    }
-    }
 }

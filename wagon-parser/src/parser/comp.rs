@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::write;
 
-use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
+use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
 use super::helpers::TokenMapper;
 
@@ -73,22 +73,6 @@ impl ParseOption for Comp {
         } else {
         	Ok(None)
         }
-    }
-}
-
-impl ToAst for Comparison {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = if let Some(op) = self.comp {
-        	let node = ast.add_node(WagNode::Comparison(Some(op.op)));
-        	let child = op.right.to_ast(ast);
-        	ast.add_edge(node, child, ());
-        	node
-        } else {
-        	ast.add_node(WagNode::Comparison(None))
-        };
-        let child = self.sum.to_ast(ast);
-        ast.add_edge(node, child, ());
-        node
     }
 }
 

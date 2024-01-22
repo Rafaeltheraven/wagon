@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, ToAst, WagNode, WagIx, WagTree, SpannableNode, ResultPeek, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, SpannableNode, ResultPeek, ResultNext};
 use wagon_lexer::math::Math;
 
 use wagon_macros::match_error;
@@ -52,32 +52,6 @@ impl Expression {
 		};
 		Ok(Self::If { this, then, r#else })
 	}
-}
-
-impl ToAst for Expression {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        match self {
-            Self::Subproc(s) => ast.add_node(WagNode::SubProc(s.into_inner())),
-            Self::If { this, then, r#else } => {
-            	let node = ast.add_node(WagNode::If);
-            	if let Some(expr) = r#else {
-            		let child = (*expr).to_ast(ast);
-            		ast.add_edge(node, child, ());
-            	}
-            	let then_node = then.to_ast(ast);
-            	let this_node = this.to_ast(ast);
-            	ast.add_edge(node, then_node, ());
-            	ast.add_edge(node, this_node, ());
-            	node
-            },
-            Self::Disjunct(d) => {
-            	let node = ast.add_node(WagNode::Disjunct);
-            	let child = d.to_ast(ast);
-            	ast.add_edge(node, child, ());
-            	node
-            },
-        }
-    }
 }
 
 impl Display for Expression {

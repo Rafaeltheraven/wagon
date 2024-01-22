@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, ToAst, SpannableNode, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ResultNext};
 use wagon_lexer::{math::Math, Spannable};
 
 use super::expression::Expression;
@@ -30,15 +30,6 @@ impl Parse for Assignment {
 			Err(WagParseError::Unexpected { span: lexer.span(), offender: next, expected: vec![Tokens::MathToken(Math::Assigns).to_string()] })
 		}
 	}
-}
-
-impl ToAst for Assignment {
-    fn to_ast(self, ast: &mut crate::ast::WagTree) -> crate::ast::WagIx {
-        let node = ast.add_node(crate::ast::WagNode::Ident(self.ident.into_inner()));
-        let child = self.expr.to_ast(ast);
-        ast.add_edge(node, child, ());
-        node
-    }
 }
 
 impl Display for Assignment {

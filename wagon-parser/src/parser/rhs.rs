@@ -3,7 +3,7 @@ use std::matches;
 
 use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, ToAst, WagNode, WagIx, WagTree, Peek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, Peek};
 use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};
@@ -128,17 +128,6 @@ impl Rhs {
 		blocks.push(curr);
 		Ok(blocks)
 	}
-}
-
-impl ToAst for Rhs {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = Self::add_vec_children(WagNode::Rhs(self.weight.is_some()), self.chunks, ast);
-        if let Some(expr) = self.weight {
-        	let child = expr.to_ast(ast);
-        	ast.add_edge(node, child, ());
-        }
-        node
-    }
 }
 
 #[cfg(test)]

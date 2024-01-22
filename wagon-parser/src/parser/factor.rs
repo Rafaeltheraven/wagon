@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::write;
-use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ResultPeek};
 use super::atom::Atom;
 use wagon_lexer::math::Math;
 
@@ -38,22 +38,6 @@ impl Parse for Factor {
 			Ok(Self::Primary(left))
 		}
 	}
-}
-
-impl ToAst for Factor {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        match self {
-            Self::Primary(a) => a.to_ast(ast),
-            Self::Power { left, right } => {
-            	let node = ast.add_node(WagNode::Factor);
-            	let right_node = (*right).to_ast(ast);
-            	let left_node = left.to_ast(ast);
-            	ast.add_edge(node, right_node, ());
-            	ast.add_edge(node, left_node, ());
-            	node
-            },
-        }
-    }
 }
 
 impl Display for Factor {

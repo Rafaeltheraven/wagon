@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::write;
 
-use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, ResultPeek};
+use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
 use wagon_lexer::math::Math;
 
@@ -66,33 +66,6 @@ pub enum Op1 {
 	Add,
     /// `-`
 	Sub
-}
-
-impl ToAst for Sum {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = if let Some(cont) = self.cont {
-        	cont.to_ast(ast)
-        } else {
-        	ast.add_node(WagNode::Sum(None))
-        };
-        let child =  self.left.to_ast(ast);
-        ast.add_edge(node, child, ());
-        node
-    }
-}
-
-impl ToAst for SumP {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        let node = ast.add_node(WagNode::Sum(Some(self.op)));
-        let ret = self.cont.map_or(node, |next| {
-        	let parent = next.to_ast(ast);
-        	ast.add_edge(parent, node, ());
-        	parent
-        });
-        let child = self.right.to_ast(ast);
-        ast.add_edge(ret, child, ());
-        ret
-    }
 }
 
 impl Display for Sum {

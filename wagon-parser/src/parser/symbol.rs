@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::write;
 
 use super::helpers::between_sep;
-use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ToAst, WagNode, WagIx, WagTree, Peek, ResultPeek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, Peek, ResultPeek};
 use wagon_lexer::{math::Math, productions::Productions};
 
 use super::terminal::Terminal;
@@ -84,17 +84,6 @@ impl Symbol {
     /// Create a symbol which is just a spanned non-terminal [`Ident::Unknown`].
     pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
         SpannableNode::new(Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), span.clone()), Vec::new()), span)
-    }
-}
-
-impl ToAst for Symbol {
-    fn to_ast(self, ast: &mut WagTree) -> WagIx {
-        match self {
-            Self::NonTerminal(i, _) => ast.add_node(WagNode::Ident(i.into_inner())),
-            Self::Terminal(t) => ast.add_node(WagNode::Terminal(t.into_inner())),
-            Self::Assignment(v) => {let node = WagNode::Assignments; Self::add_vec_children(node, v, ast)},
-            Self::Epsilon => ast.add_node(WagNode::Empty)
-        }
     }
 }
 
