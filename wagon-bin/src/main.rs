@@ -1,4 +1,5 @@
 #![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
 use std::env;
 use std::format;
 use std::fs;
@@ -104,7 +105,7 @@ fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bo
     if !exists {
         let libs = ["subprocess", "serde_json", "rand_dist", "itertools"];
         Command::new("cargo").args(["new", proj_name.to_str().expect("Project name must be valid unicode")]).output().expect("Failed to invoke cargo");
-        let mut toml = File::create(&path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
+        let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
         toml.write_all(format!(
 "[package]
 name = \"{}\"
