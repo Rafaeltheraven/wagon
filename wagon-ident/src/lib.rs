@@ -77,3 +77,9 @@ impl Ident {
         proc_macro2::Ident::new(&text, proc_macro2::Span::call_site())
     }
 }
+
+impl From<&str> for Ident {
+    fn from(value: &str) -> Self {
+        Self::Unknown(value.to_string())
+    }
+}
