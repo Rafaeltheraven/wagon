@@ -3,7 +3,7 @@ stages:
 
 rust-latest:
   stage: build
-  image: rust:latest
+  image: shepmaster/rust-stable
   script:
     - cargo build --verbose
     - cargo test --verbose
@@ -11,7 +11,7 @@ rust-latest:
 
 rust-nightly:
   stage: build
-  image: rustlang/rust:nightly
+  image: shepmaster/rust-nightly
   script:
     - cargo build --verbose
     - cargo test --verbose
