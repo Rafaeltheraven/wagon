@@ -55,6 +55,7 @@ impl CodeGen for SpannableNode<Rule> {
                     )
                 };
                 gen_args.state.add_code(pointer.clone(), stream);
+                gen_args.state.add_code(pointer.clone(), quote!(Ok(())));
                 gen_args.state.roots.insert(pointer);
                 Ok(())
             },

@@ -11,7 +11,7 @@ use petgraph::prelude::EdgeIndex;
 use wagon_utils::comma_separated_with_or_str;
 use std::{hash::{Hash, Hasher}, fmt::{Debug, Display}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, error::Error, mem::Discriminant};
 
-use self::{value::Value, value::{InnerValueError, ValueResult}};
+use self::{value::Value, value::InnerValueError};
 use sppf::{SPPFNodeIndex, SPPFNode};
 use value::ValueError;
 use wagon_ident::Ident;

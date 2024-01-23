@@ -18,7 +18,7 @@ impl<U> ToTokensState<U> for Atom {
             Self::LitNum(n) => quote!(#n.into()),
             Self::LitFloat(f) => {
                 let real_float: f32 = **f;
-                quote!(#real_float.into())
+                quote!(#real_float.try_into()?)
             },
             Self::LitString(s) => quote!(#s.into()),
             Self::Group(g) => {

@@ -441,7 +441,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns a [`GLLParseError::MissingSPPF`] if [`GLLState::sppf_pointer`] inexplicably points at a non-existant SPPF node.
-    pub fn get_ret_val(&'a self, i: AttributeKey) -> ParseResult<'a, Option<&Value<'a>>> {
+    pub fn get_ret_val(&self, i: AttributeKey) -> ParseResult<'a, Option<&Value<'a>>> {
         self.get_sppf_node(self.sppf_pointer)?.get_ret_val(i)
     }
 
@@ -491,7 +491,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns a [`Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
-    pub fn print_sppf_dot(&'a mut self, crop: bool) -> ParseResult<'a, String> {
+    pub fn print_sppf_dot(&mut self, crop: bool) -> ParseResult<'a, String> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());
         }
@@ -507,7 +507,7 @@ impl<'a> GLLState<'a> {
     /// Checks whether the current parser state has accepted the string
     #[must_use] 
     pub fn accepts(&self) -> bool {
-        !self.find_roots_sppf().is_empty()
+        self.errors.is_empty() && !self.find_roots_sppf().is_empty()
     }
 
     fn find_roots_sppf(&self) -> Vec<SPPFNodeIndex> {

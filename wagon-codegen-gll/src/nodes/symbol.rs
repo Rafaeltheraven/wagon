@@ -50,8 +50,6 @@ impl CodeGen for SpannableNode<Symbol> {
 			Symbol::NonTerminal(i, args) => {
 				if let Some(new_args) = handle_non_terminal(i, label, state, block, (args, full_args), (uuid, rule_uuid), (first_symbol, found_first))? {
 					gen_args.prev_args = Some(new_args);
-				} else {
-					return Ok(())
 				}
 			},
 			Symbol::Assignment(v) => {
@@ -69,13 +67,13 @@ impl CodeGen for SpannableNode<Symbol> {
 				state.add_code(label.clone(), quote!(
 					let cr = state.get_node_t(&[]);
 					let slot = wagon_gll::GrammarSlot::new(
-						state.get_label_by_uuid(#uuid),
-						state.get_rule(#rule_uuid),
+						state.get_label_by_uuid(#uuid)?,
+						state.get_rule(#rule_uuid)?,
 						1,
 						0,
 						#rule_uuid
 					);
-					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer);
+					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer)?;
 				));
 				state.get_first(label)?[0].1 = Some(CharBytes::Epsilon);
 				gen_args.found_first = Some(true);
@@ -99,16 +97,16 @@ fn handle_non_terminal(i: SpannableIdent, label: &Rc<Ident>, state: &mut CodeGen
 	}
 	let base = quote!(
 		state.gss_pointer = state.create(
-			std::rc::Rc::new(wagon_gll::GrammarSlot::new(
-				state.get_label_by_uuid(#uuid), 
-				state.get_rule(#rule_uuid),
+			&std::rc::Rc::new(wagon_gll::GrammarSlot::new(
+				state.get_label_by_uuid(#uuid)?, 
+				state.get_rule(#rule_uuid)?,
 				#next_block,
 				0, 
 				#rule_uuid
 			)),
 			vec![#(#args_idents.clone(),)*#(#full_args_idents,)*]
-		);
-		label.code(state);
+		)?;
+		label.code(state)
 	);
 	if first_symbol {
 		state.add_code(label.clone(), quote!(
@@ -118,10 +116,10 @@ fn handle_non_terminal(i: SpannableIdent, label: &Rc<Ident>, state: &mut CodeGen
 	} else {
 		state.add_code(label.clone(), quote!(
 			let label = state.get_label(&#i);
-			if state.test_next(label.clone()) {
+			if state.test_next(&label)? {
 				#base
 			} else {
-				return Ok(None);
+				Ok(())
 			}
 		));
 	}
@@ -171,13 +169,13 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 				let node = state.get_node_t(bytes);
 				state.next(bytes).unwrap();
 				let slot = wagon_gll::GrammarSlot::new(
-					state.get_label_by_uuid(#uuid), 
-					state.get_rule(#rule_uuid),
+					state.get_label_by_uuid(#uuid)?, 
+					state.get_rule(#rule_uuid)?,
 					#dot, 
 					#pos,
 					#rule_uuid
 				);
-				state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer);
+				state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer)?;
 			);
 			if !first_symbol {
 				stream.extend(quote!(

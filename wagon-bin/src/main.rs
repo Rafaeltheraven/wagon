@@ -26,12 +26,12 @@ fn main() {
     let proj_name = args
         .get_one::<std::path::PathBuf>("project_name")
         .expect("Project name required");
-    let overwrite = args.get_one::<bool>("overwrite").unwrap_or(&false) == &false;
+    let overwrite = args.get_one::<bool>("overwrite").unwrap_or(&false);
     let contents = fs::read_to_string(input_file).expect("Couldn't read file");
     match parse_and_check(&contents) {
         Ok(wag) => {
             match gen_parser(wag) {
-                Ok(code) => write_parser(code, proj_name, overwrite),
+                Ok(code) => write_parser(code, proj_name, *overwrite),
                 Err(e) => handle_error(e, input_file.to_str().expect("Input file path was empty"), contents),
             }
         },
@@ -94,6 +94,7 @@ fn write_parser(data: CodeMap, proj_name: &PathBuf, overwrite: bool) {
     if do_cargo {
         create_cargo(proj_name);
     }
+    cargo_fix(proj_name);
 }
 
 fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bool) -> bool {
@@ -106,8 +107,10 @@ fn create_structure(proj_name: &PathBuf, terminals: &Vec<&String>, overwrite: bo
     }
     let src_path = path.join("src");
     let term_path = src_path.join("terminals");
-    std::fs::create_dir_all(src_path).expect("Failed to create project directory");
-    std::fs::create_dir(&term_path).expect("Failed to create terminals directory");
+    if !exists {
+        std::fs::create_dir_all(src_path).expect("Failed to create project directory");
+        std::fs::create_dir(&term_path).expect("Failed to create terminals directory");
+    }
     for term in terminals {
         let curr_path = term_path.join(term);
         if !curr_path.exists() {
@@ -146,6 +149,15 @@ edition = \"2021\"
     for lib in libs {
         Command::new("cargo").current_dir(path).args(["add", lib]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));
     }
+}
+
+fn cargo_fix(proj_name: &PathBuf) {
+    let path = std::path::Path::new(proj_name);
+    Command::new("cargo") 
+        .current_dir(path)
+        .args(["fix", "--bin", proj_name.to_str().expect("Path was empty"), "--allow-no-vcs"])
+        .output()
+        .expect("Failed to cargo fix");
 }
 
 fn pretty_code(code: &TokenStream, path: &std::path::Path) -> String {

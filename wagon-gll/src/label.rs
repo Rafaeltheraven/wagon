@@ -9,7 +9,6 @@ use crate::Terminal;
 use crate::ParseResult;
 use crate::HashSet;
 use crate::Rc;
-use crate::ValueResult;
 use crate::Value;
 use std::fmt::Debug;
 
@@ -63,6 +62,9 @@ pub trait Label<'a>: Debug {
 	/// Should return a `GLLParseError` if an error occurs during the parsing or evaluation of attributes.
 	fn code(&self, state: &mut GLLState<'a>) -> ParseResult<'a, ()>;
 	/// Check if the next token in the current state is accepted by this label's first-follow set.
+	///
+	/// # Errors
+	/// Returns an error if any label in the first set can't be found.
 	fn first(&self, state: &mut GLLState<'a>) -> ParseResult<'a, bool> {
 		let fst = self.first_set(state)?;
 		for (alt, fin) in fst {
@@ -88,6 +90,9 @@ pub trait Label<'a>: Debug {
 		false
 	}
 	/// Could this label resolve to epsilon?
+	///
+	/// # Errors
+	/// Returns an error if any label in the first set can't be found.
 	fn is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
 		if self.is_eps() {
 			Ok(true)
@@ -110,12 +115,12 @@ pub trait Label<'a>: Debug {
 	/// Optionally return the weight of this label.
 	///
 	/// This should either calculate the weight for this label, as denoted in the WAGon DSL, or `None`.
-	fn _weight(&self, state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>>;
+	fn _weight(&self, state: &GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>>;
 	/// Returns either the weight of this label as calculated by [`_weight`](`Label::_weight`), or `1`.
 	///
 	/// # Errors
 	/// Should return a [`ValueError`] if something goes wrong during the evaluation of the weight.
-	fn weight(&self, state: &GLLState<'a>) -> ValueResult<'a, Value<'a>> {
+	fn weight(&self, state: &GLLState<'a>) -> ParseResult<'a, Value<'a>> {
 		self._weight(state).map_or_else(|| Ok(1.into()), |weight| weight)
 	}
 	/// A string representation of the chunk (likely a GLL block) that this label represents.
@@ -180,8 +185,8 @@ impl<'a> Label<'a> for Terminal<'a> {
 		(Vec::new(), Vec::new())
 	}
 
-	fn _weight(&self, _state: &GLLState<'a>) -> Option<ValueResult<'a, Value<'a>>> {
-		Some(Err(ValueError::ValueError(InnerValueError::Fatal("Attempted running the `_weight` method on a terminal.".to_string()))))
+	fn _weight(&self, _state: &GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>> {
+		Some(Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::Fatal("Attempted running the `_weight` method on a terminal.".to_string())))))
 	}
 }
 

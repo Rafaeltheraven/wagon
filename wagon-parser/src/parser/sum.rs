@@ -100,8 +100,8 @@ impl Display for Op1 {
 impl ToTokens for Op1 {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         match self {
-            Self::Add => tokens.extend(quote!(+)),
-            Self::Sub => tokens.extend(quote!(-)),
+            Self::Add => tokens.extend(quote!(std::ops::Add::add)),
+            Self::Sub => tokens.extend(quote!(std::ops::Sub::sub)),
         }
     }
 }

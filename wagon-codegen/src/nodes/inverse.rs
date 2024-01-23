@@ -10,9 +10,7 @@ impl<U> ToTokensState<U> for Inverse {
         match self {
             Self::Not(i) => {
                 let i_stream = i.to_tokens(state, label, attr_fun);
-                quote!(
-                    !#i_stream
-                )
+                quote!(std::ops::Not::not(#i_stream)?)
             },
             Self::Comparison(c) => {
                 c.to_tokens(state, label, attr_fun)

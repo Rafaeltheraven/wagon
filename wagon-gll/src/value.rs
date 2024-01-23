@@ -1,4 +1,5 @@
-use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Not}, error::Error};
+use std::collections::BTreeMap;
+use std::{fmt::Display, write, ops::{Add, Sub, Mul, Div, Rem, Not}, error::Error};
 
 use crate::GLLBlockLabel;
 pub(crate) use wagon_value::Value as InnerValue;
@@ -30,6 +31,12 @@ pub type ValueResult<'a, T> = Result<T, ValueError<'a>>;
 impl<'a> From<InnerValueError<Value<'a>>> for ValueError<'a> {
     fn from(value: InnerValueError<Value<'a>>) -> Self {
         Self::ValueError(value)
+    }
+}
+
+impl<'a> From<InnerValueError<InnerValue<Value<'a>>>> for ValueError<'a> {
+    fn from(value: InnerValueError<InnerValue<Value<'a>>>) -> Self {
+        Self::ValueError(value.into())
     }
 }
 
@@ -128,9 +135,50 @@ impl From<Value<'_>> for bool {
     }
 }
 
-impl<'a, T> From<T> for Value<'a> where InnerValue<Value<'a>>: From<T> {
-    fn from(value: T) -> Self {
-        Value::Value(InnerValue::from(value))
+impl<'a> From<bool> for Value<'a> {
+    fn from(value: bool) -> Self {
+        Self::Value(InnerValue::Bool(value))
+    }
+}
+
+impl<'a> From<String> for Value<'a> {
+    fn from(value: String) -> Self {
+        Self::Value(InnerValue::String(value))
+    }
+}
+
+impl<'a> From<i32> for Value<'a> {
+    fn from(value: i32) -> Self {
+        Self::Value(InnerValue::Natural(value))
+    }
+}
+
+impl<'a> From<BTreeMap<String, Value<'a>>> for Value<'a> {
+    fn from(value: BTreeMap<String, Value<'a>>) -> Self {
+        Self::Value(InnerValue::Dict(value))
+    }
+}
+
+impl<'a> From<Vec<Value<'a>>> for Value<'a> {
+    fn from(value: Vec<Value<'a>>) -> Self {
+        Self::Value(InnerValue::Array(value))
+    }
+}
+
+impl<'a> From<InnerValue<Value<'a>>> for Value<'a> {
+    fn from(value: InnerValue<Value<'a>>) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl<'a> TryFrom<f32> for Value<'a> {
+    type Error = ValueError<'a>;
+
+    fn try_from(value: f32) -> Result<Self, Self::Error> {
+        match InnerValue::try_from(value) {
+            Ok(v) => Ok(Self::Value(v)),
+            Err(e) => Err(InnerValueError::<Self>::from(e).into()),
+        }
     }
 }
 
@@ -146,56 +194,56 @@ impl<'a> TryFrom<Value<'a>> for GLLBlockLabel<'a> {
 }
 
 impl<'a> Add for Value<'a> {
-    type Output = InnerValueResult<Self, Self>;
+    type Output = ValueResult<'a, Self>;
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 + v2)?)),
-            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "+".to_string()))
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "+".to_string()).into())
         }
     }
 }
 
 impl<'a> Sub for Value<'a> {
-    type Output = InnerValueResult<Self, Self>;
+    type Output = ValueResult<'a, Self>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 - v2)?)),
-            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "-".to_string()))
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "-".to_string()).into())
         }
     }
 }
 
 impl<'a> Mul for Value<'a> {
-    type Output = InnerValueResult<Self, Self>;
+    type Output = ValueResult<'a, Self>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 * v2)?)),
-            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "*".to_string()))
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "*".to_string()).into())
         }
     }
 }
 
 impl<'a> Div for Value<'a> {
-    type Output = InnerValueResult<Self, Self>;
+    type Output = ValueResult<'a, Self>;
 
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 / v2)?)),
-            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "/".to_string()))
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "/".to_string()).into())
         }
     }
 }
 
 impl<'a> Not for Value<'a> {
-    type Output = InnerValueResult<Self, Self>;
+    type Output = ValueResult<'a, Self>;
 
     fn not(self) -> Self::Output {
         match self {
             Value::Value(v) => Ok(Value::Value((!v)?)),
-            v @ Value::Label(_) => Err(InnerValueError::NegationError(v))
+            v @ Value::Label(_) => Err(InnerValueError::NegationError(v).into())
         }
     }
 }
@@ -205,6 +253,17 @@ impl<'a> PartialOrd for Value<'a> {
         match (self, other) {
             (Value::Value(v1), Value::Value(v2)) => v1.partial_cmp(v2),
             _ => None
+        }
+    }
+}
+
+impl<'a> Rem for Value<'a> {
+    type Output = ValueResult<'a, Self>;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Value::Value(v1), Value::Value(v2)) => Ok(Value::Value((v1 % v2)?)),
+            (v1, v2) => Err(InnerValueError::OperationError(v1, v2, "/".to_string()).into())
         }
     }
 }

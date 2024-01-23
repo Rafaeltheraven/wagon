@@ -1,6 +1,5 @@
 use quote::quote;
 
-
 use crate::SpannableIdent;
 
 use super::{Rc, ToTokensState};

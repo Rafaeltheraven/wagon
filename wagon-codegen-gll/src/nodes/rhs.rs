@@ -39,17 +39,17 @@ impl CodeGen for SpannableNode<Rhs> {
                 let proc_ident = arg.to_inner().to_ident();
                 if j == 0 { // We have no context, only parameters
                     gen_args.state.add_attribute_mapping(label.clone(), arg, quote!( 
-                        let #proc_ident = state.get_attribute(#k).to_owned();
+                        let #proc_ident = state.get_attribute(#k)?.to_owned();
                     ));
                     gen_args.state.add_ret_attr(label.clone(), arg.to_string());
                 } else {
                     let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
                     if prev_args.contains(arg) {
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
-                            let #proc_ident = if let Some(v) = state.get_ret_val(#counter) {
+                            let #proc_ident = if let Some(v) = state.get_ret_val(#counter)? {
                                 v
                             } else {
-                                state.restore_attribute(#skipped_k)
+                                state.restore_attribute(#skipped_k)?
                             }.to_owned();
                         ));
                         gen_args.state.add_ret_attr(label.clone(), arg.to_string());
@@ -88,13 +88,20 @@ impl CodeGen for SpannableNode<Rhs> {
                     }
                 }
                 gen_args.state.add_code(label.clone(), quote!(
-                    state.pop(vec![#(#ret_vals,)*]);
+                    state.pop(&vec![#(#ret_vals,)*])
                 ));
             }
             if j == 0 {
                 let weight_stream = if let Some(ref expr) = weight {
                     let stream = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
-                    quote!(Some(#stream))
+                    let weight_attrs = gen_args.state.collect_attrs(&label, gen_args.state.get_req_weight_attrs(&label));
+                    quote!(
+                        fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>> {
+                            #(#weight_attrs)*
+                            Ok(#stream)
+                        }
+                        Some(actual_weight(state))
+                    )
                 } else {
                     quote!(None)
                 };
@@ -102,8 +109,8 @@ impl CodeGen for SpannableNode<Rhs> {
                 let root_str = ident.to_string();
                 let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?);
                 let inner_block = quote!(
-                    let root = state.get_label_by_uuid(#root_str);
-                    let rules = state.get_rule(#rule_str);
+                    let root = state.get_label_by_uuid(#root_str)?;
+                    let rules = state.get_rule(#rule_str)?;
                     let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
                     candidates.push(std::rc::Rc::new(slot));
                 );
@@ -112,7 +119,7 @@ impl CodeGen for SpannableNode<Rhs> {
                 } else {
                     quote!(
                        let fst = state.get_label_by_uuid(#label_str);
-                       if state.test_next(fst) {
+                       if state.test_next(&fst)? {
                            #inner_block 
                        } 
                     )

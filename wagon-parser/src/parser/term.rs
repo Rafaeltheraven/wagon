@@ -115,10 +115,10 @@ impl Display for Op2 {
 impl ToTokens for Op2 {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         match self {
-            Self::Mul => tokens.extend(quote!(*)),
-            Self::Div => tokens.extend(quote!(/)),
+            Self::Mul => tokens.extend(quote!(std::ops::Mul::mul)),
+            Self::Div => tokens.extend(quote!(std::ops::Div::div)),
             Self::Floor => unimplemented!("Not sure how to do this yet"),
-            Self::Mod => tokens.extend(quote!(%)),
+            Self::Mod => tokens.extend(quote!(std::ops::Rem::rem)),
         }
     }
 }

@@ -1,7 +1,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Display;
-use std::ops::{Add, Sub, Mul, Div, Not};
+use std::ops::{Add, Sub, Mul, Div, Not, Rem};
 use ordered_float::{NotNan, Pow};
 
 use crate::{Valueable, ValueResult, ValueError};
@@ -233,6 +233,26 @@ impl<T: Valueable> Not for Value<T> {
             Self::Bool(b) => Ok(Self::Bool(!b)),
             v => Err(ValueError::NegationError(v))
         }
+    }
+}
+
+impl<T: Valueable> Rem for Value<T> {
+    type Output = ValueResult<Self, Self>;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        Ok(match (self, rhs) {
+            (Self::Bool(b), Self::Natural(i)) => Self::Natural(i32::from(b) % i), 
+            (Self::Natural(i), Self::Bool(b)) => Self::Natural(i % i32::from(b)),
+            (Self::Bool(b), Self::Float(f)) => Self::Float(NotNan::new(f32::from(u8::from(b)))? % f),
+            (Self::Float(f), Self::Bool(b)) => Self::Float(f % NotNan::new(f32::from(u8::from(b)))?),
+
+            (Self::Natural(i1), Self::Natural(i2)) => Self::Natural(i1 % i2),
+            (Self::Natural(i), Self::Float(f)) => Self::Float(NotNan::new(i as f32)? % f),
+            (Self::Float(f), Self::Natural(i)) => Self::Float(f % NotNan::new(i as f32)?),
+
+            (Self::Float(f1), Self::Float(f2)) => Self::Float(f1 % f2),
+            (v1, v2) => return Err(ValueError::OperationError(v1, v2, "%".to_owned()))
+        })
     }
 }
 

@@ -88,7 +88,7 @@ impl CodeGenState {
     	}
     }
 
-    fn get_req_weight_attrs(&self, label: &Ident) -> Option<&ReqWeightAttrs> {
+    pub(crate) fn get_req_weight_attrs(&self, label: &Ident) -> Option<&ReqWeightAttrs> {
     	if let Some((_, attrs, _)) = self.req_attribute_map.get(label) {
     		Some(attrs)
     	} else {
@@ -104,7 +104,7 @@ impl CodeGenState {
     	}
     }
 
-    fn collect_attrs(&self, label: &Ident, a: Option<&AttrSet>) -> Vec<&TokenStream> {
+    pub(crate) fn collect_attrs(&self, label: &Ident, a: Option<&AttrSet>) -> Vec<&TokenStream> {
     	let mut stream = Vec::new();
     	if let Some(attrs) = a { // If we have any associated attrs
     		if let Some(map) = self.attribute_map.get(label) { // And this block uses them
@@ -177,9 +177,7 @@ impl CodeGenState {
 		let code = self.code.get(id).ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal(format!("Mssing code for {id}"))))?;
 		#[allow(clippy::option_if_let_else)]
 		let weight_stream = if let Some(weight) = self.weight_code.get(id) {
-			let weight_attrs = self.collect_attrs(id, self.get_req_weight_attrs(id));
 			quote!(
-				#(#weight_attrs)*
 				#(#weight)*
 			)
 		} else {
@@ -206,7 +204,6 @@ impl CodeGenState {
 				fn code(&self, state: &mut wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, ()> {
 					#(#code_attr_stream)*
 					#(#code)*
-					Ok(())
 				}
 				fn to_string(&self) -> &str {
 					#str_repr
@@ -218,7 +215,7 @@ impl CodeGenState {
 					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
 				}
 				#[allow(unused_variables)]
-				fn _weight(&self, state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
+				fn _weight(&self, state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>>> {
 					#weight_stream
 				}
 			}
@@ -285,7 +282,7 @@ impl CodeGenState {
 				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 					(Vec::new(), Vec::new())
 				}
-				fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
+				fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>>> {
 					unreachable!("This should never be called");
 				}
     		}
@@ -340,15 +337,15 @@ impl CodeGenState {
 			        )
 			        .get_matches();
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
-			    let crop = args.get_one::<bool>("no-crop").unwrap_or_default() == &false;
+			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
 			    let contents = content_string.trim_end().as_bytes();
     			let mut label_map: std::collections::HashMap<&str, std::rc::Rc<dyn wagon_gll::Label>> = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: std::collections::HashMap<&str, std::rc::Rc<Vec<wagon_ident::Ident>>> = std::collections::HashMap::with_capacity(#root_len);
     			#stream
-    			let mut state = wagon_gll::state::GLLState::init(&contents, label_map, rule_map).unwrap();
+    			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map).unwrap();
     			state.main();
-    			println!("{}", state.print_sppf_dot(crop));
+    			println!("{}", state.print_sppf_dot(crop).unwrap());
     			assert!(state.accepts());
     		}
     	))
