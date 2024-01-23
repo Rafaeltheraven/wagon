@@ -20,7 +20,8 @@
 //! let lexer = LexerBridge::new(s);
 //! let tokens: Vec<LexResult> = lexer.collect();
 //! assert_eq!(tokens, vec![
-//! Ok(Tokens::MetadataToken(Metadata::Key("meta".to_string()))), 
+//! Ok(Tokens::MetadataToken(Metadata::Identifier("meta".into()))), 
+//! Ok(Tokens::MetadataToken(Metadata::Colon)),
 //! Ok(Tokens::MathToken(Math::LitString("data".to_string()))),
 //! Ok(Tokens::MathToken(Math::Semi)),
 //! Ok(Tokens::MetadataToken(Metadata::Delim)),
@@ -139,9 +140,14 @@ enum Lexer<'source> {
 impl<'source> Lexer<'source> {
 	fn new(s: &'source str) -> Self {
 		let mut meta_lexer = MetaLexer::new(Metadata::lexer(s));
-		let fst = matches!(meta_lexer.peek(), Some(Ok(Metadata::Identifier(_))));
-		let snd = matches!(meta_lexer.peek(), Some(Ok(Metadata::Colon)));
-		if fst && snd {
+		let fst = meta_lexer.peek();
+		if matches!(fst, Some(Ok(Metadata::Identifier(_)))) {
+			if matches!(meta_lexer.peek(), Some(Ok(Metadata::Colon))) {
+				Self::Metadata(meta_lexer)
+			} else {
+				Self::Productions(Productions::lexer(s))
+			}
+		} else if !matches!(fst, Some(Err(_))) {
 			Self::Metadata(meta_lexer)
 		} else {
 			Self::Productions(Productions::lexer(s))
@@ -459,9 +465,11 @@ mod tests {
 			Ok(MetadataToken(Metadata::Path("some::path".to_string()))),
 			Ok(MetadataToken(Metadata::Semi)),
 			Ok(MetadataToken(Metadata::Identifier("left".into()))),
+			Ok(MetadataToken(Metadata::Colon)),
 			Ok(MathToken(Math::LitString("right".to_string()))),
 			Ok(MathToken(Math::Semi)),
 			Ok(MetadataToken(Metadata::Identifier("true_val".into()))),
+			Ok(MetadataToken(Metadata::Colon)),
 			Ok(MathToken(Math::LitBool(true))),
 			Ok(MathToken(Math::Semi)),
 			Ok(MetadataToken(Metadata::Delim)),

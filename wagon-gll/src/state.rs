@@ -15,7 +15,7 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 /// # Example
 /// ```
 /// # use std::collections::HashMap;
-/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel};
+/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel, value::Value};
 /// use wagon_ident::Ident;
 /// use std::rc::Rc;
 /// #[derive(Debug)]
@@ -42,7 +42,7 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 ///#    fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 ///#        (Vec::new(), Vec::new())
 ///#    }
-///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::value::ValueResult<'a, wagon_gll::value::Value<'a>>> {
+///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>> {
 ///#        unreachable!("This should never be called");
 ///#    }
 /// }
