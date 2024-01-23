@@ -7,6 +7,7 @@ rust-latest:
   script:
     - cargo build --verbose
     - cargo test --verbose
+    - cargo clippy --verbose
 
 rust-nightly:
   stage: build
@@ -14,4 +15,5 @@ rust-nightly:
   script:
     - cargo build --verbose
     - cargo test --verbose
+    - cargo clippy --verbose
   allow_failure: true
