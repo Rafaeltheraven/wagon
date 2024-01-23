@@ -24,7 +24,7 @@ use crate::firstpass::{FirstPassState, Rewrite};
 /// Given the input string, will either return a full, rewritten, WAG or an error.
 ///
 /// # Errors 
-/// Returns a [`WagParseError`] if any error occurs during the parsing or checking stage.
+/// Returns a [`WagParseError`](`crate::parser::WagParseError`) if any error occurs during the parsing or checking stage.
 pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut parser = Parser::new(date);
     let mut wag = parser.parse()?;

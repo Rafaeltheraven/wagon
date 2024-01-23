@@ -20,7 +20,7 @@ use wagon_ident::Ident;
 pub mod sppf;
 /// An implementation of the GSS.
 pub mod gss;
-/// An extension of [`wagon_codegen::value::Value`] to deal with some GLL specific elements.
+/// An extension of [`wagon_value::Value`] to deal with some GLL specific elements.
 pub mod value;
 
 mod label;

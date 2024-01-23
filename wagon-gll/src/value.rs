@@ -8,18 +8,18 @@ pub(crate) use wagon_value::ValueResult as InnerValueResult;
 use wagon_value::Valueable;
 
 #[derive(Debug, Eq, Hash, Clone)]
-/// An extension of [`wagon_value::value::Value`] that adds [`GLLBlockLabel`] as a possible type.
+/// An extension of [`wagon_value::Value`] that adds [`GLLBlockLabel`] as a possible type.
 pub enum Value<'a> {
-    /// Any regular [`wagon_value::value::Value`]
+    /// Any regular [`wagon_value::Value`]
     Value(InnerValue<Value<'a>>),
     /// A [`GLLBlockLabel`]
 	Label(GLLBlockLabel<'a>),
 }
 
 #[derive(Debug)]
-/// An extension of [`wagon_value::value::ValueError`] for specific errors related to dealing with [`GLLBlockLabel`].
+/// An extension of [`wagon_value::ValueError`] for specific errors related to dealing with [`GLLBlockLabel`].
 pub enum ValueError<'a> {
-    /// Any regular [`wagon_value::value::ValueError`]
+    /// Any regular [`wagon_value::ValueError`]
     ValueError(InnerValueError<Value<'a>>),
     /// An error occured trying to convert a [`Value`] to a [`GLLBlockLabel`].
     ConvertToLabel(Value<'a>)

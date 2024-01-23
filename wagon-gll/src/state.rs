@@ -244,7 +244,7 @@ impl<'a> GLLState<'a> {
     /// Get the [`GSSNode`] `self.gss_pointer` is currently pointing to.
     ///
     /// # Errors
-    /// Returns [`GLLParseError::MissingGSS`] if for some inexplicable reason the node does not exist.
+    /// Returns [`GLLParseError::MissingGSSNode`] if for some inexplicable reason the node does not exist.
     pub fn get_current_gss_node(&self) -> ParseResult<'a, &Rc<GSSNode<'a>>> {
         self.get_gss_node(self.gss_pointer)
     }
@@ -252,7 +252,7 @@ impl<'a> GLLState<'a> {
     /// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
     ///
     /// # Errors
-    /// Returns [`GLLParseError::MissingSPPF`] if for some inexplicable reason the node does not exist.
+    /// Returns [`GLLParseError::MissingSPPFNode`] if for some inexplicable reason the node does not exist.
     pub fn get_current_sppf_node(&self) -> ParseResult<'a, &SPPFNode<'a>> {
         self.get_sppf_node(self.sppf_pointer)
     }
@@ -440,7 +440,7 @@ impl<'a> GLLState<'a> {
     /// Get an attribute from the return arguments at the node currently pointed to by `self.sppf_pointer`.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::MissingSPPF`] if [`GLLState::sppf_pointer`] inexplicably points at a non-existant SPPF node.
+    /// Returns a [`GLLParseError::MissingSPPFNode`] if [`GLLState::sppf_pointer`] inexplicably points at a non-existant SPPF node.
     pub fn get_ret_val(&self, i: AttributeKey) -> ParseResult<'a, Option<&Value<'a>>> {
         self.get_sppf_node(self.sppf_pointer)?.get_ret_val(i)
     }
@@ -490,7 +490,7 @@ impl<'a> GLLState<'a> {
     /// Print current SPPF graph in graphviz format
     ///
     /// # Errors
-    /// Returns a [`Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
+    /// Returns a [`GLLParseError::Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
     pub fn print_sppf_dot(&mut self, crop: bool) -> ParseResult<'a, String> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());

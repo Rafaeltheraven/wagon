@@ -104,7 +104,7 @@ impl Rhs {
 	/// Expects all EBNF chunks to have been factored out.
 	///
 	/// # Errors
-	/// Returns an error if [`Chunks::ebnf`] is not `None`.
+	/// Returns an error if [`Chunk::ebnf`](`crate::parser::chunk::Chunk::ebnf`) is not `None`.
 	///
 	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
 	pub fn blocks(self) -> ParseResult<Vec<Vec<SpannableNode<Symbol>>>> {
