@@ -1,5 +1,5 @@
 [package]
-name = "wagon"
+name = "wagon-bin"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
