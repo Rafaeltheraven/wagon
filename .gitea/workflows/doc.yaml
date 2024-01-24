@@ -14,7 +14,7 @@ jobs:
       - run: echo "The ${{ gitea.repository }} repository has been cloned to the runner."
 
       - name: Compile docs
-        run: cargo doc --all --no-deps
+        run: RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo +nightly doc --all --no-deps
 
       - name: Publish docs
         run: cp -r target/doc/* /var/www/wagon
