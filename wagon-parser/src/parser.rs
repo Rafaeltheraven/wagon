@@ -102,7 +102,7 @@ pub enum WagParseError {
 	/// Expected a float but got a NaN
 	FloatError(FloatIsNan, Span),
 	/// Non-valid regex
-	RegexError(Box<regex_syntax::Error>, Span), // Regex errors are big so we're allocating it on the heap
+	RegexError(Box<regex_syntax::ast::Error>, Span), // Regex errors are big so we're allocating it on the heap
 }
 
 impl From<WagCheckError> for WagParseError {
@@ -124,7 +124,7 @@ impl Error for WagParseError {
             Self::CheckError(e) => Some(e),
             Self::LexError(e) => Some(e),
             Self::FloatError(e, _) => Some(e),
-            Self::RegexError(e, _) => Some(e),
+            Self::RegexError(e, _) => Some(&**e),
         }
     }
 }
@@ -140,7 +140,13 @@ impl MsgAndSpan for WagParseError {
 		match self {
 		    Self::CheckError(check) => check.span(),
 		    Self::LexError(lex) => lex.span(),
-		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } | Self::RegexError(_, span) => span,
+		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } => span,
+		    Self::RegexError(e, span) => {
+		    	let e_span = e.span();
+		    	let start = span.start + e_span.start.offset;
+		    	let end = span.start + e_span.end.offset;
+		    	Span { start, end }
+		    }
 		}
 	}
 
