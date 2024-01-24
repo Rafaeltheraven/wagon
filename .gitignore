@@ -10,4 +10,4 @@ target/
 *.pdb
 
 gll_test/
-test.wag
+*.wag
