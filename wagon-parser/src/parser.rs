@@ -100,7 +100,9 @@ pub enum WagParseError {
 	/// A wrapper around [`LexingError`].
 	LexError(LexingError),
 	/// Expected a float but got a NaN
-	FloatError(FloatIsNan, Span)
+	FloatError(FloatIsNan, Span),
+	/// Non-valid regex
+	RegexError(Box<regex_syntax::Error>, Span), // Regex errors are big so we're allocating it on the heap
 }
 
 impl From<WagCheckError> for WagParseError {
@@ -121,7 +123,8 @@ impl Error for WagParseError {
             Self::Fatal(_) | Self::Unexpected { .. } => None,
             Self::CheckError(e) => Some(e),
             Self::LexError(e) => Some(e),
-            Self::FloatError(e, _) => Some(e)
+            Self::FloatError(e, _) => Some(e),
+            Self::RegexError(e, _) => Some(e),
         }
     }
 }
@@ -137,7 +140,7 @@ impl MsgAndSpan for WagParseError {
 		match self {
 		    Self::CheckError(check) => check.span(),
 		    Self::LexError(lex) => lex.span(),
-		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } => span,
+		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } | Self::RegexError(_, span) => span,
 		}
 	}
 
@@ -148,7 +151,8 @@ impl MsgAndSpan for WagParseError {
 	        Self::Fatal((_, msg)) => ("Fatal Exception".to_string(), msg.to_string()),
 	        Self::CheckError(err) => err.msg(),
     		Self::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
-    		Self::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string())
+    		Self::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string()),
+    		Self::RegexError(e, _) => ("Regex Parse Error".to_string(), e.to_string()),
 		}
 	}
 }

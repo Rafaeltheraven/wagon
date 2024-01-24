@@ -19,7 +19,12 @@ impl Parse for Terminal {
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::LitString(x)) => Ok(Self::LitString(x)),
-        	Tokens::ProductionToken(Productions::LitRegex(x)) => Ok(Self::Regex(x)),
+        	Tokens::ProductionToken(Productions::LitRegex(x)) => {
+                match regex_syntax::parse(&x) {
+                    Ok(_) => Ok(Self::Regex(x)),
+                    Err(e) => Err(WagParseError::RegexError(Box::new(e), lexer.span()))
+                }
+            },
         })
     }
 }
