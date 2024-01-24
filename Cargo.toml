@@ -20,6 +20,8 @@ license = "MIT"
 edition = "2021"
 keywords = ["parsing", "gll", "weighted attribute grammar"]
 categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
+license-file = "./LICENSE"
+documentation = "wagon.thebias.nl"
 
 [workspace.dependencies]
 # common dependencies
