@@ -1,92 +1,239 @@
-# wagon
+# WAGon
 
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.utwente.nl/s1945785/wagon.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.utwente.nl/s1945785/wagon/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+A Library/Ecosystem/Proof-of-Concept for working with [Weighted Attribute Grammars](https://essay.utwente.nl/87002/1/Beekman_BA_EEMCS.pdf).
+WAGon is designed for researchers and language designers experimenting with WAGs such that they do not have to waste time creating a DSL and parser
+and can start immediately experimenting with the format itself.
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Simply clone this repository, and make sure you have `rust`, `cargo` and `clippy` installed.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Structure of the ecosystem
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+WAGon is split into several different crates, all of which are relevant for different purposes.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Researcher-Oriented
+These are crates intended for use by the "end user". People who just want a finalized AST of their WAG that they can do with
+whatever they want.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+#### `wagon-parser`
+[`wagon-parser`](https://wagon.thebias.nl/wagon_parser/) holds the code for the main parser of the [WAGon DSL](#the-wagon-dsl). 
+It can parse an input string into a valid AST, as well as perform some rewrite operations on it (for example, factoring out EBNF operators). Every node
+it parses is provided with span information, such that proper error messaging can be done later.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+#### `wagon-codegen`
+[`wagon-codegen`](https://wagon.thebias.nl/wagon_codegen/) holds code that is generically useful for turning a WAGon AST (as created by the parser) into valid Rust code.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+More specifically, it provides code that automatically turns valid WAGon evaluation expressions into valid Rust code, that can then be used anywhere the user wants.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Backend
+These are crates that are mostly used by other, more user oriented crates. They can be used directly, but usually they can be ignored.
 
-## License
-For open source projects, say how it is licensed.
+#### `wagon-lexer`
+[`wagon-lexer`](https://wagon.thebias.nl/wagon_lexer/) is the lexer for the [WAGon DSL](#the-wagon-dsl). It takes the raw input string and converts it into a stream
+of tokens that the parser can use. It automatically performs mode-switching based on the context (whether we are lexing metadata, production rules, or mathematical evaluations).
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+#### `wagon-value`
+[`wagon-value`](https://wagon.thebias.nl/wagon_value/) provides a generic enum for pseudo-dynamic typing. The end result of the code generated by `wagon-codegen` is of the type
+provided by `wagon-value`. It provides generic functions for the most basic usecases, but if more intricate types or computations are needed, you will probably have to read through
+this crate.
+
+#### `wagon-ident`
+[`wagon-ident`](https://wagon.thebias.nl/wagon_ident/) is a central repository to get the data structure for identifiers. 
+
+Identifiers are used all throughout WAGon for various purposes, but most of the time you can just import the crate and be done with it.
+
+#### `wagon-utils`
+[`wagon-utils`](https://wagon.thebias.nl/wagon_utils/) simply provides various utility functions used throughout WAGon.
+
+#### `wagon-macros`
+[`wagon-macros`](https://wagon.thebias.nl/wagon_macros/) is a catch-all crate for any procedural macros needed anywhere in WAGon. This crate only exists
+because of limitations in Rust's procedural macro system.
+
+### Proof-of-Concept
+These are crates that demonstrate how WAGon can be used, as discussed in my (not yet written) thesis. It provides an implementation of a [GLL Parser](https://dotat.at/tmp/gll.pdf) that uses a WAG for disambiguation.
+
+#### `wagon-gll-codegen`
+[`wagon-gll-codegen`](https://wagon.thebias.nl/wagon_gll_codegen) is the crate that takes a valid WAGon AST and generates valid Rust code for a GLL parser. It is very complex and very specific
+to its usecase, so most people can ignore this crate. However, the implementation in `nodes/assignment.rs` may prove a good example of how `wagon-codegen` can be used.
+
+#### `wagon-gll`
+[`wagon-gll`](https://wagon.thebias.nl/wagon_gll/) is a generic GLL library written in Rust. It is used by any parsers generated by `wagon-gll-codegen`.
+
+Technically, this library can be used completely removed from the WAGon ecosystem, it is a fully functioning GLL library. However, it does expect attributes and weights to exist. As such, it can fundamentally not be as efficient as a dedicated GLL library which does not have to consider these things.
+
+#### `wagon-bin`
+[`wagon-bin`](https://wagon.thebias.nl/wagon/) is the binary which takes an input file and generates code for a fully functioning GLL parser. Can be interesting to look at in order to see
+how to convert an input file into a valid WAG, as well as to see how to nicely show error messaging to your users.
+
+# The WAGon DSL
+WAGon (Weighted Attribute Grammar Oriented Notation (totally not a backronym)) is both an ecosystem and a DSL. In fact, the ecosystem only exists to support the DSL. 
+
+## Example Grammar
+```
+type: analytical;
+=========================================
+
+S -> A | B;
+A -> {$did_a = true;} E($did_a) B | ;
+B -> {$did_a = false;} E($did_a) A | ;
+E(*did_a) -> [*did_a * 2 + 1] C 
+  | [(!*did_a) * 3 - 4] D
+  ;
+C -> [0.3] F 
+  | [0.7] G
+  ;
+D -> [0.7] F
+  | [0.3] G
+  ;
+F -> "1";
+G -> "1";
+```
+
+## Human Explanation
+While the full DSL is described below, reading it may be a bit much. While I have tried to make it intuitive, a human readable explanation may be useful.
+
+### Metadata
+Every grammar file can optionally start with a metadata section. Inside of the grammar section, `key: value` pairs may be written (the use of which lies with the grammar designer). 
+Additionally, includes can be written inside of the metadata section to specify that external files should be included in this grammar. However, as of writing the includes are not yet supported.
+
+The metadata section is delineated with 3 or more `=` signs.
+
+### Production Rules
+Production Rules follow the pattern `Identifier -> Rule`. Alternate rules can be written using either `|` or by using the same `Identifier` again. The whole rule should be closed with a `;`.
+
+If any inherited or synthesized attributes are used in the rule, they should be declared on the left-hand side of rule, as if they were passed arguments (so between `()`, separated by `,`).
+
+### Attribute Identifiers
+In the literature for Attribute Grammars, there are 2 types of attributes; inherited and synthesized. In WAGon, we extend these with 2 more; local and unknown:
+
+|     name    | prefix |                                     explanation                                    |
+|:-----------:|:------:|:----------------------------------------------------------------------------------:|
+|  Inherited  |    *   | Value is defined earlier in the grammar. Any changes stay only in the local scope. |
+| Synthesized |    &   | Value is defined earlier in the grammar. Changes are passed "upward".              |
+|    Local    |    $   | Is defined inside of this scope.                                                   |
+|   Unknown   |        | Must be inferred from the rest of the grammar                                      |
+
+The type of each attribute is defined inside of a rule. Inherited and Synthesized attributes should be specified on the left-hand side, while local and unknown attributes can be defined anywhere.
+
+Any time attributes are passed to a non-terminal, they are specified as if we are calling a function with arguments.
+
+The `Unknown` identifier is currently reserved for non-terminals. Theoretically, the `FirstPass` in `wagon-parser` could run through the "call stack" of the grammar 
+and try determine to what type each attribute is automatically. An `Unknown` identifier would then be rewritten into any of the other types. This is currently not supported however.
+
+#### Scope
+Note that the type of attribute on the "calling" side may differ from that of the "definition" side. For example, we may have `S(*a, *b) -> A(*a, *b);` and `A(&b, &c) -> ...;`. 
+In this case, for the "scope" of `S`, the attributes `*a` and `*b` are inherited, and any changes are thus not passed upwards. 
+However, for the scope of `A`, `&b` and `&c` are synthesized and changes are thus passed upwards. So if `&b` were to change, `*a` would also change inside of `S`'s scope.
+
+Of course, this is implementation detail. If you are working with a raw AST, you can define these things differently.
+
+## Full (Supported) DSL
+At the time of writing, the DSL looks as follows (written itself in the WAGon DSL):
+```
+Wag                -> Metadata? Rule*;
+
+// Metadata Section
+Metadata           -> Meta* MetaDelim;
+MetaDelim          -> "==" "="+;
+Meta               -> Include | Config;
+Include            -> Identifier? "::" Identifier Include?;
+Config             -> Identifier ":" Expression ";";
+
+// Production Rules
+Rule               -> Identifier NTArgs? "->" Rhs;
+Rhs                -> Weight? Chunk* "|" Rhs
+	               |  Weight? Chunk* ";"
+	               ;
+Weight             -> "[" Expression "]";
+Chunk              -> ChunkP EbnfType?;
+EbnfType           -> "+" | "*" | "?";
+ChunkP             -> Symbol
+ 	               |  "(" Chunk* ")"
+ 	               ;
+Symbol             -> NonTerminal
+                   |  Terminal
+                   |  Assignment
+                   |  // This is an empty rule, aka ε aka epsilon.
+                   ;
+
+NonTerminal        -> Identifier NTArgs?;
+NTArgs             -> "(" AttrIdentifierList ")";
+AttrIdentifierList -> AttrIdentifier "," AttrIdentifierList
+                   |  AttrIdentifier
+                   ;
+Terminal           -> "/" /[^/]*/ "/" // Regex
+                   |  String
+                   ;
+Assignment         -> "{" (AttrIdentifier "=" Expression ";")* "}";
+
+// Attribute Evaluation
+Expression         -> SubProc
+                   |  If
+                   |  Disjunct
+                   ;
+SubProc            -> "$(" /[^)]*/ ")";
+If                 -> "if" Disjunct "then" Disjunct ("else" Expression)?;
+Disjunct           -> Conjunct ("&&" Disjunct)?;
+Conjunct           -> Inverse ("||" Conjunct)?;
+Inverse            -> "!"? Comparison;
+Comparison         -> Sum (CompOp Sum)?;
+CompOp             -> "<" | "<=" | ">" | ">=" | "==" | "!=" | "in";
+Sum                -> Term SumP?;
+SumP               -> SumOp Term SumP?;
+SumOp              -> "+" | "-";
+Term               -> Factor TermP?;
+TermP              -> TermOp Factor TermP?;
+TermOp             -> "*" | "//" | "/" | "%";
+Factor             -> Atom ("**" Factor)?;
+Atom               -> AttrIdentifier
+                   |  Dictionary
+                   |  Bool
+                   |  Num
+                   |  Float
+                   |  String
+                   |  "(" Expression ")"
+                   ;
+
+Identifier         -> /[a-zA-Z][a-zA-Z0-9_]*/;
+AttrIdentifier     -> AttrSpec? Identifier;
+AttrSpec           -> "$" | "*" | "&";
+
+Dictionary         -> AttrIdentifier "[" Expression "]";
+Bool               -> "true" | "false";
+Num                -> /[0-9]+/;
+Float              -> /[0-9]+.[0-9]+/;
+String             -> '"' /[^"]*/ '"'
+                   |  "'" /[^']*/ "'"
+```
+
+# Limitations
+Currently, the following features are not supported, but they were planned. As such, skeletons for implementations exist throughout the library.
+
+## Different arrow types.
+At the moment, each rule uses the `->` arrow. However, the following arrows were also designed (and have support in the parser).
+
+### Generative
+A `=>` rule means that this rule is "generative". It differs from "analytic" rules in that it is intended specifically to generate data, as opposed to parsing it.
+
+### Imports
+WAGon was designed with [Module Grammars](https://www.sciencedirect.com/science/article/pii/S0167642313002414) in mind. As such, the following arrow types exist (as defined in the paper):
+
+* `<-` - Import by reference
+* `<=` - Import by clone
+* `<<` - Recursive import-by-clone
+
+Additionally, in order to specify rules that should **not** be imported, one can use the `<\` arrow, as well as a series of non-terminals separated by `&`.
+
+## Subshells
+The attribute evaluation language is quite limited. To get around the limitation, it was decided to allow grammar designers to shell out to arbitrary shell scripts. 
+These scripts should print out json data, which can then be parsed and put into a dictionary. A skeleton implementation exists in `wagon-codegen`, but it was never tested or completed.
+
+## Regexes
+At the moment, a regex is defined as just any string between two `/`, no further support exists for turning these into proper regex machines or checking if it's even valid regex.
+
+## Type checking
+There is no type checking functionality. For now, it is assumed that grammars are properly written (they are not, but we assume it anyway). Proper error handling of value errors should occur
+inside of any generated code as a result.
+
+## Attribute Type Inference
+As discussed in the section on [Attribute Identifiers](#attribute-identifiers), it was intended that the type of an attribute could be inferred automatically. This is not currently supported.
