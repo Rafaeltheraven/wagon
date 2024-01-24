@@ -97,6 +97,10 @@ impl<T: Parse> SpannableNode<T> {
 	pub const fn to_inner(&self) -> &T {
 		&self.node
 	}
+    /// Get a mutable reference to the inner node.
+    pub fn to_inner_mut(&mut self) -> &mut T {
+        &mut self.node
+    }
 
 	const fn new(node: T, span: Span) -> Self {
 		Self {node, span}
