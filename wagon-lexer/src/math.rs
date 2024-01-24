@@ -60,17 +60,9 @@ pub enum Math {
 	/// `<=`
 	Lte,
 
-	#[token("<")]
-	/// `<`
-	Lt,
-
 	#[token(">=")]
 	/// `>=`
 	Gte,
-
-	#[token(">")]
-	/// `>`
-	Gt,
 
 	#[token("in")]
 	/// `in`

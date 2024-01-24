@@ -34,8 +34,8 @@ impl Parse for Symbol {
         match lexer.peek_result()? {
         	Tokens::ProductionToken(Productions::Identifier(_)) => {
                 let ident = SpannableNode::parse(lexer)?;
-                let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::LPar))) {
-                    between_sep(lexer, &Tokens::ProductionToken(Productions::LPar), &Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
+                let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::Lt))) {
+                    between_sep(lexer, &Tokens::ProductionToken(Productions::Lt), &Tokens::ProductionToken(Productions::Gt), Tokens::ProductionToken(Productions::Comma))?
                 } else {
                     Vec::new()
                 };

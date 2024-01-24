@@ -74,9 +74,9 @@ type: analytical;
 =========================================
 
 S -> A | B;
-A -> {$did_a = true;} E($did_a) B | ;
-B -> {$did_a = false;} E($did_a) A | ;
-E(*did_a) -> [*did_a * 2 + 1] C 
+A -> {$did_a = true;} E<$did_a> B | ;
+B -> {$did_a = false;} E<$did_a> A | ;
+E<*did_a> -> [*did_a * 2 + 1] C 
   | [(!*did_a) * 3 - 4] D
   ;
 C -> [0.3] F 
@@ -101,7 +101,7 @@ The metadata section is delineated with 3 or more `=` signs.
 ### Production Rules
 Production Rules follow the pattern `Identifier -> Rule`. Alternate rules can be written using either `|` or by using the same `Identifier` again. The whole rule should be closed with a `;`.
 
-If any inherited or synthesized attributes are used in the rule, they should be declared on the left-hand side of rule, as if they were passed arguments (so between `()`, separated by `,`).
+If any inherited or synthesized attributes are used in the rule, they should be declared on the left-hand side of rule, as if they were type parameters (so between `<>`, separated by `,`).
 
 ### Attribute Identifiers
 In the literature for Attribute Grammars, there are 2 types of attributes; inherited and synthesized. In WAGon, we extend these with 2 more; local and unknown:
@@ -115,13 +115,13 @@ In the literature for Attribute Grammars, there are 2 types of attributes; inher
 
 The type of each attribute is defined inside of a rule. Inherited and Synthesized attributes should be specified on the left-hand side, while local and unknown attributes can be defined anywhere.
 
-Any time attributes are passed to a non-terminal, they are specified as if we are calling a function with arguments.
+Any time attributes are passed to a non-terminal, they are specified as if we are calling a function with type parameters.
 
 The `Unknown` identifier is currently reserved for non-terminals. Theoretically, the `FirstPass` in `wagon-parser` could run through the "call stack" of the grammar 
 and try determine to what type each attribute is automatically. An `Unknown` identifier would then be rewritten into any of the other types. This is currently not supported however.
 
 #### Scope
-Note that the type of attribute on the "calling" side may differ from that of the "definition" side. For example, we may have `S(*a, *b) -> A(*a, *b);` and `A(&b, &c) -> ...;`. 
+Note that the type of attribute on the "calling" side may differ from that of the "definition" side. For example, we may have `S<*a, *b> -> A<*a, *b>;` and `A<&b, &c> -> ...;`. 
 In this case, for the "scope" of `S`, the attributes `*a` and `*b` are inherited, and any changes are thus not passed upwards. 
 However, for the scope of `A`, `&b` and `&c` are synthesized and changes are thus passed upwards. So if `&b` were to change, `*a` would also change inside of `S`'s scope.
 

@@ -31,8 +31,8 @@ impl Parse for Rule {
         let ident = match_error!(match lexer.next_result()? {
         	Tokens::ProductionToken(Productions::Identifier(wagon_ident::Ident::Unknown(s))) => Ok(s),
         })?;
-        let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::LPar))) {
-            between_sep(lexer, &Tokens::ProductionToken(Productions::LPar), &Tokens::ProductionToken(Productions::RPar), Tokens::ProductionToken(Productions::Comma))?
+        let args = if lexer.peek() == Some(&Ok(Tokens::ProductionToken(Productions::Lt))) {
+            between_sep(lexer, &Tokens::ProductionToken(Productions::Lt), &Tokens::ProductionToken(Productions::Gt), Tokens::ProductionToken(Productions::Comma))?
         } else {
             Vec::new()
         };

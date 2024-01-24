@@ -58,6 +58,14 @@ enum Base {
     /// `)`
     RPar,
 
+    #[token("<")]
+    /// `<`
+    Lt,
+
+    #[token(">")]
+    /// `>`
+    Gt,
+
     #[token(";")]
     /// `;`
     Semi,

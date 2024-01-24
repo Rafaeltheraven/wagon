@@ -47,7 +47,7 @@ impl Rhs {
 		} else {
 			resp.push(SpannableNode::parse(lexer)?);
 			let mut check = lexer.peek();
-			while check.is_some() && check != Some(&Ok(Tokens::ProductionToken(Productions::Alternative))) && check != Some(&Ok(Tokens::ProductionToken(Productions::Semi))) {
+			while check.is_some() && !matches!(check, Some(&Ok(Tokens::ProductionToken(Productions::Alternative)) | &Ok(Tokens::ProductionToken(Productions::Semi)))) {
 				if matches!(check, Some(Err(_))) {
 					return Err(WagParseError::Fatal((lexer.span(), "An unknown error occurred during tokenizing".to_string())))
 				}

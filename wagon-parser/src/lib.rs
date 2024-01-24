@@ -97,7 +97,7 @@ impl<T: Parse> SpannableNode<T> {
 	pub const fn to_inner(&self) -> &T {
 		&self.node
 	}
-    
+
     /// Get a mutable reference to the inner node.
     pub fn to_inner_mut(&mut self) -> &mut T {
         &mut self.node
@@ -180,7 +180,7 @@ impl<T: Parse> Spannable for SpannableNode<T> {
     }
 }
 
-impl<T: Parse> Parse for SpannableNode<T> {
+impl<T: Parse + std::fmt::Debug> Parse for SpannableNode<T> {
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
     	let start = lexer.span().start;
     	let node = T::parse(lexer)?;

@@ -402,8 +402,8 @@ mod tests {
 	#[allow(clippy::too_many_lines)]
 	fn test_example_wag2() {
 		let input = r"
-		S -> {$x = 0; $y = 0;} X($x, $y);
-		X(*y, &x) -> 'a' {*y = *y + 1; &x = &x + 1;} B;
+		S -> {$x = 0; $y = 0;} X<$x, $y>;
+		X<*y, &x> -> 'a' {*y = *y + 1; &x = &x + 1;} B;
 		B -> 'b';
 		";
 		let mut lexer = LexerBridge::new(input);
