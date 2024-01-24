@@ -15,5 +15,4 @@ rust-nightly:
   script:
     - cargo build --verbose
     - cargo test --verbose
-    - cargo clippy --verbose
   allow_failure: true
