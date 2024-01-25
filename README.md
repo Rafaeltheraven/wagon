@@ -62,7 +62,7 @@ to its usecase, so most people can ignore this crate. However, the implementatio
 Technically, this library can be used completely removed from the WAGon ecosystem, it is a fully functioning GLL library. However, it does expect attributes and weights to exist. As such, it can fundamentally not be as efficient as a dedicated GLL library which does not have to consider these things.
 
 #### `wagon-bin`
-[`wagon-bin`](https://wagon.thebias.nl/wagon/) is the binary which takes an input file and generates code for a fully functioning GLL parser. Can be interesting to look at in order to see
+[`wagon-bin`](https://wagon.thebias.nl/wagon-bin/) is the binary which takes an input file and generates code for a fully functioning GLL parser. Can be interesting to look at in order to see
 how to convert an input file into a valid WAG, as well as to see how to nicely show error messaging to your users.
 
 # The WAGon DSL
