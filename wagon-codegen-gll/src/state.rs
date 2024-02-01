@@ -365,19 +365,22 @@ impl CodeGenState {
 			r.hash(&mut hasher);
 			let basename = hasher.finish();
 			let little_name = format!("{basename:x}_little.dfa");
+			let little_path = std::path::Path::new("regexes").join(&little_name);
+			let little_string = little_path.to_str().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Non utf-8 path".to_string())))?;
 			let (bytes, pad) = dfa.to_bytes_little_endian();
 			regex_dir.insert_blob(&little_name, bytes[pad..].into());
 			let big_name = format!("{basename:x}_big.dfa");
+			let big_path = std::path::Path::new("regexes").join(&big_name);
+			let big_string = big_path.to_str().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Non utf-8 path".to_string())))?;
 			let (bytes, pad) = dfa.to_bytes_big_endian();
 			regex_dir.insert_blob(&big_name, bytes[pad..].into());
     		stream.extend(quote!(
-    			#[cfg(target_endian = "big")]
-    			let filename = format!("regexes/{}", #big_name);
-    			#[cfg(target_endian = "little")]
-    			let filename = format!("regexes/{}", #little_name);
     			let aligned: &regex_automata::util::wire::AlignAs<[u8], u32> = &regex_automata::util::wire::AlignAs {
     				_align: [],
-			        bytes: *include_bytes!(filename),
+    				#[cfg(target_endian = "big")]
+			        bytes: *include_bytes!(#big_string),
+			        #[cfg(target_endian = "little")]
+			        bytes: *include_bytes!(#little_string),
     			};
     			let (dfa, _) = regex_automata::dfa::dense::DFA::from_bytes(&aligned.bytes).expect("Unable to serialize regex DFA");
     			let automata = wagon_gll::RegexTerminal::new(#r, dfa);
