@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, helpers::{check_semi, between_sep}, Rewrite, SpannableNode, Peek, ResultNext};
 use wagon_lexer::{productions::{ImportType, Productions}, Spannable};
 use crate::firstpass::{FirstPassState, FirstPassResult};
@@ -75,7 +77,7 @@ Ident format:
 
 {BASE}·{alt}·{chunk}             - Default
                     ·p           - Helper for '+'
-                    [_{chunk}]+  - Deeper layers of recursive EBNF
+                    [··{chunk}]+ - Deeper layers of recursive EBNF
                                - - Default again but at this layer
 
 */
@@ -113,6 +115,35 @@ impl Rewrite<Vec<Self>> for SpannableNode<Rule> {
             },
             Rule::Import(..) => todo!(),
             Rule::Exclude(..) => todo!(),
+        }
+    }
+}
+
+use wagon_utils::comma_separated;
+use itertools::Itertools;
+impl Display for Rule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Analytic(s, args, rhs) => {
+                if args.is_empty() {
+                    writeln!(f, "{s} -> {};", rhs.iter().join(" | "))
+                } else {
+                    writeln!(f, "{s}({}) -> {};", comma_separated(args), rhs.iter().join(" | "))
+                }
+            },
+            Self::Generate(s, args, rhs) => {
+                if args.is_empty() {
+                    writeln!(f, "{s} <= {};", rhs.iter().join(" | "))
+                } else {
+                    writeln!(f, "{s}({}) <= {};", comma_separated(args), rhs.iter().join(" | "))
+                }
+            },
+            Self::Import(s1, imp, s2) => {
+                writeln!(f, "{s1} {imp} {s2};")
+            },
+            Self::Exclude(s, ex) => {
+                writeln!(f, "{s} </ {}", ex.iter().join(" & "))
+            },
         }
     }
 }

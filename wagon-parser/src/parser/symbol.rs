@@ -87,11 +87,18 @@ impl Symbol {
     }
 }
 
+use itertools::Itertools;
 impl Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::NonTerminal(i, _) => write!(f, "{i}"),
-            Self::Assignment(i) => write!(f, "{}", i.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join("; ")),
+            Self::NonTerminal(i, args) => {
+                if args.is_empty() {
+                    write!(f, "{i}")
+                } else {
+                    write!(f, "{i}({})", args.iter().join(", "))
+                }
+            }
+            Self::Assignment(i) => write!(f, "{{{}}}", i.iter().join("; ")),
             Self::Terminal(i) => write!(f, "{i}"),
             Self::Epsilon => write!(f, "ε"),
         }

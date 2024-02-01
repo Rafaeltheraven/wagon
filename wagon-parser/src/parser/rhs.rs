@@ -1,4 +1,5 @@
 use crate::parser::Span;
+use std::fmt::Display;
 use std::matches;
 
 use wagon_lexer::Spannable;
@@ -128,6 +129,16 @@ impl Rhs {
 		blocks.push(curr);
 		Ok(blocks)
 	}
+}
+
+use itertools::Itertools;
+impl Display for Rhs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(weight) = &self.weight {
+        	write!(f, "[{weight}] ")?;
+        }
+        write!(f, "{}", self.chunks.iter().join(" "))
+    }
 }
 
 #[cfg(test)]

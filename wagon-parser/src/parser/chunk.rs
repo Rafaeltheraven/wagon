@@ -1,4 +1,6 @@
 
+use std::fmt::Display;
+
 use crate::WrapSpannable;
 use crate::firstpass::{FirstPassResult, FirstPassState};
 use wagon_lexer::{productions::{Productions, EbnfType}, Span};
@@ -121,7 +123,7 @@ impl Chunk {
                     Self::rewrite_ebnf(&e, ident, args, yanked, span, rule_func, &mut rules);
                 },
                 Self { chunk: ChunkP::Group(g), ..} => {
-                    let new_ident = format!("{ident}_{depth}");
+                    let new_ident = format!("{ident}··{depth}");
                     let mut new_rule = SpannableNode::new(rule_func(new_ident.clone(), args.clone(), vec![Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())]), span.clone());
                     rules.extend(new_rule.rewrite(depth+1, state)?);
                     rules.push(new_rule);
@@ -230,4 +232,24 @@ impl Parse for Chunk {
 			Ok(Self {chunk, ebnf: None})
 		}
 	}
+}
+
+use itertools::Itertools;
+impl Display for Chunk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(ebnf) = &self.ebnf {
+            write!(f, "{}{ebnf}", self.chunk)
+        } else {
+            write!(f, "{}", self.chunk)
+        }
+    }
+}
+
+impl Display for ChunkP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChunkP::Unit(s) => write!(f, "{s}"),
+            ChunkP::Group(g) => write!(f, "({})", g.iter().join(" ")),
+        }
+    }
 }

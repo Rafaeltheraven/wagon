@@ -1,7 +1,7 @@
 use crate::parser::helpers::{check_semi, check_colon};
 use wagon_ident::Ident;
 use wagon_macros::match_error;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext, SpannableNode};
 
@@ -44,5 +44,17 @@ impl Parse for Metadata {
                 })?;
         }
         Ok(Self { includes, mappings })
+    }
+}
+
+impl Display for Metadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for include in &self.includes {
+            writeln!(f, "include {include};")?;
+        }
+        for (key, value) in &self.mappings {
+            writeln!(f, "{key}: {value};")?;
+        }
+        writeln!(f, "================")
     }
 }

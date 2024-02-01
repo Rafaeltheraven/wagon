@@ -23,6 +23,7 @@ indexmap = {workspace = true}
 quote = {workspace = true}
 derivative = {workspace = true}
 regex-automata = {workspace = true}
+itertools = {workspace = true}
 regex-syntax = "0.8.2"
 
 [dev-dependencies]

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::firstpass::{FirstPassState, FirstPassResult, WagCheckError};
 
 use super::{Parse, ParseResult, LexerBridge, Rewrite, SpannableNode, Spannable, Peek};
@@ -66,4 +68,14 @@ impl Rewrite<()> for Wag {
         Ok(())
     }
 
+}
+
+impl Display for Wag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.metadata.fmt(f)?;
+        for rule in &self.grammar {
+            rule.fmt(f)?;
+        }
+        Ok(())
+    }
 }
