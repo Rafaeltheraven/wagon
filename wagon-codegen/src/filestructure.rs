@@ -19,7 +19,7 @@ pub struct FileStructure {
 /// for writing to disk anyway, they are not supported. Just convert them to string instead.
 #[derive(Debug, Eq, PartialEq)]
 pub enum FileType {
-	/// Write a specific string to a file (similar to [`Tokens`]).
+	/// Write a specific string to a file.
 	String(String),
 	/// Write binary data to a file.
 	Blob(Box<[u8]>),

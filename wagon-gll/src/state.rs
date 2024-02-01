@@ -10,7 +10,7 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 
 /// A map from a uuid to a specific [`GLLBlockLabel`].
 pub type LabelMap<'a> = HashMap<&'a str, GLLBlockLabel<'a>>;
-/// A map representing a rule and the constituent [`Ident`s] of that rule. 
+/// A map representing a rule and the constituent [`Ident`]s of that rule. 
 pub type RuleMap<'a> = HashMap<&'a str, Rc<Vec<Ident>>>;
 /// A map from a regular expression to the [`RegexTerminal`] that it represents.
 pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
@@ -493,7 +493,7 @@ impl<'a> GLLState<'a> {
 
     /// Get a specific [`RegexTerminal`] by its pattern.
     ///
-    /// This differs from [`get_label_by_uuid`] in that it specifically returns a [`RegexTerminal`], as opposed to some trait object.
+    /// This differs from [`Self::get_label_by_uuid`] in that it specifically returns a [`RegexTerminal`], as opposed to some trait object.
     ///
     /// # Errors
     /// Returns a [`GLLParseError::UnknownLabel`] if the dfa can not be found.
