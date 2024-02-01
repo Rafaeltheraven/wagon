@@ -9,6 +9,7 @@ mod fallible_itertools;
 
 use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
 
+use itertools::Itertools;
 pub use peek::Peek;
 pub use fallible_itertools::FallibleItertools;
 
@@ -186,6 +187,12 @@ pub fn comma_separated_with_or_str(strings: &Vec<&str>) -> String {
             format!("{joined} or {last}")
         }
     })
+}
+
+/// Given a list of objects that implement [`std::fmt::Display`]. Returns a comma separated string.
+#[must_use] 
+pub fn comma_separated<T: std::fmt::Display>(input: &[T]) -> String {
+    input.iter().join(",")
 }
 
 /// Given a list of values, attempt to normalize them based on their sum.

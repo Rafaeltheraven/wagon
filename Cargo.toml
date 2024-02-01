@@ -34,6 +34,7 @@ ordered-float = "3.9.1"
 replace_with = "0.1.7"
 derivative = "2.2.0"
 regex-automata = "0.4.5"
+itertools = "0.12.1"
 
 # local crates
 wagon-codegen = {path = "./wagon-codegen"}
