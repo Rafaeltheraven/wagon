@@ -8,8 +8,9 @@
 //! are probably faster implementations out there that do not have to consider the possibility of the grammar changing at runtime.
 use gss::{GSSNodeIndex, GSSNode};
 use petgraph::prelude::EdgeIndex;
+
 use wagon_utils::comma_separated_with_or_str;
-use std::{hash::{Hash, Hasher}, fmt::{Debug, Display}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, error::Error, mem::Discriminant};
+use std::{hash::{Hash, Hasher}, fmt::Display, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, error::Error, mem::Discriminant};
 
 use self::{value::Value, value::InnerValueError};
 use sppf::{SPPFNodeIndex, SPPFNode};
@@ -29,8 +30,8 @@ mod state;
 mod descriptor;
 mod slot;
 
-pub use label::Label;
-pub use state::GLLState;
+pub use label::{Label, RegexTerminal};
+pub use state::{GLLState, LabelMap, RuleMap, RegexMap};
 pub use slot::GrammarSlot;
 
 /// A single byte in a [`Terminal`].
@@ -108,10 +109,10 @@ impl<'a> Display for GLLParseError<'a> {
         match self {
             Self::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}."),
             Self::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}."),
-            Self::Utf8Error(e) => std::fmt::Display::fmt(&e, f),
+            Self::Utf8Error(e) => e.fmt(f),
             Self::UnknownRule(s) => write!(f, "No rule with id {s} exists in the state object."),
             Self::UnknownLabel(s) => write!(f, "No label with id {s} exists in the state object."),
-            Self::ValueError(e) => std::fmt::Display::fmt(&e, f),
+            Self::ValueError(e) => e.fmt(f),
             Self::MissingRoot => write!(f, "{ROOT_UUID} could not be found."),
             Self::MissingSPPFNode(i) => write!(f, "Expected to find SPPF node {i:?} in the graph, but it was not there."),
             Self::IncorrectSPPFType(e, c) => write!(f, "Expected SPPFNode of type {}, got {c:?}", comma_separated_with_or_str(e)),

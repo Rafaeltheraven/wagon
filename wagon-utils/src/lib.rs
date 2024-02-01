@@ -5,10 +5,12 @@
 
 /// A trait version of [`std::iter::Peekable`].
 mod peek;
+mod fallible_itertools;
 
 use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
 
 pub use peek::Peek;
+pub use fallible_itertools::FallibleItertools;
 
 /// Removes the first and last character of a string.
 /// # Example

@@ -12,6 +12,7 @@ description = "Various utilities for WAGon."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+itertools = "0.12.1"
 
 [lints]
 workspace = true

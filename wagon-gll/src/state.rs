@@ -1,11 +1,19 @@
-use std::{collections::{HashSet, HashMap}, rc::Rc, format};
+use std::{collections::{HashSet, HashMap}, rc::Rc, format, usize};
 
 use indexmap::IndexSet;
 use petgraph::{Direction::Outgoing, prelude::EdgeIndex};
+use regex_automata::dfa::Automaton;
 
-use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap};
+use crate::{value::Value, AttributeMap, AttributeKey, ReturnMap, label::RegexTerminal};
 
 use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFNode}, descriptor::Descriptor, GrammarSlot, ParseResult, GLLParseError, Terminal, Ident, ROOT_UUID, GLLBlockLabel};
+
+/// A map from a uuid to a specific [`GLLBlockLabel`].
+pub type LabelMap<'a> = HashMap<&'a str, GLLBlockLabel<'a>>;
+/// A map representing a rule and the constituent [`Ident`s] of that rule. 
+pub type RuleMap<'a> = HashMap<&'a str, Rc<Vec<Ident>>>;
+/// A map from a regular expression to the [`RegexTerminal`] that it represents.
+pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 
 /// The state object for the GLL parse process.
 ///
@@ -15,7 +23,7 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 /// # Example
 /// ```
 /// # use std::collections::HashMap;
-/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel, value::Value};
+/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel, value::Value, LabelMap, RuleMap, RegexMap};
 /// use wagon_ident::Ident;
 /// use std::rc::Rc;
 /// #[derive(Debug)]
@@ -47,14 +55,15 @@ use crate::{gss::{GSS, GSSNodeIndex, GSSNode}, sppf::{SPPF, SPPFNodeIndex, SPPFN
 ///#    }
 /// }
 ///# fn main() -> ParseResult<'static, ()> {
-///     let mut l_map: HashMap<&str, GLLBlockLabel> = HashMap::new();
-///     let mut r_map: HashMap<&str, Rc<Vec<Ident>>> = HashMap::new();
+///     let mut l_map: LabelMap = HashMap::new();
+///     let mut r_map: RuleMap = HashMap::new();
+///     let mut regex_map: RegexMap = HashMap::new();
 ///     let root_label = Rc::new(Root{});
 ///     let root_rule = Rc::new(vec![]);
 ///     l_map.insert(ROOT_UUID, root_label);
 ///     r_map.insert(ROOT_UUID, root_rule);
 ///     let input = "".as_bytes();
-///     let mut state = GLLState::init(input, l_map, r_map)?;
+///     let mut state = GLLState::init(input, l_map, r_map, regex_map)?;
 ///     state.main();
 ///#    Ok(())
 ///# }
@@ -88,8 +97,9 @@ pub struct GLLState<'a> {
     // Easy Maps
     gss_map: HashMap<Rc<GSSNode<'a>>, GSSNodeIndex>,
     sppf_map: HashMap<SPPFNode<'a>, SPPFNodeIndex>,
-    label_map: HashMap<&'a str, GLLBlockLabel<'a>>,
-    rule_map: HashMap<&'a str, Rc<Vec<Ident>>>,
+    label_map: LabelMap<'a>,
+    rule_map: RuleMap<'a>,
+    regex_map: RegexMap<'a>,
     /// All the errors
     pub errors: Vec<GLLParseError<'a>>
 }
@@ -101,7 +111,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns [`GLLParseError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
-    pub fn init(input: &'a [u8], label_map: HashMap<&'a str, GLLBlockLabel<'a>>, rule_map: HashMap<&'a str, Rc<Vec<Ident>>>) -> ParseResult<'a, Self> {
+    pub fn init(input: &'a [u8], label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ParseResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
         let mut sppf_map = HashMap::new();
@@ -129,6 +139,7 @@ impl<'a> GLLState<'a> {
             sppf_map,
             rule_map,
             label_map,
+            regex_map,
             errors: Vec::default(),
         };
         state.add(root_slot, gss_root, 0, sppf_root);
@@ -352,6 +363,28 @@ impl<'a> GLLState<'a> {
         Ok(())
     }
 
+    // TODO: Make this cached
+    fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &'a [u8]) -> ParseResult<'a, usize> {
+        let mut pointer = start_pointer;
+        let input_len = input.len();
+        for expected in bytes {
+            if pointer >= input_len {
+                return Err(GLLParseError::TooLong { pointer, offender: bytes })
+            }
+            let check = input[pointer];
+            if check != *expected {
+                return Err(GLLParseError::UnexpectedByte { pointer, expected: *expected, offender: check })
+            }
+            pointer += 1;
+        }
+        Ok(pointer)
+    }
+
+    // This one only exists to work around the borrow checker.
+    fn _next(&self, bytes: Terminal<'a>) -> ParseResult<'a, usize> {
+        Self::__next(bytes, self.input_pointer, self.input)
+    }
+
     /// Consume the following bytes from the input string. 
     ///
     /// If the bytes we just consumed are not the expected bytes, we return an error.
@@ -360,28 +393,71 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns either a [`GLLParseError::TooLong`] or [`GLLParseError::UnexpectedByte`] depending on the expected bytes and state of the input.
-    pub fn next(&mut self, bytes: Terminal<'a>) -> ParseResult<()> {
-        let mut pointer = self.input_pointer;
-        for expected in bytes {
-            if pointer >= self.input.len() {
-                return Err(GLLParseError::TooLong { pointer, offender: bytes })
-            }
-            let check = self.input[pointer];
-            if check != *expected {
-                return Err(GLLParseError::UnexpectedByte { pointer, expected: *expected, offender: check })
-            }
-            pointer += 1;
-        };
+    pub fn next(&mut self, bytes: Terminal<'a>) -> ParseResult<'a, ()> {
+        let pointer = self._next(bytes)?;
         self.input_pointer = pointer;
         Ok(())
     }
 
     /// Check if the following bytes **can** be consumed, but do not consume them.
     pub fn has_next(&mut self, bytes: Terminal<'a>) -> bool {
-        let curr = self.input_pointer;
-        let ret = self.next(bytes).is_ok();
-        self.input_pointer = curr;
-        ret
+        self._next(bytes).is_ok()
+    }
+
+    #[must_use]
+    fn _next_regex(regex: &RegexTerminal<'a>, start_pointer: usize, input: &[u8]) -> Option<usize> {
+        let current_byte = &input[start_pointer..=start_pointer];
+        let Ok(mut curr_state) = regex.automaton.start_state_forward(&current_byte.into()) else {
+            return None
+        };
+        let input_len = input.len();
+        let mut i = 0;
+        let mut last_match = None;
+        while !regex.automaton.is_dead_state(curr_state) && !regex.automaton.is_quit_state(curr_state)  {
+            let pointer = start_pointer + i;
+            if pointer >= input_len {
+                break;
+            }
+            let byte = input[pointer];
+            curr_state = regex.automaton.next_state(curr_state, byte);
+            if regex.automaton.is_match_state(curr_state) {
+                last_match = Some(i);
+            }
+            i += 1;
+        }
+        if regex.automaton.is_quit_state(curr_state) || regex.automaton.is_dead_state(curr_state) {
+            last_match
+        } else {
+            let state = regex.automaton.next_eoi_state(curr_state);
+            if regex.automaton.is_match_state(state) {
+                Some(i)
+            } else {
+                last_match
+            }
+        }
+    }
+
+    /// Check if the given regex is accepting.
+    ///
+    /// If it is, we move the pointer forwards and return the accepted bytes. If no bytes are accepted, we return [`None`].
+    ///
+    /// # Errors
+    /// Returns an error if the regex completely fails to build.
+    pub fn next_regex(&mut self, pattern: &'a str) -> ParseResult<'a, Option<Terminal<'a>>> {
+        let regex = self.get_regex_automaton(pattern)?;
+        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
+            let result = &self.input[self.input_pointer..self.input_pointer + j];
+            self.input_pointer += j;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Get the current input byte for the state
+    #[must_use]
+    pub fn current_byte(&self) -> &[u8] {
+        &self.input[self.input_pointer..=self.input_pointer]
     }
 
     /// Check if, given the current state, the [`Label`](crate::Label)'s first-follow set is accepting.
@@ -413,6 +489,16 @@ impl<'a> GLLState<'a> {
     /// Returns a [`GLLParseError::UnknownLabel`] if the label can not be found.
     pub fn get_label_by_uuid(&self, label: &'a str) -> ParseResult<'a, GLLBlockLabel<'a>> {
         Ok(self.label_map.get(label).ok_or_else(|| GLLParseError::UnknownLabel(label))?.clone())
+    }
+
+    /// Get a specific [`RegexTerminal`] by its pattern.
+    ///
+    /// This differs from [`get_label_by_uuid`] in that it specifically returns a [`RegexTerminal`], as opposed to some trait object.
+    ///
+    /// # Errors
+    /// Returns a [`GLLParseError::UnknownLabel`] if the dfa can not be found.
+    pub fn get_regex_automaton(&self, regex: &'a str) -> ParseResult<'a, Rc<RegexTerminal<'a>>> {
+        Ok(self.regex_map.get(regex).ok_or_else(|| GLLParseError::UnknownLabel(regex))?.clone())
     }
 
     /// Get an attribute from the node pointed at by `self.gss_pointer`.

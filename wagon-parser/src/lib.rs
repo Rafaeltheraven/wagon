@@ -34,12 +34,13 @@ pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
 }
 
 /// A trait for [`Error`]s that return a specific message and span structure.
-pub trait MsgAndSpan: Error {
-    /// Return the message and the span.
-    fn msg_and_span(self) -> ((String, String), Span) where Self: Sized {
+pub trait ErrorReport: Error {
+    /// Return the full error report
+    fn report(self) -> ((String, String), Span, Option<String>) where Self: Sized {
         let msg = self.msg();
+        let source = ErrorReport::source(&self);
         let span = self.span();
-        (msg, span)
+        (msg, span, source)
     }
 
     /// Return span information for this error.
@@ -50,6 +51,16 @@ pub trait MsgAndSpan: Error {
     /// The first element is a "header" (for example: 'Fatal Exception!').
     /// The second element is the actual message.
     fn msg(&self) -> (String, String);
+
+    /// Return the text source for this error message.
+    ///
+    /// Usually the source of the error is just the input file, in which case we return `None`.
+    /// Sometimes, however, the source of the error may be a `TokenStream` or some other text. In this case,
+    /// the output of `source` should be that stream of text.
+    fn source(&self) -> Option<String> {
+        None
+    }
+
 }
 
 /// A node is anything that implements [`Parse`]. `SpannableNode` then, is a wrapper around this node that holds span information about it.

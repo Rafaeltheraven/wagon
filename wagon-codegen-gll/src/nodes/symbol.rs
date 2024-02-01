@@ -125,7 +125,15 @@ fn handle_non_terminal(i: SpannableIdent, label: &Rc<Ident>, state: &mut CodeGen
 	}
 	if !found_first {
 		state.add_req_first_attr(label.clone(), i.clone());
-		state.get_first(label)?[0].0.push(i.clone());
+		let stream = match i.clone().into_inner() {
+		    wagon_ident::Ident::Unknown(s) => quote!(state.get_label_by_uuid(#s)?),
+            other => {
+            	let i = other.to_ident();
+            	quote!(#i.try_into()?)
+            }
+		};
+		state.get_first(label)?[0].0.push(stream);
+		state.get_first_ident(label)?[0].push(i.clone());
 	}
 	if !matches!(i.to_inner(), wagon_ident::Ident::Unknown(_)) {
 		state.add_req_code_attr(label.clone(), i);
@@ -137,14 +145,36 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 	let (symbol, block, block_size) = counts;
 	let (uuid, rule_uuid) = uuids;
 	let (first_symbol, found_first) = checks;
-	let span = t.span();
-	match t.into_inner() {
-		Terminal::Regex(_r) => {
-			return Err(crate::CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Still determining what to do with regexes".to_string()), span));
+	let mut stream = TokenStream::new();
+	let (next_stream, cond_stream) = match t.into_inner() {
+		Terminal::Regex(r, dfa) => {
+			stream.extend(quote!(
+				let pattern = #r;
+			));
+			if !found_first {
+				state.get_first(label)?[0].0.push(quote!(state.get_regex_automaton(#r)?));
+			}
+			state.regexes.push((r, dfa));
+			if first_symbol && block_size != 1 {
+				stream.extend(quote!(
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+					let new_node = state.get_node_t(bytes);
+					state.sppf_pointer = new_node;
+				));
+				state.add_code(label.clone(), stream);
+				return Ok(())
+			}
+			let next_stream = if first_symbol && block_size == 1 {
+				quote!(
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+				)
+			} else {
+				TokenStream::new()
+			};
+			(next_stream, quote!(let Some(bytes) = state.next_regex(pattern)))
 		},
 		Terminal::LitString(s) => {
 			let bytes = Literal::byte_string(s.as_bytes());
-			let mut stream = TokenStream::new();
 			stream.extend(quote!(
 				let bytes = #bytes;
 			));
@@ -155,42 +185,43 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 				stream.extend(quote!(
 					let new_node = state.get_node_t(bytes);
 					state.sppf_pointer = new_node;
-					state.next(bytes).unwrap();
+					state.next(bytes)?;
 				));
 				state.add_code(label.clone(), stream);
 				return Ok(());
 			}
-			let (dot, pos) = if symbol == block_size-1 {
-				(block+1, 0)
-			} else {
-				(block, symbol+1)
-			};
-			let base = quote!(
-				let node = state.get_node_t(bytes);
-				state.next(bytes).unwrap();
-				let slot = wagon_gll::GrammarSlot::new(
-					state.get_label_by_uuid(#uuid)?, 
-					state.get_rule(#rule_uuid)?,
-					#dot, 
-					#pos,
-					#rule_uuid
-				);
-				state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer)?;
-			);
-			if !first_symbol {
-				stream.extend(quote!(
-					if state.has_next(bytes) {
-						#base
-					} else {
-						return;
-					}
-				));
-				state.add_code(label.clone(), stream);
-			} else if block_size == 1 {
-				stream.extend(base);
-				state.add_code(label.clone(), stream);
-			}
+			(quote!(state.next(bytes)?;), quote!(state.has_next(bytes)))
 		},
 	};
+	let (dot, pos) = if symbol == block_size-1 {
+		(block+1, 0)
+	} else {
+		(block, symbol+1)
+	};
+	let base = quote!(
+		#next_stream
+		let node = state.get_node_t(bytes);
+		let slot = wagon_gll::GrammarSlot::new(
+			state.get_label_by_uuid(#uuid)?, 
+			state.get_rule(#rule_uuid)?,
+			#dot, 
+			#pos,
+			#rule_uuid
+		);
+		state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer)?;
+	);
+	if !first_symbol {
+		stream.extend(quote!(
+			if #cond_stream {
+				#base
+			} else {
+				return Ok(())
+			}
+		));
+		state.add_code(label.clone(), stream);
+	} else if block_size == 1 {
+		stream.extend(base);
+		state.add_code(label.clone(), stream);
+	}
 	Ok(())
 }

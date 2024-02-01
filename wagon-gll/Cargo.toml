@@ -12,7 +12,7 @@ description = "GLL library for WAGon generated parsers."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derivative = "2.2.0"
+derivative = {workspace = true}
 indexmap = {workspace = true}
 ordered-float = {workspace = true}
 petgraph = {workspace = true}
@@ -20,6 +20,7 @@ rand_core = "0.6.4"
 wagon-ident = {workspace = true}
 wagon-value = {workspace = true}
 wagon-utils = {workspace = true}
+regex-automata = "0.4.4"
 
 [lints]
 workspace = true

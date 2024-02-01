@@ -1,3 +1,6 @@
+use regex_automata::dfa::Automaton;
+use regex_automata::dfa::dense::DFA;
+
 use crate::InnerValueError;
 use crate::Hash;
 use crate::Hasher;
@@ -188,6 +191,71 @@ impl<'a> Label<'a> for Terminal<'a> {
 	fn _weight(&self, _state: &GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>> {
 		Some(Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::Fatal("Attempted running the `_weight` method on a terminal.".to_string())))))
 	}
+}
+
+#[derive(Debug)]
+/// A special type of Terminal which is a regex recognizer.
+///
+/// Implements label so that regex machines can be used. The string representation/uuid of the machine is its regex pattern.
+pub struct RegexTerminal<'a> {
+	pattern: &'a str,
+	/// The regex automaton this terminal represents.
+	pub automaton: DFA<&'a [u32]>
+}
+
+impl<'a> RegexTerminal<'a> {
+	/// Construct a new `RegexTerminal`.
+	#[must_use]
+	pub const fn new(pattern: &'a str, automaton: DFA<&'a [u32]>) -> Self {
+		Self { pattern, automaton }
+	}
+}
+
+impl<'a> Label<'a> for RegexTerminal<'a> {
+    fn first_set(&self, _: &GLLState<'a>) -> ParseResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>> {
+        Err(GLLParseError::Fatal("Attempted running the `first_set` method on a regex."))
+    }
+
+    fn code(&self, _: &mut GLLState<'a>) -> ParseResult<'a, ()> {
+        Err(GLLParseError::Fatal("Attempted running the `code` method on a regex."))
+    }
+
+    fn _weight(&self, _: &GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>> {
+        Some(Err(GLLParseError::Fatal("Attempted running the `weight` method on a regex.")))
+    }
+
+    fn to_string(&self) -> &str {
+        self.pattern
+    }
+
+    fn str_parts(&self) -> Vec<&str> {
+        vec![self.to_string()]
+    }
+
+    fn uuid(&self) -> &str {
+        self.to_string()
+    }
+
+    fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) {
+        (Vec::new(), Vec::new())
+    }
+    fn is_eps(&self) -> bool {
+	    self.automaton.pattern_len() == 0
+    }
+
+    /// A regex is sort of between a non-terminal and a terminal. They way `first` is used, we want
+    /// it to return `true` if some terminal is parsable from this point. In the case of a regex, this means the pattern is accepting.
+    fn first(&self, state: &mut GLLState<'a>) -> ParseResult<'a, bool> {
+	    Ok(state.next_regex(self.pattern)?.is_some())
+    }
+
+    fn is_terminal(&self) -> bool {
+	    true
+    }
+
+    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
+	    Ok(self.automaton.has_empty())
+    }
 }
 
 impl<'a> Hash for dyn Label<'a> {

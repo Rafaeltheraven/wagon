@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use wagon_lexer::Spannable;
-use crate::{SpannableNode, MsgAndSpan, Span};
+use crate::{SpannableNode, ErrorReport, Span};
 use std::{collections::HashMap, error::Error};
 
 use indexmap::IndexSet;
@@ -40,7 +40,7 @@ pub enum WagCheckError {
 
 impl Error for WagCheckError{}
 
-impl MsgAndSpan for WagCheckError {
+impl ErrorReport for WagCheckError {
 	fn msg(&self) -> (String, String) {
 		match self {
 		    Self::DuplicateParameters(nt, i) => ("Duplicate Parameter!".to_string(), format!("Nonterminal {nt} uses parameter {i} multiple times. This makes no sense.")),

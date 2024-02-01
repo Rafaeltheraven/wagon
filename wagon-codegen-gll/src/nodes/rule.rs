@@ -21,6 +21,7 @@ impl CodeGen for SpannableNode<Rule> {
                     gen_args.state.top = Some(pointer.clone());
                 }
                 gen_args.state.first_queue.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
+                gen_args.state.first_idents.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
                 gen_args.state.str_repr.insert(pointer.clone(), vec![ident]);
                 let alt_count = rhs.len();
                 gen_args.state.add_code(pointer.clone(), quote!(
@@ -41,9 +42,9 @@ impl CodeGen for SpannableNode<Rule> {
                     )
                 } else {
                     let to_add = if gen_args.weight_config.min_weight {
-                        quote!(itertools::Itertools::min_set_by(candidates.into_iter(), |x, y| x.cmp(y, state)))
+                        quote!(wagon_utils::FallibleItertools::fallible_min_set_by(candidates.into_iter(), |x, y| x.partial_cmp(y, state))?)
                     } else {
-                        quote!(itertools::Itertools::max_set_by(candidates.into_iter(), |x, y| x.cmp(y, state)))
+                        quote!(wagon_utils::FallibleItertools::fallible_max_set_by(candidates.into_iter(), |x, y| x.partial_cmp(y, state))?)
                     };
                     quote!(
                         if !candidates.is_empty() {

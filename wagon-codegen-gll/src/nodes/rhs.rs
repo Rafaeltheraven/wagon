@@ -17,6 +17,7 @@ impl CodeGen for SpannableNode<Rhs> {
         let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("ident".to_string()), span.clone()))?.clone();
         let alt = gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?;
         let mut firsts = Vec::with_capacity(node.chunks.len());
+        let mut first_idents = Vec::with_capacity(node.chunks.len());
         let weight = std::mem::take(&mut node.weight);
         let blocks = node.blocks()?;
         let blocks_count = blocks.len();
@@ -29,6 +30,12 @@ impl CodeGen for SpannableNode<Rhs> {
             let label_str = format!("{ident}_{alt}_{j}");
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
             gen_args.state.first_queue.insert(label.clone(), vec![(Vec::with_capacity(block.len()), None)]);
+            gen_args.state.first_idents.insert(label.clone(), vec![Vec::with_capacity(block.len())]);
+            if let Some(alts) = gen_args.state.alt_map.get_mut(&ident) {
+                alts.push(label.clone());
+            } else {
+                gen_args.state.alt_map.insert(ident.clone(), vec![label.clone()]);
+            };
             let block_size = block.len();
             let mut str_repr = Vec::with_capacity(block_size);
             if block_size == 0 {
@@ -57,7 +64,7 @@ impl CodeGen for SpannableNode<Rhs> {
                         counter += 1;
                     } else {
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
-                            let #proc_ident = state.restore_attribute(#skipped_k).to_owned();
+                            let #proc_ident = state.restore_attribute(#skipped_k)?.clone();
                         ));
                         gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                     }
@@ -118,7 +125,7 @@ impl CodeGen for SpannableNode<Rhs> {
                     inner_block
                 } else {
                     quote!(
-                       let fst = state.get_label_by_uuid(#label_str);
+                       let fst = state.get_label_by_uuid(#label_str)?;
                        if state.test_next(&fst)? {
                            #inner_block 
                        } 
@@ -126,9 +133,11 @@ impl CodeGen for SpannableNode<Rhs> {
                 };
                 gen_args.state.add_code(ident.clone(), stream);
             }
-            firsts.push(wagon_ident::Ident::Unknown(label_str).into());
+            firsts.push(quote!(state.get_label_by_uuid(#label_str)?));
+            first_idents.push(wagon_ident::Ident::Unknown(label_str).into());
 		}
         gen_args.state.get_first(&ident)?.push((firsts, None));
+        gen_args.state.get_first_ident(&ident)?.push(first_idents);
         Ok(())
     }
 }

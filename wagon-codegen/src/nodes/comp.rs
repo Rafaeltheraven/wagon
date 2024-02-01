@@ -15,11 +15,11 @@ impl<U> ToTokensState<U> for Comparison {
             let right = comp_op.right.to_tokens(state, label, attr_fun);
             if matches!(op, CompOp::In) {
                 quote!(
-                    #left.contains(#right)
+                    (#left.contains(#right)).into()
                 )
             } else {
                 quote!(
-                    #left #op #right
+                    (#left #op #right).into()
                 )
             }
         } else {

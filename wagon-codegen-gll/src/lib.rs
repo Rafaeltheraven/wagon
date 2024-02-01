@@ -14,14 +14,14 @@ mod state;
 
 use crate::state::CodeGenState;
 use std::{rc::Rc, collections::HashSet};
-use proc_macro2::{Ident, Literal};
+use proc_macro2::{Ident, Literal, TokenStream};
 use quote::quote;
 use indexmap::IndexSet;
 
 use wagon_parser::parser::WagParseError;
 use wagon_parser::parser::{wag::Wag, atom::Atom};
-use wagon_parser::{Span, MsgAndSpan};
-use wagon_codegen::{SpannableIdent, CodeMap};
+use wagon_parser::{Span, ErrorReport};
+use wagon_codegen::{FileStructure, SpannableIdent};
 use wagon_value::{RecursiveValue, ValueError};
 use wagon_utils::ConversionError;
 
@@ -31,7 +31,7 @@ pub(crate) enum CharBytes {
 	Bytes(Literal)
 }
 
-type FirstSet = (Vec<SpannableIdent>, Option<CharBytes>);
+type FirstSet = (Vec<TokenStream>, Option<CharBytes>);
 
 type AttrSet = HashSet<SpannableIdent>;
 type ReqCodeAttrs = AttrSet;
@@ -97,7 +97,9 @@ pub(crate) enum CodeGenErrorKind {
 	/// Expected to have a first set for some ident in [`CodeGenState`] but we do not.
 	MissingFirst(Rc<Ident>),
 	/// An error occurred in [`wagon_parser`].
-	ParseError(WagParseError)
+	ParseError(WagParseError),
+	/// An error occurred while prettifying [`TokenStream`].
+	SynParseError(syn::parse::Error)
 }
 
 #[derive(Debug)]
@@ -119,7 +121,7 @@ impl CodeGenError {
 	}
 }
 
-impl MsgAndSpan for CodeGenError {
+impl ErrorReport for CodeGenError {
     fn span(self) -> Span {
         match self.kind {
         	CodeGenErrorKind::ParseError(e) => e.span(),
@@ -135,6 +137,14 @@ impl MsgAndSpan for CodeGenError {
             CodeGenErrorKind::MissingArg(s) => ("Missing Argument".to_string(), format!("Expected to see {s} but it was None")),
             CodeGenErrorKind::MissingFirst(i) => ("Missing First Set".to_string(), format!("Expected to have one for {i} but it was None")),
             CodeGenErrorKind::ParseError(e) => e.msg(),
+            CodeGenErrorKind::SynParseError(e) => ("Error parsing TokenStream".to_string(), e.to_string()),
+        }
+    }
+
+    fn source(&self) -> Option<String> {
+        match &self.kind {
+            CodeGenErrorKind::SynParseError(e) => e.span().source_text(), // This doesn't work as expected
+            _ => None
         }
     }
 }
@@ -151,6 +161,7 @@ impl std::error::Error for CodeGenError {
         match &self.kind {
             CodeGenErrorKind::AtomConversionError(e) => Some(e),
             CodeGenErrorKind::ValueError(e) => Some(e),
+            CodeGenErrorKind::SynParseError(e) => Some(e),
             _ => None
         }
     }
@@ -174,26 +185,34 @@ impl From<WagParseError> for CodeGenError {
     }
 }
 
+impl From<syn::parse::Error> for CodeGenError {
+    fn from(value: syn::parse::Error) -> Self {
+        Self::new(CodeGenErrorKind::SynParseError(value))
+    }
+}
+
 type CodeGenResult<T> = Result<T, CodeGenError>;
 
 trait CodeGen {
 	fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()>;
 }
 
-/// Given a [`Wag`], create a GLL parser and return a [`CodeMap`] representing this parser.
+/// Given a [`Wag`], create a GLL parser and return a [`FileStructure`] representing this parser.
 ///
 /// # Errors
 /// Will return a [`CodeGenError`] if anything goes wrong during codegen (usually unwrapping things).
-pub fn gen_parser(wag: Wag) -> CodeGenResult<CodeMap> {
+pub fn gen_parser(wag: Wag) -> CodeGenResult<FileStructure> {
 	let mut args = CodeGenArgs::default();
 	wag.gen(&mut args)?;
-	let state = args.state;
-	let (structs, start) = state.gen_struct_stream()?;
-	let main = state.gen_state_stream()?;
+	let mut state = args.state;
+	let (mut fs, start) = state.gen_struct_stream()?;
+	state.gen_nt_stream(&mut fs)?;
+	let main = state.gen_state_stream(&mut fs)?;
 	let fin = quote!(
-		mod terminals;
+		mod nonterminals;
 		#start
 		#main
 	);
-	Ok((structs, fin))
+	fs.insert_tokenstream("main.rs", fin, true)?;
+	Ok(fs)
 }

@@ -37,10 +37,11 @@ pub mod term;
 pub mod terminal;
 mod ident;
 
+use derivative::Derivative;
 use std::{error::Error, fmt::Display, write};
 use self::wag::Wag;
 use crate::firstpass::{WagCheckError, Rewrite};
-use crate::{SpannableNode, MsgAndSpan};
+use crate::{SpannableNode, ErrorReport};
 
 use ordered_float::FloatIsNan;
 use wagon_ident::Ident;
@@ -81,7 +82,8 @@ impl<'source> Parser<'source> {
 /// Any parse will either return the node we are trying to parse, or a [`WagParseError`].
 pub type ParseResult<T> = Result<T, WagParseError>;
 
-#[derive(PartialEq, Debug)]
+#[derive(Derivative, Debug)]
+#[derivative(PartialEq)]
 /// Any of the various errors that can occur during parsing.
 pub enum WagParseError {
 	/// An unexpected character was encountered.
@@ -102,7 +104,7 @@ pub enum WagParseError {
 	/// Expected a float but got a NaN
 	FloatError(FloatIsNan, Span),
 	/// Non-valid regex
-	RegexError(Box<regex_syntax::ast::Error>, Span), // Regex errors are big so we're allocating it on the heap
+	RegexError(#[derivative(PartialEq="ignore")] Box<regex_automata::dfa::dense::BuildError>, Span, String), // Regex errors are big so we're allocating it on the heap
 }
 
 impl From<WagCheckError> for WagParseError {
@@ -124,10 +126,11 @@ impl Error for WagParseError {
             Self::CheckError(e) => Some(e),
             Self::LexError(e) => Some(e),
             Self::FloatError(e, _) => Some(e),
-            Self::RegexError(e, _) => Some(&**e),
+            Self::RegexError(e, _, _) => Some(&**e),
         }
     }
 }
+
 impl Display for WagParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     	let (head, msg) = self.msg();
@@ -135,17 +138,29 @@ impl Display for WagParseError {
     }
 }
 
-impl MsgAndSpan for WagParseError {
+impl ErrorReport for WagParseError {
 	fn span(self) -> Span {
 		match self {
 		    Self::CheckError(check) => check.span(),
 		    Self::LexError(lex) => lex.span(),
 		    Self::FloatError(_, span) | Self::Fatal((span, _)) | Self::Unexpected { span, .. } => span,
-		    Self::RegexError(e, span) => {
-		    	let e_span = e.span();
-		    	let start = span.start + e_span.start.offset;
-		    	let end = span.start + e_span.end.offset;
-		    	Span { start, end }
+		    Self::RegexError(e, span, _) => {
+		    	match e.source() {
+		    		Some(e) => match e.source() { // NFA Build Error
+		    			Some(e) => { // Syntax Error
+		    				let e_span = match e.downcast_ref() {
+		    					Some(regex_syntax::Error::Parse(e)) => e.span(),
+		    					Some(regex_syntax::Error::Translate(e)) => e.span(),
+		    					_ => return span
+		    				};
+					    	let start = span.start + e_span.start.offset;
+					    	let end = span.start + e_span.end.offset;
+					    	Span { start, end }
+		    			},
+		    			None => span
+		    		},
+		    		None => span
+		    	}
 		    }
 		}
 	}
@@ -158,7 +173,7 @@ impl MsgAndSpan for WagParseError {
 	        Self::CheckError(err) => err.msg(),
     		Self::LexError(lex) => ("Lexing Error".to_string(), lex.to_string()),
     		Self::FloatError(e, _) => ("Error converting floating point".to_string(), e.to_string()),
-    		Self::RegexError(e, _) => ("Regex Parse Error".to_string(), e.to_string()),
+    		Self::RegexError(e, _, s) => ("Regex Build Error:".to_string(), format!("Failed building pattern {s}: {e}")),
 		}
 	}
 }

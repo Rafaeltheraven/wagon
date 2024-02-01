@@ -6,28 +6,14 @@
 
 /// Codegen for parts of the [`wagon-parser`] AST that are generally useful.
 pub mod nodes;
+/// A datastructure that represents a structure and data to write to disk.
+mod filestructure;
 
-use std::{rc::Rc, collections::HashMap};
+use std::rc::Rc;
 use proc_macro2::{TokenStream, Ident};
 use wagon_parser::{parser::Parse, SpannableNode};
+pub use filestructure::{FileStructure, FileType};
 
-/// A [`HashMap`] that represents what [`TokenStream`] to write where.  
-///
-/// The `CodeMap` is a tuple with 2 elements:
-/// 1. A `HashMap` from [`String`] to `Vec<(String, TokenStream)`. In this map, the key is the name of the module/folder to write the data to.
-///    The tuple then, is a "mapping" for a specific submodule of this module. The `String` represents the name of the file to write to, while the `TokenStream` is the code to write.
-/// 2. The `TokenStream` for the `main.rs` file.
-///
-/// # Example
-/// Say we have the following `CodeMap`: 
-/// 
-/// `(HashMap::from(("A", vec![("A_0_0", quote!(Foo)), ("A_0_1", quote!(Bar))]), quote!(Baz));`
-///
-/// This map represents a structure such that we have a `main.rs` file with the code `Baz`. And then a module `A.rs` 
-/// which has 2 submodules `A_0_0.rs` and `A_0_1.rs` with the code `Foo` and `Bar` respectively.
-///
-/// Of course, the actual meaning of this map is up to the implementer. But this should help keep the structure clear for most usecases.
-pub type CodeMap = (HashMap<String, Vec<(String, TokenStream)>>, TokenStream);
 /// A quick type alias to represent a [`wagon_ident::Ident`] with span information.
 pub type SpannableIdent = SpannableNode<wagon_ident::Ident>;
 
