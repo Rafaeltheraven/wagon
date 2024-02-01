@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::{TypeDetect, LexingError};
 use logos::Logos;
 use wagon_macros::inherit_from_base;
@@ -36,6 +38,17 @@ impl Default for ImportType {
     }
 }
 
+impl Display for ImportType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Basic => write!(f, "<-"),
+            Self::Full => write!(f, "<="),
+            Self::Recursive => write!(f, "<<"),
+            Self::Exclude => write!(f, "</"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 /// Enum to specify a type of EBNF operator.
 pub enum EbnfType {
@@ -57,6 +70,16 @@ impl TypeDetect for EbnfType {
 	    	None      => Err(LexingError::UnexpectedEOF(span))
 	    }
 	}
+}
+
+impl Display for EbnfType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Some => write!(f, "+"),
+            Self::Many => write!(f, "*"),
+            Self::Maybe => write!(f, "?"),
+        }
+    }
 }
 
 #[derive(Eq)]
