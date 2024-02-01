@@ -175,11 +175,17 @@ impl CodeGenState {
 
     pub(crate) fn gen_nt_stream(&self, fs: &mut FileStructure) -> CodeGenResult<()> {
     	let nonterminals = self.alt_map.keys();
-    	let stream = quote!(
+    	let mut stream = quote!(
     		#![allow(non_snake_case)]
 			#![allow(unused_parens)]
-    		#(pub(crate) mod #nonterminals;)*
     	);
+    	for nt in nonterminals {
+    		let path = format!("nonterminals/{nt}.rs");
+    		stream.extend(quote!(
+    			#[path = #path]
+    			pub(crate) mod #nt;
+    		));
+    	}
     	fs.insert_tokenstream("nonterminals.rs", stream, true)?;
     	Ok(())
     }
@@ -214,9 +220,13 @@ impl CodeGenState {
 		};
 		let filename = if root_uuid == uuid {
 			if let Some(alts) = self.alt_map.get(id) {
-				stream.extend(quote!(
-					#(pub(crate) mod #alts;)*
-				));
+				for alt in alts {
+					let path = format!("{root_uuid}/{alt}.rs");
+					stream.extend(quote!(
+						#[path = #path]
+						pub(crate) mod #alt;
+					));
+				}
 			}
 			format!("nonterminals/{root_uuid}.rs")
 		} else {
