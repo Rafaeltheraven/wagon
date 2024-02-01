@@ -127,6 +127,12 @@ However, for the scope of `A`, `&b` and `&c` are synthesized and changes are thu
 
 Of course, this is implementation detail. If you are working with a raw AST, you can define these things differently.
 
+## Regexes
+The DSL supports regex representations of terminals (for example, you could write `Digit -> /[0-9]/;`). A regex must be enclosed by `//` to differentiate it from a normal non-terminal. 
+
+The parser will parse this regex and construct a DFA from it using `regex_automata`. This DFA can then be used either directly, or compiled to bytes and loaded later on in some other Rust program.
+An example of the "compiled" approach can be found in `wagon-codegen-gll`.
+
 ## Full (Supported) DSL
 At the time of writing, the DSL looks as follows (written itself in the WAGon DSL):
 ```
@@ -227,9 +233,6 @@ Additionally, in order to specify rules that should **not** be imported, one can
 ## Subshells
 The attribute evaluation language is quite limited. To get around the limitation, it was decided to allow grammar designers to shell out to arbitrary shell scripts. 
 These scripts should print out json data, which can then be parsed and put into a dictionary. A skeleton implementation exists in `wagon-codegen`, but it was never tested or completed.
-
-## Regexes
-At the moment, a regex is defined as just any string between two `/`, no further support exists for turning these into proper regex machines or checking if it's even valid regex.
 
 ## Type checking
 There is no type checking functionality. For now, it is assumed that grammars are properly written (they are not, but we assume it anyway). Proper error handling of value errors should occur
