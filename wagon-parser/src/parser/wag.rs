@@ -59,10 +59,11 @@ impl Rewrite<()> for Wag {
         let rules = std::mem::take(&mut self.grammar);
         let mut map: IndexMap<String, SpannableNode<Rule>> = IndexMap::with_capacity(rules.len());
         for mut rule in rules {
-            for new_rule in rule.rewrite(depth, state)?.0 {
+            let new_rules = rule.rewrite(depth, state)?.0;
+            handle_conflict(rule, &mut map)?;
+            for new_rule in new_rules {
                 handle_conflict(new_rule, &mut map)?;
             }
-            handle_conflict(rule, &mut map)?;
         }
         self.grammar.extend(map.into_values());
         Ok(())

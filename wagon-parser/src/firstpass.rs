@@ -94,10 +94,9 @@ pub(crate) trait GetReqAttributes {
 #[cfg(test)]
 mod test {
 
-	use crate::BTreeMap;
-	use crate::parser::{Parser, wag::Wag, metadata::Metadata, rule::Rule, rhs::Rhs, chunk::{Chunk, ChunkP}};
+	use crate::parser::Parser;
 	use super::{FirstPassState, Rewrite};
-	use wagon_macros::unspanned_tree;
+	
 	use pretty_assertions::assert_eq;
 
 	fn test_inputs(input: &str, expected_input: &str) {
@@ -140,8 +139,8 @@ mod test {
 		";
 		let expected_input = r"
 		A -> X A·0·1;
-		A·0·1 -> Y A·0·1·p;
 		A·0·1·p -> Y A·0·1·p | ;
+		A·0·1 -> Y A·0·1·p;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -153,8 +152,8 @@ mod test {
 		";
 		let expected_input = r"
 		A -> A·0·0;
-		A·0·0 -> A·0·0··0 A·0·0·p;
 		A·0·0·p -> A·0·0··0 A·0·0·p | ;
+		A·0·0 -> A·0·0··0 A·0·0·p;
 		A·0·0··0 -> B A·0·0··0·0·1;
 		A·0·0··0·0·1 -> C | ;
 		";
@@ -168,13 +167,13 @@ mod test {
 		";
 		let expected_input = r"
 		A -> A·0·0;
-		A·0·0 -> A·0·0··0 A·0·0·p;
 		A·0·0·p -> A·0·0··0 A·0·0·p | ;
+		A·0·0 -> A·0·0··0 A·0·0·p;
 		A·0·0··0 -> A·0·0··0·0·0 A·0·0··0·0·1;
-		A·0·0··0·0·1 -> Z | ;
-		A·0·0··0·0·0 -> A·0·0··0·0·0··1 A·0·0··0·0·0·p;
 		A·0·0··0·0·0·p -> A·0·0··0·0·0··1 A·0·0··0·0·0·p | ;
+		A·0·0··0·0·0 -> A·0·0··0·0·0··1 A·0·0··0·0·0·p;
 		A·0·0··0·0·0··1 -> X Y;
+		A·0·0··0·0·1 -> Z | ;
 		";
 		test_inputs(input, expected_input);
 	}

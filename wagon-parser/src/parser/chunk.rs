@@ -171,11 +171,11 @@ impl Chunk {
                         },
                         _ => {}
                     }
-                    rules.extend(new_rules);
-                    rules.push(new_rule);
                     let symbol = Symbol::simple_ident_spanned_with_args(&new_ident, span.clone(), as_synth.clone()); // Should be as synthesized
                     self.chunk = ChunkP::Unit(Symbol::simple_ident_spanned_with_args(&ident, span.clone(), args)); // Should be as expected
                     Self::rewrite_ebnf(&e, ident, as_synth, symbol, span, rule_func, &mut rules); // Should be as synthesized
+                    rules.push(new_rule);
+                    rules.extend(new_rules);
                     req_args
                 }
             }
