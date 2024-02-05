@@ -98,37 +98,27 @@ mod test {
 	use crate::parser::{Parser, wag::Wag, metadata::Metadata, rule::Rule, rhs::Rhs, chunk::{Chunk, ChunkP}};
 	use super::{FirstPassState, Rewrite};
 	use wagon_macros::unspanned_tree;
+	use pretty_assertions::assert_eq;
+
+	fn test_inputs(input: &str, expected_input: &str) {
+		let mut parser = Parser::new(input);
+		let mut output = parser.parse().unwrap();
+		output.rewrite(0, &mut FirstPassState::default()).unwrap();
+		let mut parser = Parser::new(expected_input);
+		let expected = parser.parse().unwrap();
+		assert_eq!(expected, output);
+	}
 
 	#[test]
 	fn test_simple_rewrite_maybe() {
 		let input = r"
 		A -> X Y?;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![Chunk::simple_ident("Y")]
-					},
-					Rhs::empty()
-				]),
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs { 
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("X"),
-							Chunk::simple_ident("A·0·1")
-						] 
-					}
-				]),
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> X A·0·1;
+		A·0·1 -> Y | ;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -136,34 +126,11 @@ mod test {
 		let input = r"
 		A -> X Y*;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("Y"),
-							Chunk::simple_ident("A·0·1")
-						]
-					},
-					Rhs::empty()
-				]),
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs { 
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("X"),
-							Chunk::simple_ident("A·0·1")
-						] 
-					}
-				]),
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> X A·0·1;
+		A·0·1 -> Y A·0·1 | ;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -171,43 +138,12 @@ mod test {
 		let input = r"
 		A -> X Y+;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag { 
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A·0·1·p".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("Y"),
-							Chunk::simple_ident("A·0·1·p")
-						]
-					},
-					Rhs::empty()
-				]),
-				Rule::Analytic("A·0·1".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("Y"),
-							Chunk::simple_ident("A·0·1·p")
-						]
-					}
-				]),
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs { 
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("X"),
-							Chunk::simple_ident("A·0·1")
-						] 
-					}
-				]),
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> X A·0·1;
+		A·0·1 -> Y A·0·1·p;
+		A·0·1·p -> Y A·0·1·p | ;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -215,56 +151,14 @@ mod test {
 		let input = r"
 		A -> (B C?)+;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A·0·0··0·0·1".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![Chunk::simple_ident("C")]
-					},
-					Rhs::empty()
-				]),
-				Rule::Analytic("A·0·0··0".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("B"),
-							Chunk::simple_ident("A·0·0··0·0·1")
-						]
-					}
-				]),
-				Rule::Analytic("A·0·0·p".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("A·0·0··0"),
-							Chunk::simple_ident("A·0·0·p")
-						]
-					},
-					Rhs::empty()
-				]),
-				Rule::Analytic("A·0·0".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk::simple_ident("A·0·0··0"),
-							Chunk::simple_ident("A·0·0·p")
-						]
-					},
-				]),
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![Chunk::simple_ident("A·0·0")]
-					}
-				])
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> A·0·0;
+		A·0·0 -> A·0·0··0 A·0·0·p;
+		A·0·0·p -> A·0·0··0 A·0·0·p | ;
+		A·0·0··0 -> B A·0·0··0·0·1;
+		A·0·0··0·0·1 -> C | ;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -272,88 +166,17 @@ mod test {
 		let input = r"
 		A -> ((X Y)+ Z?)+;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A·0·0··0·0·0··1".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("X"),
-	                        Chunk::simple_ident("Y")
-	                    ],
-	                },
-	            ]),
-		        Rule::Analytic("A·0·0··0·0·0·p".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0··0·0·0··1"),
-	                        Chunk::simple_ident("A·0·0··0·0·0·p")
-	                    ],
-	                },
-	                Rhs::empty()
-	            ]),
-		        Rule::Analytic("A·0·0··0·0·0".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0··0·0·0··1"),
-	                        Chunk::simple_ident("A·0·0··0·0·0·p")
-	                    ],
-	                },
-	            ]),
-		        Rule::Analytic("A·0·0··0·0·1".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("Z")
-	                    ],
-	                },
-	                Rhs::empty()
-	            ]),
-		        Rule::Analytic("A·0·0··0".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0··0·0·0"),
-	                        Chunk::simple_ident("A·0·0··0·0·1")
-	                    ],
-	                },
-	            ]),
-		        Rule::Analytic("A·0·0·p".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0··0"),
-	                        Chunk::simple_ident("A·0·0·p")
-	                    ],
-	                },
-	                Rhs::empty()
-	            ]),
-		        Rule::Analytic("A·0·0".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0··0"),
-	                        Chunk::simple_ident("A·0·0·p")
-	                    ],
-	                },
-	            ]),
-		        Rule::Analytic("A".to_string(), Vec::new(), vec![
-	                Rhs {
-	                    weight: None,
-	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0")
-	                    ],
-	                },
-	            ]),
-		    ]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> A·0·0;
+		A·0·0 -> A·0·0··0 A·0·0·p;
+		A·0·0·p -> A·0·0··0 A·0·0·p | ;
+		A·0·0··0 -> A·0·0··0·0·0 A·0·0··0·0·1;
+		A·0·0··0·0·1 -> Z | ;
+		A·0·0··0·0·0 -> A·0·0··0·0·0··1 A·0·0··0·0·0·p;
+		A·0·0··0·0·0·p -> A·0·0··0·0·0··1 A·0·0··0·0·0·p | ;
+		A·0·0··0·0·0··1 -> X Y;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -361,29 +184,10 @@ mod test {
 		let input = r"
 		A -> (B C);
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs {
-						weight: None,
-						chunks: vec![
-							Chunk {
-								chunk: ChunkP::Group(vec![
-									Chunk::simple_ident("B"),
-									Chunk::simple_ident("C")
-								]),
-								ebnf: None
-							}
-						]
-					}
-				])
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> B C;
+		";
+		test_inputs(input, expected_input);
 	}
 
 	#[test]
@@ -393,19 +197,9 @@ mod test {
 		A -> C;
 		A -> ;
 		";
-		let mut parser = Parser::new(input);
-		let mut output = parser.parse().unwrap();
-		output.rewrite(0, &mut FirstPassState::default()).unwrap();
-		let expected = unspanned_tree!(Wag {
-			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
-			grammar: vec![
-				Rule::Analytic("A".to_string(), Vec::new(), vec![
-					Rhs::simple_ident("B"),
-					Rhs::simple_ident("C"),
-					Rhs::empty()
-				])
-			]
-		});
-		assert_eq!(expected, output);
+		let expected_input = r"
+		A -> B | C | ;
+		";
+		test_inputs(input, expected_input);
 	}
 }

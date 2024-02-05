@@ -28,6 +28,7 @@ regex-syntax = "0.8.2"
 
 [dev-dependencies]
 pretty_assertions = {workspace = true}
+wagon-lexer = {workspace = true, features=["test"]}
 
 [lints]
 workspace = true

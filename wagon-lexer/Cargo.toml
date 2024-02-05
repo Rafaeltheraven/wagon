@@ -25,3 +25,6 @@ pretty_assertions = {workspace = true}
 
 [lints]
 workspace = true
+
+[features]
+test = ["wagon-macros/test"]

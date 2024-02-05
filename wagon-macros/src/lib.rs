@@ -21,11 +21,16 @@ use extendable_data::extendable_data;
 #[logos(skip r"/\*([^*]|\*[^/])+\*/|[ \t\n\f]+")]
 #[logos(error = LexingError)]
 enum Base {
+    
     #[display_override("Identifier")]
-    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| wagon_ident::Ident::detect(lex.slice(), lex.span()))]
     /// An identifier. Gets parsed to an [`wagon-ident::Ident`] automatically.
     /// An identifier may be any string of alphanumeric characters, as well as `_`. The string must start with a purely alphabetical character.
     /// The identifier may be prepended by `$`/`&`/`*` to specify what type of identifier it is.
+    #[cfg(feature="test")]
+    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_·]*)", |lex| wagon_ident::Ident::detect(lex.slice(), lex.span()))]
+    Identifier(wagon_ident::Ident),
+    #[cfg(not(feature="test"))]
+    #[regex("(\\$|&|\\*)?([a-zA-Z][a-zA-Z0-9_]*)", |lex| wagon_ident::Ident::detect(lex.slice(), lex.span()))]
     Identifier(wagon_ident::Ident),
 
     #[display_override("String Literal")]
