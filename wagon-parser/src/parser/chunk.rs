@@ -179,8 +179,39 @@ impl Chunk {
                     req_args
                 }
             }
+        } else if let Self { chunk: ChunkP::Group(g), ..} = self {
+            let mut new_rule = SpannableNode::new(
+                rule_func(
+                    ident.clone(), 
+                    CallingArgs::new(), // Should be as synthesized
+                    vec![
+                        Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())
+                    ]
+                ), 
+                span.clone()
+            );
+            let (new_rules, req_args) = new_rule.rewrite(depth+1, state)?;
+            let mut as_synth = CallingArgs::with_capacity(req_args.len());
+            for i in &req_args {
+                let s = i.to_inner().extract_string();
+                as_synth.push(SpannableNode::new(Ident::Synth(s.to_string()), i.span()));
+            }
+            match new_rule.to_inner_mut() {
+                Rule::Analytic(_, v, _) | Rule::Generate(_, v, _) => {
+                    if depth == 0 {
+                        v.extend(req_args.clone());
+                    } else {
+                        v.extend(as_synth.clone());
+                    }
+                },
+                _ => {}
+            }
+            self.chunk = ChunkP::Unit(Symbol::simple_ident_spanned_with_args(&ident, span.clone(), args)); // Should be as expected
+            rules.push(new_rule);
+            rules.extend(new_rules);
+            req_args
         } else {
-            self.get_req_attributes()
+           self.get_req_attributes() 
         };
         Ok((rules, required_args))
 	}

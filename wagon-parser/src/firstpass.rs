@@ -184,7 +184,8 @@ mod test {
 		A -> (B C);
 		";
 		let expected_input = r"
-		A -> B C;
+		A -> A·0·0;
+		A·0·0 -> B C;
 		";
 		test_inputs(input, expected_input);
 	}
