@@ -1,6 +1,8 @@
 use wagon_macros::TokenMapper;
 use std::{fmt::Display, write};
 
+use crate::firstpass::GetReqAttributes;
+
 use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
 
@@ -66,6 +68,26 @@ impl ParseOption for TermP {
 	    	Ok(None)
 	    }
 	}
+}
+
+impl GetReqAttributes for Term {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.left.get_req_attributes();
+        if let Some(cont) = &self.cont {
+            req.extend(cont.get_req_attributes());
+        }
+        req
+    }
+}
+
+impl GetReqAttributes for TermP {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.right.get_req_attributes();
+        if let Some(cont) = &self.cont {
+            req.extend(cont.get_req_attributes());
+        }
+        req
+    }
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]

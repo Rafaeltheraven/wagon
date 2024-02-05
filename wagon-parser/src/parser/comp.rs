@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::write;
 
+use crate::firstpass::GetReqAttributes;
+
 use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
 use super::helpers::TokenMapper;
@@ -73,6 +75,16 @@ impl ParseOption for Comp {
         } else {
         	Ok(None)
         }
+    }
+}
+
+impl GetReqAttributes for Comparison {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.sum.get_req_attributes();
+        if let Some(cont) = &self.comp {
+            req.extend(cont.right.get_req_attributes());
+        }
+        req
     }
 }
 

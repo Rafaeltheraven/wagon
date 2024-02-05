@@ -6,6 +6,8 @@ use std::{collections::HashMap, error::Error};
 use indexmap::IndexSet;
 use wagon_ident::Ident;
 
+pub(crate) type ReqAttributes = IndexSet<SpannableNode<Ident>>;
+
 /// Any node that can be rewritten in a different way for any reason should implement this trait.
 pub(crate) trait Rewrite<T> {
 	fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<T>;
@@ -84,3 +86,8 @@ impl FirstPassState {
 	// 	self.parameter_map.get(s)
 	// }
 }
+
+pub(crate) trait GetReqAttributes {
+	fn get_req_attributes(&self) -> ReqAttributes;
+}
+ 

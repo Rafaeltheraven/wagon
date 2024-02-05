@@ -610,6 +610,7 @@ version = "0.1.0"
 dependencies = [
  "derivative",
  "indexmap",
+ "itertools",
  "ordered-float",
  "petgraph",
  "pretty_assertions",

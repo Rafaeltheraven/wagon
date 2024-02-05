@@ -276,7 +276,7 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
     funcs
 }
 
-const CUSTOM_INTO: [&str; 4] = ["Vec", "Option", "Box", "BTreeMap"];
+const CUSTOM_INTO: [&str; 5] = ["Vec", "Option", "Box", "BTreeMap", "CallingArgs"];
 const IGNORE_UNSPAN: [&str; 4] = ["Terminal", "Ident", "Some", "None"];
 
 fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::Type, bool, bool) {
@@ -310,6 +310,9 @@ fn extract_spanned_node_type(root: syn::Type, mut known_custom: bool) -> (syn::T
                         }
                     }
                     b.args = new_args;
+                } else if CUSTOM_INTO.contains(&ident.as_str()) {
+                    known_custom = true;
+                    has_changed = true;
                 }
             }
             (syn::Type::Path(p), known_custom, has_changed)
@@ -392,7 +395,6 @@ fn unspanned_macro(ast: ExprMacro) -> Result<TokenStream2> {
 }
 
 fn handle_expr(expr: Expr) -> Result<TokenStream2> {
-    let span = expr.span();
     match expr {
         syn::Expr::Call(c) => unspanned_enum(c),
         syn::Expr::Macro(m) => unspanned_macro(m),
@@ -402,7 +404,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
         syn::Expr::Lit(l) => Ok(l.to_token_stream()),
         syn::Expr::Tuple(t) => Ok(t.to_token_stream()),
         syn::Expr::Array(a) => Ok(a.to_token_stream()),
-        other => Err(syn::Error::new(span, format!("Unexpected Expression {other:?}")))
+        other => Err(syn::Error::new(other.span(), format!("Unexpected Expression {other:?}")))
     }
 }
 

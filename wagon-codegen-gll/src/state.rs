@@ -406,7 +406,7 @@ impl CodeGenState {
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
 			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
-			    let contents = content_string.trim_end().as_bytes();
+			    let contents = content_string.trim().as_bytes();
     			let mut label_map: wagon_gll::LabelMap = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: wagon_gll::RuleMap = std::collections::HashMap::with_capacity(#root_len);
     			let mut regex_map: wagon_gll::RegexMap = std::collections::HashMap::with_capacity(#regex_len);

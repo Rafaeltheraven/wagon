@@ -1,4 +1,6 @@
 use std::fmt::Display;
+use crate::firstpass::{GetReqAttributes, ReqAttributes};
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode};
 use wagon_lexer::math::Math;
 
@@ -11,6 +13,16 @@ use wagon_macros::new_unspanned;
 #[cfg_attr(test, new_unspanned)]
 /// A list of [`Inverse`] nodes. Separated by `||`.
 pub struct Conjunct(pub Vec<SpannableNode<Inverse>>);
+
+impl GetReqAttributes for Conjunct {
+    fn get_req_attributes(&self) -> ReqAttributes {
+        let mut req = ReqAttributes::new();
+        for i in &self.0 {
+            req.extend(i.get_req_attributes());
+        }
+        req
+    }
+}
 
 impl Parse for Conjunct {
     

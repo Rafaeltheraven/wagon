@@ -48,6 +48,8 @@ use wagon_ident::Ident;
 use wagon_utils::{Peek, comma_separated_with_or, string_vec, ResultNext, ResultPeek};
 use wagon_lexer::{LexerBridge, Tokens, Spannable, Span, LexingError};
 
+type CallingArgs = Vec<SpannableNode<Ident>>;
+
 /// The main parser struct.
 ///
 /// Uses a [`LexerBridge`] internally.
@@ -751,19 +753,19 @@ mod tests {
 		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
-				Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
+				Rule::Analytic("A·0·0··0·0·1".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
 						chunks: vec![Chunk::simple_ident("C")]
 					},
 					Rhs::empty()
 				]),
-				Rule::Analytic("A·0·0_0".to_string(), Vec::new(), vec![
+				Rule::Analytic("A·0·0··0".to_string(), Vec::new(), vec![
 					Rhs {
 						weight: None,
 						chunks: vec![
 							Chunk::simple_ident("B"),
-							Chunk::simple_ident("A·0·0_0·0·1")
+							Chunk::simple_ident("A·0·0··0·0·1")
 						]
 					}
 				]),
@@ -771,7 +773,7 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("A·0·0_0"),
+							Chunk::simple_ident("A·0·0··0"),
 							Chunk::simple_ident("A·0·0·p")
 						]
 					},
@@ -781,7 +783,7 @@ mod tests {
 					Rhs {
 						weight: None,
 						chunks: vec![
-							Chunk::simple_ident("A·0·0_0"),
+							Chunk::simple_ident("A·0·0··0"),
 							Chunk::simple_ident("A·0·0·p")
 						]
 					},
@@ -808,7 +810,7 @@ mod tests {
 		let expected = unspanned_tree!(Wag {
 			metadata: Metadata { includes: Vec::new(), mappings: BTreeMap::new() }, 
 			grammar: vec![
-				Rule::Analytic("A·0·0_0·0·0_1".to_string(), Vec::new(), vec![
+				Rule::Analytic("A·0·0··0·0·0··1".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
@@ -817,26 +819,26 @@ mod tests {
 	                    ],
 	                },
 	            ]),
-		        Rule::Analytic("A·0·0_0·0·0·p".to_string(), Vec::new(), vec![
+		        Rule::Analytic("A·0·0··0·0·0·p".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0_0·0·0_1"),
-	                        Chunk::simple_ident("A·0·0_0·0·0·p")
+	                        Chunk::simple_ident("A·0·0··0·0·0··1"),
+	                        Chunk::simple_ident("A·0·0··0·0·0·p")
 	                    ],
 	                },
 	                Rhs::empty()
 	            ]),
-		        Rule::Analytic("A·0·0_0·0·0".to_string(), Vec::new(), vec![
+		        Rule::Analytic("A·0·0··0·0·0".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0_0·0·0_1"),
-	                        Chunk::simple_ident("A·0·0_0·0·0·p")
+	                        Chunk::simple_ident("A·0·0··0·0·0··1"),
+	                        Chunk::simple_ident("A·0·0··0·0·0·p")
 	                    ],
 	                },
 	            ]),
-		        Rule::Analytic("A·0·0_0·0·1".to_string(), Vec::new(), vec![
+		        Rule::Analytic("A·0·0··0·0·1".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
@@ -845,12 +847,12 @@ mod tests {
 	                },
 	                Rhs::empty()
 	            ]),
-		        Rule::Analytic("A·0·0_0".to_string(), Vec::new(), vec![
+		        Rule::Analytic("A·0·0··0".to_string(), Vec::new(), vec![
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0_0·0·0"),
-	                        Chunk::simple_ident("A·0·0_0·0·1")
+	                        Chunk::simple_ident("A·0·0··0·0·0"),
+	                        Chunk::simple_ident("A·0·0··0·0·1")
 	                    ],
 	                },
 	            ]),
@@ -858,7 +860,7 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0_0"),
+	                        Chunk::simple_ident("A·0·0··0"),
 	                        Chunk::simple_ident("A·0·0·p")
 	                    ],
 	                },
@@ -868,7 +870,7 @@ mod tests {
 	                Rhs {
 	                    weight: None,
 	                    chunks: vec![
-	                        Chunk::simple_ident("A·0·0_0"),
+	                        Chunk::simple_ident("A·0·0··0"),
 	                        Chunk::simple_ident("A·0·0·p")
 	                    ],
 	                },

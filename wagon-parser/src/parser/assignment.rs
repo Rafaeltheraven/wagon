@@ -1,5 +1,7 @@
 use std::{fmt::Display, write};
 
+use crate::firstpass::{GetReqAttributes, ReqAttributes};
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ResultNext};
 use wagon_lexer::{math::Math, Spannable};
 
@@ -18,6 +20,16 @@ pub struct Assignment {
 	pub ident: SpannableNode<Ident>,
 	/// The right-hand side.
 	pub expr: SpannableNode<Expression>
+}
+
+impl GetReqAttributes for Assignment {
+	fn get_req_attributes(&self) -> ReqAttributes {
+		let mut req = self.expr.get_req_attributes();
+		if !matches!(self.ident.node, Ident::Local(_)) {
+			req.insert(self.ident.clone());
+		}
+		req
+	}
 }
 
 impl Parse for Assignment {

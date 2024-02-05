@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
 
+use firstpass::GetReqAttributes;
 use wagon_lexer::LexerBridge;
 pub use wagon_lexer::{Span, Spannable};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
@@ -209,5 +210,11 @@ impl<U, T: Parse + Rewrite<U>> Rewrite<U> for SpannableNode<T> {
 impl<T: Parse + quote::ToTokens> quote::ToTokens for SpannableNode<T> {
     fn to_tokens(&self, tokens: &mut quote::__private::TokenStream) {
         self.node.to_tokens(tokens);
+    }
+}
+
+impl<T: Parse + GetReqAttributes> GetReqAttributes for SpannableNode<T> {
+    fn get_req_attributes(&self) -> firstpass::ReqAttributes {
+        self.to_inner().get_req_attributes()
     }
 }

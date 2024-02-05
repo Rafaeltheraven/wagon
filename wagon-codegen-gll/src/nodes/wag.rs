@@ -4,6 +4,7 @@ use crate::{CodeGenArgs, CodeGen, CodeGenResult};
 
 impl CodeGen for Wag {
     fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
+        println!("{}", self);
         self.metadata.into_inner().gen(gen_args)?;
         gen_args.fst = Some(true);
         for rule in self.grammar {

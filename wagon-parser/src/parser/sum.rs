@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::write;
 
+use crate::firstpass::GetReqAttributes;
+
 use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
 use wagon_lexer::math::Math;
@@ -57,6 +59,26 @@ impl ParseOption for SumP {
 	    	Ok(None)
 	    }
 	}
+}
+
+impl GetReqAttributes for Sum {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.left.get_req_attributes();
+        if let Some(cont) = &self.cont {
+            req.extend(cont.get_req_attributes());
+        }
+        req
+    }
+}
+
+impl GetReqAttributes for SumP {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.right.get_req_attributes();
+        if let Some(cont) = &self.cont {
+            req.extend(cont.get_req_attributes());
+        }
+        req
+    }
 }
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]

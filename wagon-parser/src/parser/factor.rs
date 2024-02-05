@@ -1,5 +1,7 @@
 use std::fmt::Display;
 use std::write;
+use crate::firstpass::GetReqAttributes;
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ResultPeek};
 use super::atom::Atom;
 use wagon_lexer::math::Math;
@@ -38,6 +40,19 @@ impl Parse for Factor {
 			Ok(Self::Primary(left))
 		}
 	}
+}
+
+impl GetReqAttributes for Factor {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        match self {
+            Self::Primary(p) => p.get_req_attributes(),
+            Self::Power { left, right } => {
+            	let mut req = left.get_req_attributes();
+            	req.extend(right.get_req_attributes());
+            	req
+            },
+        }
+    }
 }
 
 impl Display for Factor {

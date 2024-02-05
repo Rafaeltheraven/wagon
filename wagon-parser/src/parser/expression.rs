@@ -1,5 +1,7 @@
 use std::{fmt::Display, write};
 
+use crate::firstpass::{GetReqAttributes, ReqAttributes};
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, SpannableNode, ResultPeek, ResultNext};
 use wagon_lexer::math::Math;
 
@@ -52,6 +54,23 @@ impl Expression {
 		};
 		Ok(Self::If { this, then, r#else })
 	}
+}
+
+impl GetReqAttributes for Expression {
+    fn get_req_attributes(&self) -> ReqAttributes {
+        match self {
+		    Self::Subproc(_) => ReqAttributes::new(),
+		    Self::If { this, then, r#else } => {
+		    	let mut req = this.get_req_attributes();
+		    	req.extend(then.get_req_attributes());
+		    	if let Some(cont) = r#else {
+		    		req.extend(cont.get_req_attributes());
+		    	}
+		    	req
+		    },
+		    Self::Disjunct(d) => d.get_req_attributes(),
+		}
+    }
 }
 
 impl Display for Expression {

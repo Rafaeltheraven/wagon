@@ -1,9 +1,13 @@
-use crate::parser::Span;
+
+use crate::firstpass::GetReqAttributes;
+use crate::firstpass::ReqAttributes;
+use crate::parser::{Span, Spannable};
 use std::fmt::Display;
 use std::write;
 
 use super::helpers::between_sep;
-use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, Peek, ResultPeek};
+use super::CallingArgs;
+use super::{LexerBridge, Parse, ParseResult, Peek, ResultPeek, SpannableNode, Tokens};
 use wagon_lexer::{math::Math, productions::Productions};
 
 use super::terminal::Terminal;
@@ -82,8 +86,64 @@ impl Symbol {
     }
 
     /// Create a symbol which is just a spanned non-terminal [`Ident::Unknown`].
-    pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
-        SpannableNode::new(Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), span.clone()), Vec::new()), span)
+    // pub(crate) fn simple_ident_spanned(ident: &str, span: Span) -> SpannableNode<Self> {
+    //     Self::simple_ident_spanned_with_args(ident, span, Vec::new())
+    // }
+
+    pub(crate) fn simple_ident_spanned_with_args(ident: &str, span: Span, args: Vec<SpannableNode<Ident>>) -> SpannableNode<Self> {
+        SpannableNode::new(Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), span.clone()), args), span)
+    }
+
+    pub(crate) fn rewrite(&mut self) -> ReqAttributes {
+        match self {
+            Self::NonTerminal(_, v) => {
+                let mut req = ReqAttributes::with_capacity(v.len());
+                for i in v.iter_mut() {
+                    match &i.node {
+                        Ident::Inherit(s) | Ident::Local(s) | Ident::Unknown(s) => { // This happens in EBNF rewrites. Every change in EBNF created rules must be passed up.
+                            i.node = Ident::Synth(s.clone());
+                        },
+                        Ident::Synth(_) => {}
+                    }
+                    if !req.contains(i) {
+                        req.insert(i.clone());
+                    }
+                }
+                req
+            },
+            Self::Assignment(v) => {
+                let mut req = ReqAttributes::new();
+                for a in v {
+                    for i in a.get_req_attributes() {
+                        let string = i.node.extract_string();
+                        let to_insert = SpannableNode::new(Ident::Synth(string.to_owned()), i.span());
+                        req.insert(to_insert);
+                    }
+                }
+                req
+            }
+            _ => ReqAttributes::new()
+        }
+    }
+
+    pub(crate) fn calling_args(&self) -> CallingArgs {
+        match self {
+            Self::NonTerminal(_, v) => v.clone(),
+            Self::Assignment(v) => {
+                let mut req = ReqAttributes::new();
+                for a in v {
+                    req.extend(a.get_req_attributes());
+                }
+                req.into_iter().collect()
+            }
+            _ => CallingArgs::new()
+        }
+    }
+}
+
+impl GetReqAttributes for Symbol {
+    fn get_req_attributes(&self) -> ReqAttributes {
+        self.calling_args().into_iter().collect()
     }
 }
 
@@ -95,7 +155,7 @@ impl Display for Symbol {
                 if args.is_empty() {
                     write!(f, "{i}")
                 } else {
-                    write!(f, "{i}({})", args.iter().join(", "))
+                    write!(f, "{i}<{}>", args.iter().join(", "))
                 }
             }
             Self::Assignment(i) => write!(f, "{{{}}}", i.iter().join("; ")),

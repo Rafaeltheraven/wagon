@@ -18,8 +18,8 @@ TLDR: Instead of S where the left E inherits/synthesizes from/to A, we can do S 
            <p=1>   <p=2>                                                [<p=1>, <p=2>]
 On the SPPF, this is essentially the same as putting the date on the corresponding edge. So we could probably just do that as well
 
-& => by reference => synthesized
-* => dereferenced/by value => inherited
+& => by reference => synthesized (kind of like Rust &mut)
+* => dereferenced/by value => inherited 
 $ => local
 
 # What to do with weights
@@ -27,3 +27,35 @@ $ => local
 2. Attempt highest value, given accepting first set
 3. Attempt highest value, regardless of first set (thus allowing it to fail)
 4. 2/3 but with lowest value
+
+
+A(&a) -> B(&a, $b)?
+
+A(&a) -> B(&a, $b)?
+A(&a) -> A_0_0(&a, $b)
+A_0_0(&a, &b) -> B(&a, &b) | 
+
+A(&a) -> B(&a, $b)&
+A(&a) -> A_0_0(&a, $b)
+A_0_0(&a, &b) -> B(&a. &b) A_0_0(&a. &b) | 
+
+A(&a) -> B(&a, $b)+
+A(&a) -> A_0_0(&a, $b)
+A_0_0(&a, &b) -> B(&a, &b) A_0_0_p(&a, &b)
+A_0_0_p(&a, &b) -> B(&a, &b) A_0_0_p(&a, &b) | 
+
+A(&a) -> (B($b)& C($c)?)?
+
+A(&a) -> A_0_0__0?
+A_0_0__0 -> B($b)& C($c)?
+
+A(&a) -> A_0_0__0_0_0($b, $c)
+A_0_0__0_0_0(&b, &c) -> A_0_0__0(&b, &c) | 
+A_0_0__0(&b, &c) -> B(&b)& C(&c)?
+
+Any attrs we can not find inside of () can be assumed to be from outside and must be passed in.
+Any attrs we CAN find are constructed inside of the ().
+Attributes inside () or EBNF MUST by synthesized. 
+
+Could be good idea to disallow multiple types of attributes for the same "name". If you want that, just use a different name or something.
+Reason is that this conflicts with rewrites of (), which require all passed arguments to be synthesized.

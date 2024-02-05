@@ -1,5 +1,7 @@
 use std::{fmt::Display, write};
 
+use crate::firstpass::GetReqAttributes;
+
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, Peek};
 
 use wagon_lexer::math::Math;
@@ -29,6 +31,15 @@ impl Parse for Inverse {
         }
     }
 
+}
+
+impl GetReqAttributes for Inverse {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        match self {
+            Self::Not(i) => i.get_req_attributes(),
+            Self::Comparison(c) => c.get_req_attributes(),
+        }
+    }
 }
 
 impl Display for Inverse {

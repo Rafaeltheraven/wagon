@@ -5,6 +5,7 @@ use std::write;
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
+use crate::firstpass::GetReqAttributes;
 
 use wagon_lexer::{math::Math, Spannable};
 use wagon_macros::match_error;
@@ -83,6 +84,20 @@ impl Parse for Atom {
 	        },
 	    })
 	}
+}
+
+impl GetReqAttributes for Atom {
+    fn get_req_attributes(&self) -> crate::firstpass::ReqAttributes {
+        match self {
+        	Self::Ident(i) => { 
+        		let mut req = crate::firstpass::ReqAttributes::new();
+        		req.insert(i.clone().into());
+        		req
+        	},
+        	Self::Group(e) => e.get_req_attributes(),
+        	_ => crate::firstpass::ReqAttributes::new()
+        }
+    }
 }
 
 impl Display for Atom {

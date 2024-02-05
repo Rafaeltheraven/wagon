@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, helpers::{check_semi, between_sep}, Rewrite, SpannableNode, Peek, ResultNext};
+use super::{helpers::{check_semi, between_sep}, LexerBridge, Parse, ParseResult, Peek, ResultNext, Rewrite, SpannableNode, Tokens, WagParseError};
 use wagon_lexer::{productions::{ImportType, Productions}, Spannable};
-use crate::firstpass::{FirstPassState, FirstPassResult};
+use crate::firstpass::{FirstPassResult, FirstPassState, ReqAttributes};
 
 use super::rhs::Rhs;
 use super::Ident;
@@ -82,36 +82,42 @@ Ident format:
 
 */
 /// Convert every [`Chunk`] for every alternative into it's own separate `Rule`.
-impl Rewrite<Vec<Self>> for SpannableNode<Rule> {
-    fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<Vec<Self>> {
+impl Rewrite<(Vec<Self>, ReqAttributes)> for SpannableNode<Rule> {
+    fn rewrite(&mut self, depth: usize, state: &mut FirstPassState) -> FirstPassResult<(Vec<Self>, ReqAttributes)> {
         match &mut self.node {
             Rule::Analytic(s, args, rhs) => {
                 let mut rules = Vec::new();
+                let mut req_attrs = ReqAttributes::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
                         let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
-                        rules.extend(chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?);
+                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?;
+                        rules.extend(new_rules);
+                        req_attrs.extend(new_attrs);
                     }
                 }
                 for arg in args {
                     state.add_parameter(s.clone(), arg.clone())?;
                 }
-                Ok(rules)
+                Ok((rules, req_attrs))
             },
             Rule::Generate(s, args, rhs) => {
                 let mut rules = Vec::new();
+                let mut req_attrs = ReqAttributes::new();
                 for (i, alt) in rhs.iter_mut().enumerate() {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
                         let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
-                        rules.extend(chunk_node.rewrite(ident, args.clone(), span, Rule::Generate, depth, state)?);
+                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?;
+                        rules.extend(new_rules);
+                        req_attrs.extend(new_attrs);
                     }
                 }
                 for arg in args {
                     state.add_parameter(s.clone(), arg.clone())?;
                 }
-                Ok(rules)
+                Ok((rules, req_attrs))
             },
             Rule::Import(..) => todo!(),
             Rule::Exclude(..) => todo!(),
@@ -128,14 +134,14 @@ impl Display for Rule {
                 if args.is_empty() {
                     writeln!(f, "{s} -> {};", rhs.iter().join(" | "))
                 } else {
-                    writeln!(f, "{s}({}) -> {};", comma_separated(args), rhs.iter().join(" | "))
+                    writeln!(f, "{s}<{}> -> {};", comma_separated(args), rhs.iter().join(" | "))
                 }
             },
             Self::Generate(s, args, rhs) => {
                 if args.is_empty() {
                     writeln!(f, "{s} <= {};", rhs.iter().join(" | "))
                 } else {
-                    writeln!(f, "{s}({}) <= {};", comma_separated(args), rhs.iter().join(" | "))
+                    writeln!(f, "{s}<{}> <= {};", comma_separated(args), rhs.iter().join(" | "))
                 }
             },
             Self::Import(s1, imp, s2) => {
