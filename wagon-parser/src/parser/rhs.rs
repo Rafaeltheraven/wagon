@@ -80,16 +80,16 @@ impl Rhs {
 		}, span)
 	}
 
-	#[cfg(test)]
-	/// Automatically create a rule which is just an ident. See [`Chunk::simple_ident`].
-	pub(crate) fn simple_ident(ident: &str) -> Self {
-		Self {
-			weight: None,
-			chunks: vec![
-				Chunk::simple_ident(ident).into()
-			]
-		}
-	}
+	// #[cfg(test)]
+	// /// Automatically create a rule which is just an ident. See [`Chunk::simple_ident`].
+	// pub(crate) fn simple_ident(ident: &str) -> Self {
+	// 	Self {
+	// 		weight: None,
+	// 		chunks: vec![
+	// 			Chunk::simple_ident(ident).into()
+	// 		]
+	// 	}
+	// }
 
 	#[cfg(test)]
 	/// Automatically create a rule which is just a terminal. See [`Chunk::simple_terminal`].
