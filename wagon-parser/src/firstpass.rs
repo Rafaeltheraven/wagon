@@ -111,11 +111,11 @@ mod test {
 	#[test]
 	fn test_simple_rewrite_maybe() {
 		let input = r"
-		A -> X Y?;
+			A -> X Y?;
 		";
 		let expected_input = r"
-		A -> X A·0·1;
-		A·0·1 -> Y | ;
+			A -> X A·0·1;
+			A·0·1 -> Y | ;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -123,11 +123,11 @@ mod test {
 	#[test]
 	fn test_simple_rewrite_many() {
 		let input = r"
-		A -> X Y*;
+			A -> X Y*;
 		";
 		let expected_input = r"
-		A -> X A·0·1;
-		A·0·1 -> Y A·0·1 | ;
+			A -> X A·0·1;
+			A·0·1 -> Y A·0·1 | ;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -135,12 +135,12 @@ mod test {
 	#[test]
 	fn test_simple_rewrite_some() {
 		let input = r"
-		A -> X Y+;
+			A -> X Y+;
 		";
 		let expected_input = r"
-		A -> X A·0·1;
-		A·0·1·p -> Y A·0·1·p | ;
-		A·0·1 -> Y A·0·1·p;
+			A -> X A·0·1;
+			A·0·1·p -> Y A·0·1·p | ;
+			A·0·1 -> Y A·0·1·p;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -148,14 +148,14 @@ mod test {
 	#[test]
 	fn test_simple_group() {
 		let input = r"
-		A -> (B C?)+;
+			A -> (B C?)+;
 		";
 		let expected_input = r"
-		A -> A·0·0;
-		A·0·0·p -> A·0·0··0 A·0·0·p | ;
-		A·0·0 -> A·0·0··0 A·0·0·p;
-		A·0·0··0 -> B A·0·0··0·0·1;
-		A·0·0··0·0·1 -> C | ;
+			A -> A·0·0;
+			A·0·0·p -> A·0·0··0 A·0·0·p | ;
+			A·0·0 -> A·0·0··0 A·0·0·p;
+			A·0·0··0 -> B A·0·0··0·0·1;
+			A·0·0··0·0·1 -> C | ;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -163,17 +163,17 @@ mod test {
 	#[test]
 	fn test_complex_rewrite() {
 		let input = r"
-		A -> ((X Y)+ Z?)+;
+			A -> ((X Y)+ Z?)+;
 		";
 		let expected_input = r"
-		A -> A·0·0;
-		A·0·0·p -> A·0·0··0 A·0·0·p | ;
-		A·0·0 -> A·0·0··0 A·0·0·p;
-		A·0·0··0 -> A·0·0··0·0·0 A·0·0··0·0·1;
-		A·0·0··0·0·0·p -> A·0·0··0·0·0··1 A·0·0··0·0·0·p | ;
-		A·0·0··0·0·0 -> A·0·0··0·0·0··1 A·0·0··0·0·0·p;
-		A·0·0··0·0·0··1 -> X Y;
-		A·0·0··0·0·1 -> Z | ;
+			A -> A·0·0;
+			A·0·0·p -> A·0·0··0 A·0·0·p | ;
+			A·0·0 -> A·0·0··0 A·0·0·p;
+			A·0·0··0 -> A·0·0··0·0·0 A·0·0··0·0·1;
+			A·0·0··0·0·0·p -> A·0·0··0·0·0··1 A·0·0··0·0·0·p | ;
+			A·0·0··0·0·0 -> A·0·0··0·0·0··1 A·0·0··0·0·0·p;
+			A·0·0··0·0·0··1 -> X Y;
+			A·0·0··0·0·1 -> Z | ;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -181,11 +181,11 @@ mod test {
 	#[test]
 	fn test_rewrite_group_no_ebnf() {
 		let input = r"
-		A -> (B C);
+			A -> (B C);
 		";
 		let expected_input = r"
-		A -> A·0·0;
-		A·0·0 -> B C;
+			A -> A·0·0;
+			A·0·0 -> B C;
 		";
 		test_inputs(input, expected_input);
 	}
@@ -193,12 +193,70 @@ mod test {
 	#[test]
 	fn test_rewrite_conflict() {
 		let input = r"
-		A -> B;
-		A -> C;
-		A -> ;
+			A -> B;
+			A -> C;
+			A -> ;
 		";
 		let expected_input = r"
-		A -> B | C | ;
+			A -> B | C | ;
+		";
+		test_inputs(input, expected_input);
+	}
+
+	#[test]
+	fn test_simple_rewrite_with_attrs() {
+		let input = r"
+			A<*a> -> B<*a, $b>+;
+		";
+		let expected_input = r"
+			A<*a> -> A·0·0<*a, $b>;
+			A·0·0·p<&a, &b> -> B<&a, &b> A·0·0·p<&a, &b> | ;
+			A·0·0<&a, &b> -> B<&a, &b> A·0·0·p<&a, &b>;
+		";
+		test_inputs(input, expected_input);
+	}
+
+	#[test]
+	fn test_simple_group_with_attrs() {
+		let input = r"
+			A<*x> -> (B<*x> C<$y>?)+;
+		";
+		let expected_input = r"
+			A<*x> -> A·0·0<*x, $y>;
+			A·0·0·p<&x, &y> -> A·0·0··0<&x, &y> A·0·0·p<&x, &y> | ;
+			A·0·0<&x, &y> -> A·0·0··0<&x, &y> A·0·0·p<&x, &y>;
+			A·0·0··0<&x, &y> -> B<&x> A·0·0··0·0·1<&y>;
+			A·0·0··0·0·1<&y> -> C<&y> | ;
+		";
+		test_inputs(input, expected_input);
+	}
+
+	#[test]
+	fn test_complex_rewrite_with_attrs() {
+		let input = r"
+			A<*a, *b> -> ((X<*a, *b> Y<*b, $c>)+ Z<$c>?)+;
+		";
+		let expected_input = r"
+			A<*a, *b> -> A·0·0<*a, *b, $c>;
+			A·0·0·p<&a, &b, &c> -> A·0·0··0<&a, &b, &c> A·0·0·p<&a, &b, &c> | ;
+			A·0·0<&a, &b, &c> -> A·0·0··0<&a, &b, &c> A·0·0·p<&a, &b, &c>;
+			A·0·0··0<&a, &b, &c> -> A·0·0··0·0·0<&a, &b, &c> A·0·0··0·0·1<&c>;
+			A·0·0··0·0·0·p<&a, &b, &c> -> A·0·0··0·0·0··1<&a, &b, &c> A·0·0··0·0·0·p<&a, &b, &c> | ;
+			A·0·0··0·0·0<&a, &b, &c> -> A·0·0··0·0·0··1<&a, &b, &c> A·0·0··0·0·0·p<&a, &b, &c>;
+			A·0·0··0·0·0··1<&a, &b, &c> -> X<&a, &b> Y<&b, &c>;
+			A·0·0··0·0·1<&c> -> Z<&c> | ;
+		";
+		test_inputs(input, expected_input);
+	}
+
+	#[test]
+	fn test_group_no_ebnf_with_attrs() {
+		let input = r"
+			A<*a> -> (B<*a> C<$b>);
+		";
+		let expected_input = r"
+			A<*a> -> A·0·0<*a, $b>;
+			A·0·0<&a, &b> -> B<&a> C<&b>;
 		";
 		test_inputs(input, expected_input);
 	}

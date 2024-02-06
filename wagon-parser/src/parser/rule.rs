@@ -92,7 +92,7 @@ impl Rewrite<(Vec<Self>, ReqAttributes)> for SpannableNode<Rule> {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
                         let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
-                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?;
+                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, span, Rule::Analytic, depth, state)?;
                         rules.extend(new_rules);
                         req_attrs.extend(new_attrs);
                     }
@@ -109,7 +109,7 @@ impl Rewrite<(Vec<Self>, ReqAttributes)> for SpannableNode<Rule> {
                     for (j, chunk) in alt.node.chunks.iter_mut().enumerate() {
                         let ident = format!("{s}·{i}·{j}");
                         let (chunk_node, span) = chunk.deconstruct();
-                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, args.clone(), span, Rule::Analytic, depth, state)?;
+                        let (new_rules, new_attrs) = chunk_node.rewrite(ident, span, Rule::Analytic, depth, state)?;
                         rules.extend(new_rules);
                         req_attrs.extend(new_attrs);
                     }

@@ -117,8 +117,7 @@ impl Chunk {
     /// At the end, all EBNF operators are replaced by references to the new rules and we return a list of new rules to add to the grammar.
 	pub(crate) fn rewrite(
             &mut self, 
-            ident: String, 
-            args: Vec<SpannableNode<Ident>>, 
+            ident: String,
             span: &Span, 
             rule_func: RuleConstructor, 
             depth: usize, 
@@ -128,93 +127,118 @@ impl Chunk {
         let required_args = if let Some(e) = std::mem::take(&mut self.ebnf) {
             match self {
                 Self { chunk: ChunkP::Unit(u), ..} => {
-                    let calling_args = u.to_inner().calling_args();
-                    let req_args = u.get_req_attributes();
-                    let mut yanked = std::mem::replace(u, 
-                        SpannableNode::new(
-                            Symbol::NonTerminal(
-                                SpannableNode::new(Ident::Unknown(ident.clone()), span.clone()), 
-                                calling_args
-                            ), 
-                            span.clone()
-                        )
-                    );
-                    let symbol_args = yanked.to_inner_mut().rewrite().into_iter().collect();
-                    Self::rewrite_ebnf(&e, ident, symbol_args, yanked, span, rule_func, &mut rules);
-                    req_args
+                    Self::rewrite_unit_ebnf(u, &e, rule_func, depth, ident, span, &mut rules)
                 },
                 Self { chunk: ChunkP::Group(g), ..} => {
-                    let new_ident = format!("{ident}··{depth}");
-                    let mut new_rule = SpannableNode::new(
-                        rule_func(
-                            new_ident.clone(), 
-                            CallingArgs::new(), // Should be as synthesized
-                            vec![
-                                Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())
-                            ]
-                        ), 
-                        span.clone()
-                    );
-                    let (new_rules, req_args) = new_rule.rewrite(depth+1, state)?;
-                    let mut as_synth = CallingArgs::with_capacity(req_args.len());
-                    for i in &req_args {
-                        let s = i.to_inner().extract_string();
-                        as_synth.push(SpannableNode::new(Ident::Synth(s.to_string()), i.span()));
-                    }
-                    match new_rule.to_inner_mut() {
-                        Rule::Analytic(_, v, _) | Rule::Generate(_, v, _) => {
-                            if depth == 0 {
-                                v.extend(req_args.clone());
-                            } else {
-                                v.extend(as_synth.clone());
-                            }
-                        },
-                        _ => {}
-                    }
-                    let symbol = Symbol::simple_ident_spanned_with_args(&new_ident, span.clone(), as_synth.clone()); // Should be as synthesized
-                    self.chunk = ChunkP::Unit(Symbol::simple_ident_spanned_with_args(&ident, span.clone(), args)); // Should be as expected
-                    Self::rewrite_ebnf(&e, ident, as_synth, symbol, span, rule_func, &mut rules); // Should be as synthesized
-                    rules.push(new_rule);
-                    rules.extend(new_rules);
-                    req_args
+                    let real_g = std::mem::take(g);
+                    self.rewrite_group(real_g, Some(&e), rule_func, depth, ident, span, state, &mut rules)?
                 }
             }
-        } else if let Self { chunk: ChunkP::Group(g), ..} = self {
-            let mut new_rule = SpannableNode::new(
-                rule_func(
-                    ident.clone(), 
-                    CallingArgs::new(), // Should be as synthesized
-                    vec![
-                        Rhs { weight: None, chunks: std::mem::take(g) }.into_spanned(span.clone())
-                    ]
-                ), 
-                span.clone()
-            );
-            let (new_rules, req_args) = new_rule.rewrite(depth+1, state)?;
-            let mut as_synth = CallingArgs::with_capacity(req_args.len());
-            for i in &req_args {
-                let s = i.to_inner().extract_string();
-                as_synth.push(SpannableNode::new(Ident::Synth(s.to_string()), i.span()));
-            }
-            match new_rule.to_inner_mut() {
-                Rule::Analytic(_, v, _) | Rule::Generate(_, v, _) => {
-                    if depth == 0 {
-                        v.extend(req_args.clone());
-                    } else {
-                        v.extend(as_synth.clone());
-                    }
-                },
-                _ => {}
-            }
-            self.chunk = ChunkP::Unit(Symbol::simple_ident_spanned_with_args(&ident, span.clone(), args)); // Should be as expected
-            rules.push(new_rule);
-            rules.extend(new_rules);
-            req_args
         } else {
-           self.get_req_attributes() 
+            match self {
+                Self { chunk: ChunkP::Unit(u), ..} => {
+                    Self::rewrite_unit_no_ebnf(u, depth)
+                },
+                Self { chunk: ChunkP::Group(g), ..} => {
+                    let real_g = std::mem::take(g);
+                    self.rewrite_group(real_g, None, rule_func, depth, ident, span, state, &mut rules)?
+                }
+            } 
         };
         Ok((rules, required_args))
 	}
+
+    fn rewrite_unit_ebnf(u: &mut SpannableNode<Symbol>, e: &EbnfType, rule_func: RuleConstructor, depth: usize, ident: String, span: &Span, rules: &mut Vec<SpannableNode<Rule>>) -> ReqAttributes {
+        let calling_args = u.to_inner().calling_args();
+        let req_args = u.get_req_attributes();
+        let mut yanked = std::mem::replace(u, 
+            SpannableNode::new(
+                Symbol::NonTerminal(
+                    SpannableNode::new(Ident::Unknown(ident.clone()), span.clone()), 
+                    CallingArgs::new(),
+                ), 
+                span.clone()
+            )
+        );
+        let symbol_args = yanked.to_inner_mut().rewrite().into_iter().collect();
+        if let Symbol::NonTerminal(_, v) = u.to_inner_mut() {
+            let main_args = if depth > 0 {
+                let mut as_synth = CallingArgs::with_capacity(calling_args.len());
+                for i in &calling_args {
+                    let s = i.to_inner().extract_string();
+                    as_synth.push(SpannableNode::new(Ident::Synth(s.to_string()), i.span()));
+                }
+                as_synth
+            } else {
+                calling_args
+            };
+            let _ = std::mem::replace(v, main_args);
+        }
+        Self::rewrite_ebnf(e, ident, symbol_args, yanked, span, rule_func, rules);
+        req_args
+    }
+
+    fn rewrite_unit_no_ebnf(u: &mut SpannableNode<Symbol>, depth: usize) -> ReqAttributes {
+        let req = u.get_req_attributes();
+        if depth > 0 {
+            u.to_inner_mut().rewrite();
+        }
+        req
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn rewrite_group(
+            &mut self, 
+            g: Vec<SpannableNode<Self>>, 
+            e: Option<&EbnfType>, 
+            rule_func: RuleConstructor, 
+            depth: usize, 
+            ident: String, 
+            span: &Span, 
+            state: &mut FirstPassState, 
+            rules: &mut Vec<SpannableNode<Rule>>
+        ) -> FirstPassResult<ReqAttributes> {
+        let new_ident = if e.is_some() {
+            format!("{ident}··{depth}")
+        } else {
+            ident.clone()
+        };
+        let mut new_rule = SpannableNode::new(
+            rule_func(
+                new_ident.clone(), 
+                CallingArgs::new(), // Should be as synthesized
+                vec![
+                    Rhs { weight: None, chunks: g }.into_spanned(span.clone())
+                ]
+            ), 
+            span.clone()
+        );
+        let (new_rules, req_args) = new_rule.rewrite(depth+1, state)?;
+        let mut as_synth = CallingArgs::with_capacity(req_args.len());
+        for i in &req_args {
+            let s = i.to_inner().extract_string();
+            as_synth.push(SpannableNode::new(Ident::Synth(s.to_string()), i.span()));
+        }
+        match new_rule.to_inner_mut() {
+            Rule::Analytic(_, v, _) | Rule::Generate(_, v, _) => {
+                let _ = std::mem::replace(v, as_synth.clone());
+            },
+            _ => {}
+        }
+        let symbol_args = if depth > 0 {
+            as_synth.clone()
+        } else {
+            req_args.iter().cloned().collect()
+        };
+        self.chunk = ChunkP::Unit(Symbol::simple_ident_spanned_with_args(&ident, span.clone(), symbol_args)); // Should be as expected
+        if let Some(eb) = e {
+            let symbol = Symbol::simple_ident_spanned_with_args(&new_ident, span.clone(), as_synth.clone()); // Should be as synthesized
+            Self::rewrite_ebnf(eb, ident, as_synth, symbol, span, rule_func, rules); // Should be as synthesized
+        }
+        rules.push(new_rule);
+        rules.extend(new_rules);
+        Ok(req_args)
+    }
 
     /// Check if this chunk is a terminal
     // pub(crate) fn is_terminal(&self) -> bool {
