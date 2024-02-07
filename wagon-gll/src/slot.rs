@@ -98,11 +98,14 @@ impl<'a> GrammarSlot<'a> {
 				for (j, s) in parts.iter().enumerate() {
 					if j == self.pos {
 						res.push('•');
+						res.push(' ');
 					}
 					res.push_str(s);
+					res.push(' ');
 				}
 			} else {
 				res.push_str(label.to_string());
+				res.push(' ');
 			}
 		}
 		if self.is_last(state) {
