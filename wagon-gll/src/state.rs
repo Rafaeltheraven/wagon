@@ -372,7 +372,7 @@ impl<'a> GLLState<'a> {
                 return Err(GLLParseError::TooLong { pointer, offender: bytes })
             }
             let check = input[pointer];
-            if check != *expected {
+            if check != *expected && !check.is_ascii_whitespace() {
                 return Err(GLLParseError::UnexpectedByte { pointer, expected: *expected, offender: check })
             }
             pointer += 1;

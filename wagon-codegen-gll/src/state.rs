@@ -360,7 +360,7 @@ impl CodeGenState {
     	}
     	#[allow(clippy::expect_used)]
     	let regex_dir = files.insert_dir("regexes").expect("Unable to add regexes dir, should be impossible");
-    	for (r, dfa) in &self.regexes {
+    	for (i, (r, dfa)) in self.regexes.iter().enumerate() {
     		let mut hasher = DefaultHasher::new();
 			r.hash(&mut hasher);
 			let basename = hasher.finish();
@@ -374,17 +374,20 @@ impl CodeGenState {
 			let big_string = big_path.to_str().ok_or_else(|| CodeGenError::new(CodeGenErrorKind::Fatal("Non utf-8 path".to_string())))?;
 			let (bytes, pad) = dfa.to_bytes_big_endian();
 			regex_dir.insert_blob(&big_name, bytes[pad..].into());
+			let aligned_ident = format_ident!("ALIGNED_{}", i);
     		stream.extend(quote!(
-    			let aligned: &regex_automata::util::wire::AlignAs<[u8], u32> = &regex_automata::util::wire::AlignAs {
+    			static #aligned_ident: &regex_automata::util::wire::AlignAs<[u8], u32> = &regex_automata::util::wire::AlignAs {
     				_align: [],
     				#[cfg(target_endian = "big")]
 			        bytes: *include_bytes!(#big_string),
 			        #[cfg(target_endian = "little")]
 			        bytes: *include_bytes!(#little_string),
     			};
-    			let (dfa, _) = regex_automata::dfa::dense::DFA::from_bytes(&aligned.bytes).expect("Unable to serialize regex DFA");
+    			let (dfa, _) = regex_automata::dfa::dense::DFA::from_bytes(&#aligned_ident.bytes).expect("Unable to serialize regex DFA");
     			let automata = wagon_gll::RegexTerminal::new(#r, dfa);
-    			regex_map.insert(#r, std::rc::Rc::new(automata));
+    			let pointer = std::rc::Rc::new(automata);
+    			label_map.insert(#r, pointer.clone());
+    			regex_map.insert(#r, pointer);
     		));
     	}
     	let regex_len = self.regexes.len();
@@ -406,7 +409,7 @@ impl CodeGenState {
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
 			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
-			    let contents = content_string.trim().as_bytes();
+			    let contents: &'static [u8] = Box::leak(content_string.trim().as_bytes().into()); // This is required to tell Rust the input data lasts forever.
     			let mut label_map: wagon_gll::LabelMap = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: wagon_gll::RuleMap = std::collections::HashMap::with_capacity(#root_len);
     			let mut regex_map: wagon_gll::RegexMap = std::collections::HashMap::with_capacity(#regex_len);

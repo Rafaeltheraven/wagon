@@ -152,7 +152,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 				let pattern = #r;
 			));
 			if !found_first {
-				state.get_first(label)?[0].0.push(quote!(state.get_regex_automaton(#r)?));
+				state.get_first(label)?[0].0.push(quote!(state.get_label_by_uuid(#r)?));
 			}
 			state.regexes.push((r, dfa));
 			if first_symbol && block_size != 1 {
