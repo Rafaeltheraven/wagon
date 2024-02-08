@@ -11,3 +11,4 @@ target/
 
 gll_test/
 *.wag
+*.sublime-workspace
