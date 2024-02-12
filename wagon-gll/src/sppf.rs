@@ -103,9 +103,15 @@ impl<'a> SPPFNode<'a> {
             },
             SPPFNode::Intermediate { slot, left, right, ret, context } => {
                 let mut attr_map: HashMap<&str, &Value> = HashMap::new();
-                let label = state.get_label(&slot.rule[slot.len()-1]);
+                let dot = if slot.is_complete() {
+                    slot.dot - 2
+                } else {
+                    slot.dot
+                };
+                let label = state.get_label(&slot.rule[dot]);
                 let (from_ret, from_ctx) = label.attr_rep_map();
                 let ret_len = from_ret.len();
+                let slot_str = slot.to_string(state);
                 for (i, attr) in from_ctx.iter().enumerate() {
                     attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLParseError::MissingContext(i + ret_len, context.clone()))?);
                 }
@@ -123,7 +129,7 @@ impl<'a> SPPFNode<'a> {
                     });
                 attr_rep.pop();
                 attr_rep.pop();
-                format!("({},{},{},<{}>)", slot.to_string(state), left, right, attr_rep)
+                format!("({slot_str},{left},{right},<{attr_rep}>)")
             },
             SPPFNode::Packed { slot, split, .. } => format!("({}, {})", slot.to_string(state), split),
         })

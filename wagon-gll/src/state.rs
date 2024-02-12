@@ -246,8 +246,7 @@ impl<'a> GLLState<'a> {
     /// Find or create an [`SPPFNode::Symbol`].
     ///
     /// `get_node_t` from the original paper.
-    pub fn get_node_t(&mut self, terminal: &'a [u8]) -> SPPFNodeIndex {
-        let left = self.input_pointer;
+    pub fn get_node_t(&mut self, terminal: &'a [u8], left: usize) -> SPPFNodeIndex {
         let right = left + terminal.len();
         self.find_or_create_sppf_symbol(terminal, left, right)
     }
@@ -367,7 +366,7 @@ impl<'a> GLLState<'a> {
     fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &'a [u8]) -> ParseResult<'a, usize> {
         let mut pointer = start_pointer;
         let input_len = input.len();
-        while input[pointer].is_ascii_whitespace() && pointer < input_len { // left trim the input
+        while pointer < input_len && input[pointer].is_ascii_whitespace() { // left trim the input
             pointer += 1;
         }
         for expected in bytes {
@@ -450,7 +449,7 @@ impl<'a> GLLState<'a> {
         let regex = self.get_regex_automaton(pattern)?;
         if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
             let result = &self.input[self.input_pointer..self.input_pointer + j];
-            self.input_pointer += j;
+            self.input_pointer += j + 1;
             Ok(Some(result))
         } else {
             Ok(None)
@@ -462,10 +461,23 @@ impl<'a> GLLState<'a> {
     /// # Errors
     /// Returns an error if the regex completely fails to build.
     pub fn has_regex(&mut self, pattern: &'a str) -> ParseResult<'a, bool> {
-        let curr_pointer = self.input_pointer;
-        let resp = self.next_regex(pattern)?;
-        self.input_pointer = curr_pointer;
-        Ok(resp.is_some())
+        let regex = self.get_regex_automaton(pattern)?;
+        Ok(Self::_next_regex(&regex, self.input_pointer, self.input).is_some())
+    }
+
+    /// Get the bytes matched by the pattern based on where the current input pointer is, but do not consume these bytes.
+    ///
+    /// Similar to [`GLLState::next_regex`] but without consuming bytes.
+    ///
+    /// # Errors
+    /// Returns an error if the regex completely fails to build.
+    pub fn regex_bytes(&mut self, pattern: &'a str) -> ParseResult<'a, Option<Terminal<'a>>> {
+        let regex = self.get_regex_automaton(pattern)?;
+        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
+            Ok(Some(&self.input[self.input_pointer..self.input_pointer + j]))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Get the current input byte for the state

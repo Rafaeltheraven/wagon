@@ -122,7 +122,7 @@ impl<'a> GrammarSlot<'a> {
 	/// Have we completely parsed this rule?
 	///
 	/// This is defined as the dot being 1 higher than the length of the rule.
-	fn is_complete(&self) -> bool {
+	pub(crate) fn is_complete(&self) -> bool {
 		self.dot == self.len()+1
 	}
 
