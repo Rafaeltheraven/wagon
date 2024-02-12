@@ -367,6 +367,9 @@ impl<'a> GLLState<'a> {
     fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &'a [u8]) -> ParseResult<'a, usize> {
         let mut pointer = start_pointer;
         let input_len = input.len();
+        while input[pointer].is_ascii_whitespace() && pointer < input_len { // left trim the input
+            pointer += 1;
+        }
         for expected in bytes {
             if pointer >= input_len {
                 return Err(GLLParseError::TooLong { pointer, offender: bytes })
@@ -452,6 +455,17 @@ impl<'a> GLLState<'a> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Check if the following pattern **can** be matched, but do not consume the resulting bytes.
+    ///
+    /// # Errors
+    /// Returns an error if the regex completely fails to build.
+    pub fn has_regex(&mut self, pattern: &'a str) -> ParseResult<'a, bool> {
+        let curr_pointer = self.input_pointer;
+        let resp = self.next_regex(pattern)?;
+        self.input_pointer = curr_pointer;
+        Ok(resp.is_some())
     }
 
     /// Get the current input byte for the state

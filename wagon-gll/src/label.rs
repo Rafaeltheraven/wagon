@@ -246,7 +246,7 @@ impl<'a> Label<'a> for RegexTerminal<'a> {
     /// A regex is sort of between a non-terminal and a terminal. They way `first` is used, we want
     /// it to return `true` if some terminal is parsable from this point. In the case of a regex, this means the pattern is accepting.
     fn first(&self, state: &mut GLLState<'a>) -> ParseResult<'a, bool> {
-	    Ok(state.next_regex(self.pattern)?.is_some())
+	    state.has_regex(self.pattern)
     }
 
     fn is_terminal(&self) -> bool {

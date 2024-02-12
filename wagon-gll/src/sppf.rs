@@ -97,13 +97,13 @@ impl<'a> SPPFNode<'a> {
                 let term = if terminal.is_empty() {
                     "ε"
                 } else {
-                    from_utf8(terminal)?
+                    from_utf8(terminal)?.trim_start()
                 };
                 format!("({term},{left},{right})")
             },
             SPPFNode::Intermediate { slot, left, right, ret, context } => {
                 let mut attr_map: HashMap<&str, &Value> = HashMap::new();
-                let label = state.get_label(&slot.rule[slot.dot-2]);
+                let label = state.get_label(&slot.rule[slot.len()-1]);
                 let (from_ret, from_ctx) = label.attr_rep_map();
                 let ret_len = from_ret.len();
                 for (i, attr) in from_ctx.iter().enumerate() {
