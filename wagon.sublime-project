@@ -6,6 +6,13 @@
 			"folder_exclude_patterns": ["target"]
 		}
 	],
+	"debugger_tasks": [
+		{
+			"name": "Compile GLLTest",
+			"working_dir": "${project_path}/gll_test",
+			"shell_cmd": "cargo build",
+		},
+	],
 	"debugger_configurations":
 	[
 		{
@@ -21,5 +28,14 @@
 			"args": [],
 			"program": "${folder}/target/debug/wagon"
 		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "GLLTest Run",
+			"pre_debug_task": "Compile GLLTest",
+			"args": ["input"],
+			"cwd": "${project_path}/gll_test/",
+			"program": "${project_path}/gll_test/target/debug/gll_test"
+		}
 	],
 }
