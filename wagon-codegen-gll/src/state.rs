@@ -416,7 +416,10 @@ impl CodeGenState {
     			#stream
     			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map, regex_map).unwrap();
     			state.main();
-    			println!("{}", state.print_sppf_dot(crop).unwrap());
+    			match state.print_sppf_dot(crop) {
+			        Ok(t) => println!("{t}"),
+			        Err(e) => println!("Error: {e}")
+			    }
     			assert!(state.accepts());
     		}
     	))
