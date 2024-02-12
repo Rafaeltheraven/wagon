@@ -192,7 +192,7 @@ impl<'a> SPPF<'a> {
             let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
             let has_parents = self.0.neighbors_directed(ix, Incoming).next().is_some();
             match node {
-                SPPFNode::Intermediate { slot, left, right, .. } if !has_parents && slot.dot == slot.rule.len()+1 && left == &0 && (input_target.is_none() || input_target.is_some_and(|x| &x == right)) => roots.push(ix),
+                SPPFNode::Intermediate { slot, left, right, .. } if !has_parents && slot.dot == slot.rule.len()+1 && left == &0 && (input_target.is_none() || input_target.is_some_and(|x| &x <= right)) => roots.push(ix),
                 _ => {}
             }
         }
