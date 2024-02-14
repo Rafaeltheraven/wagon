@@ -20,7 +20,7 @@ impl CodeGen for SpannableNode<Assignment> {
 		args.insert(ident);
 		let expr_stream = expr.to_tokens(state, label.clone(), CodeGenState::add_req_code_attr);
 		state.add_code(label.clone(), quote!(
-			let #ident_label: wagon_gll::value::Value = #expr_stream;
+			let #ident_label: wagon_gll::value::Value = (#expr_stream).into();
 		));
 		Ok(())
 	}

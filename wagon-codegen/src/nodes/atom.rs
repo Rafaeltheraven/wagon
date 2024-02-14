@@ -12,15 +12,15 @@ impl<U> ToTokensState<U> for Atom {
             Self::Ident(i) => {
                 let proc_ident = i.to_ident();
                 attr_fun(state, label, i.clone().into());
-                quote!(#proc_ident)
+                quote!(#proc_ident.clone())
             },
-            Self::LitBool(b) => quote!(#b.into()),
-            Self::LitNum(n) => quote!(#n.into()),
+            Self::LitBool(b) => quote!(wagon_value::Value::from(#b)),
+            Self::LitNum(n) => quote!(wagon_value::Value::from(#n)),
             Self::LitFloat(f) => {
                 let real_float: f32 = **f;
-                quote!(#real_float.try_into()?)
+                quote!(wagon_value::Value::try_from(#real_float?))
             },
-            Self::LitString(s) => quote!(#s.into()),
+            Self::LitString(s) => quote!(wagon_value::Value::from(#s)),
             Self::Group(g) => {
                 let g_stream = g.to_tokens(state, label, attr_fun);
                 quote!((#g_stream))
