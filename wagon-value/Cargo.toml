@@ -12,6 +12,7 @@ description = "Dynamic type value object for WAGon."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+num-traits = "0.2.18"
 ordered-float = {workspace = true}
 wagon-utils = {workspace = true}
 

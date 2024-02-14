@@ -20,11 +20,6 @@ pub trait Valueable: std::fmt::Debug + std::fmt::Display + PartialEq + std::hash
     /// # Errors
     /// Should return an error if this value can not be converted into an `f32`.
     fn to_float(&self) -> ValueResult<f32, Self>;
-    /// Calculate this value to the power of another.
-    ///
-    /// # Errors
-    /// Should return an error if this value can not be raised to the value of `rhs` or if an overflow occurs.
-    fn pow(&self, rhs: &Self) -> ValueResult<Self, Self>;
     /// Get a string representation of the value, as if it were a number. 
     ///
     /// # Errors
@@ -51,10 +46,6 @@ impl<T: ToValue<T> + From<Value<T>> + Clone + Eq + std::hash::Hash + std::fmt::D
 
     fn to_float(&self) -> ValueResult<f32, Self> {
         Ok(self.to_value().to_float()?)
-    }
-
-    fn pow<'a>(&'a self, rhs: &'a Self) -> ValueResult<Self, Self> {
-        Ok(Self::from(self.to_value().pow(rhs.to_value())?))
     }
 
     fn display_numerical(&self) -> ValueResult<String, Self> {

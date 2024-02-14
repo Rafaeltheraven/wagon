@@ -16,6 +16,7 @@ syn = {workspace = true, features = ["extra-traits", "full"]}
 quote = {workspace = true}
 proc-macro2 = {workspace = true}
 extendable-data = "0.1.5"
+paste = "1.0.14"
 
 [lib]
 proc-macro = true

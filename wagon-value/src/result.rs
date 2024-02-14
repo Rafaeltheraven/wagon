@@ -21,7 +21,9 @@ pub enum ValueError<T: Valueable> {
     /// This type can not be negated.
     NegationError(T),
     /// Tried to compare a value of to another value and failed.
-    ComparisonError(T, T)
+    ComparisonError(T, T),
+    /// Tried to convert `T` to [`Value`] but failed
+    ConversionError(T),
 }
 
 impl<T: Valueable> Error for ValueError<T> {
@@ -43,6 +45,7 @@ impl<T: Valueable> Display for ValueError<T> {
             Self::IntConversionError(e) => e.fmt(f),
             Self::NegationError(v) => write!(f, "Can not negate value of type {v:?}"),
             Self::ComparisonError(v1, v2) => write!(f, "Can not compare value of type {v1:?} with value of type {v2:?}"),
+            Self::ConversionError(v) => write!(f, "Unable to convert {v:?} to inner value type")
         }
     }
 }
@@ -68,6 +71,7 @@ impl<T: Valueable + From<Value<T>>> From<ValueError<Value<T>>> for ValueError<T>
             ValueError::IntConversionError(e) => Self::IntConversionError(e),
             ValueError::NegationError(v) => Self::NegationError(T::from(v)),
             ValueError::ComparisonError(v1, v2) => Self::ComparisonError(T::from(v1), T::from(v2)),
+            ValueError::ConversionError(v) => Self::ConversionError(T::from(v))
         }
     }
 }

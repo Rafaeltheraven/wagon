@@ -345,9 +345,9 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "num-traits"
-version = "0.2.16"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f30b0abd723be7e2ffca1272140fac1a2f084c77ec3e123c192b66af1ee9e6c2"
+checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
 dependencies = [
  "autocfg",
 ]
@@ -360,6 +360,12 @@ checksum = "f1e1c390732d15f1d48471625cd92d154e66db2c56645e29a9cd26f4699f72dc"
 dependencies = [
  "num-traits",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
 
 [[package]]
 name = "petgraph"
@@ -568,6 +574,7 @@ dependencies = [
  "rand_core",
  "regex-automata",
  "wagon-ident",
+ "wagon-macros",
  "wagon-utils",
  "wagon-value",
 ]
@@ -599,6 +606,7 @@ name = "wagon-macros"
 version = "0.1.0"
 dependencies = [
  "extendable-data",
+ "paste",
  "proc-macro2",
  "quote",
  "syn 2.0.48",
@@ -635,6 +643,7 @@ dependencies = [
 name = "wagon-value"
 version = "0.1.0"
 dependencies = [
+ "num-traits",
  "ordered-float",
  "wagon-utils",
 ]

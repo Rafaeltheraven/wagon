@@ -5,9 +5,15 @@
 //! It would make more sense to put these in the [`wagon-utils`](../wagon_utils/index.html) crate. 
 //! But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
 
+use syn::token::Comma;
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
+use syn::DataEnum;
+use syn::DataStruct;
+use syn::Field;
+use syn::Generics;
 use syn::{Pat, Result, spanned::Spanned, ExprMacro, Attribute, DeriveInput, punctuated::Punctuated, ExprStruct, ExprCall, Expr, Token};
 use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
@@ -543,4 +549,221 @@ fn pat_to_str(pat: &Pat, span: Span) -> Result<TokenStream2> {
         Pat::Wild(_) => Err(syn::Error::new(span, "Match statement already has a wildcard pattern, can not add another!")),
         p => Err(syn::Error::new(span, format!("Unsupported pattern! {p:?}"))),
     }
+}
+
+#[proc_macro_derive(ValueOps, attributes(value, value_variant))]
+/// Automatically derive all value operations
+pub fn derive_value_operations(item: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(item as DeriveInput);
+    match _derive_value_operations(ast) {
+        Ok(s) => s,
+        Err(e) => e.into_compile_error(),
+    }.into()
+}
+
+fn _derive_value_operations(ast: DeriveInput) -> Result<TokenStream2> {
+    let add_stream = _derive_value_add(ast.clone())?;
+    let sub_stream = _derive_value_sub(ast.clone())?;
+    let mul_stream = _derive_value_mul(ast.clone())?;
+    let div_stream = _derive_value_div(ast.clone())?;
+    let rem_stream = _derive_value_rem(ast.clone())?;
+    let pow_stream = _derive_value_pow(ast)?;
+    Ok(quote!(
+        #add_stream
+        #sub_stream
+        #mul_stream
+        #div_stream
+        #rem_stream
+        #pow_stream
+    ))
+}
+
+macro_rules! derive_value_op {
+    ($o:expr, $p:path, $f:ident, $n:ident) => {
+        paste::item! {
+            /// Automatically derive [`$p`] for [`Valueable`] types.
+            #[proc_macro_derive($n, attributes(value, value_variant))]
+            pub fn [< derive_value_ $f >](item: TokenStream) -> TokenStream {
+                let ast = parse_macro_input!(item as DeriveInput);
+                match [< _derive_value_ $f >](ast) {
+                    Ok(s) => s,
+                    Err(e) => e.into_compile_error()
+                }.into()
+            }
+            fn [< _derive_value_ $f >](ast: DeriveInput) -> Result<TokenStream2> {
+                let operation = $o;
+                let operation_trait = quote!($p);
+                let operation_func = quote!($f);
+                derive_value_operation(ast, operation, &operation_trait, &operation_func)
+            }
+        }
+    };
+}
+
+derive_value_op!("+",  std::ops::Add,    add, ValueAdd);
+derive_value_op!("-",  std::ops::Sub,    sub, ValueSub);
+derive_value_op!("*",  std::ops::Mul,    mul, ValueMul);
+derive_value_op!("/",  std::ops::Div,    div, ValueDiv);
+derive_value_op!("%",  std::ops::Rem,    rem, ValueRem);
+derive_value_op!("**", wagon_value::Pow, pow, ValuePow);
+
+fn derive_value_operation(ast: DeriveInput, operation: &str, operation_trait: &TokenStream2, operation_func: &TokenStream2) -> Result<TokenStream2> {
+    let span = ast.span();
+    let ident = ast.ident;
+    let generics = ast.generics;
+    match ast.data {
+        syn::Data::Struct(s) => derive_value_operation_struct(s, &generics, span, &ident, operation, operation_trait, operation_func),
+        syn::Data::Enum(e) => derive_value_operation_enum(e, &generics, span, &ident, operation, operation_trait, operation_func),
+        syn::Data::Union(_) => Err(syn::Error::new(span, format!("Can not derive {operation} for unions!"))),
+    }
+}
+
+fn derive_value_operation_enum(data: DataEnum, generics: &Generics, span: Span, ident: &Ident, operation: &str, operation_trait: &TokenStream2, operation_func: &TokenStream2) -> Result<TokenStream2> {
+    let mut found = false;
+    for variant in data.variants {
+        for attr in variant.attrs {
+            if let syn::Meta::Path(path) = attr.meta {
+                if path.is_ident("value_variant") {
+                    found = true;
+                    break
+                }
+            }
+        }
+        if found {
+            let variant_ident = variant.ident;
+            let fields = match variant.fields {
+                syn::Fields::Named(n) => n.named,
+                syn::Fields::Unnamed(u) => u.unnamed,
+                syn::Fields::Unit => return Err(syn::Error::new(span, format!("Can only derive {operation} for non-unit structs!"))),
+            };
+            let fields_count = fields.len();
+            if fields_count == 0 {
+                return Err(syn::Error::new(span, format!("Can only derive {operation} for non-empty enums!")))
+            }
+            let (value_field, value_i) = find_value_field(fields);
+            #[allow(clippy::option_if_let_else)]
+            let base_stream = if let Some(i) = value_field { // Named
+                quote!(
+                    match (self, rhs) {
+                        (#ident::#variant_ident {#i: v1, ..}, #ident::#variant_ident {#i: v2, ..}) => Ok(#ident::#variant_ident(#operation_trait::#operation_func(v1, v2)?)),
+                        (v1, v2) => Err(wagon_value::ValueError::OperationError(v1, v2, #operation.to_string()))
+                    }
+                )
+            } else { // Unnamed
+                let mut stream_lhs = TokenStream2::new();
+                let mut stream_rhs = TokenStream2::new();
+                for _ in 0..value_i {
+                    stream_lhs.extend(quote!(_,));
+                    stream_rhs.extend(quote!(_,));
+                }
+                stream_lhs.extend(quote!(v1,));
+                stream_rhs.extend(quote!(v2,));
+                for _ in value_i+1..fields_count {
+                    stream_lhs.extend(quote!(_,));
+                    stream_rhs.extend(quote!(_,));
+                }
+                quote!(
+                    match (self, rhs) {
+                        (#ident::#variant_ident(#stream_lhs), #ident::#variant_ident(#stream_rhs)) => Ok(#ident::#variant_ident(#operation_trait::#operation_func(v1, v2)?)),
+                        (v1, v2) => Err(wagon_value::ValueError::OperationError(v1, v2, #operation.to_string()))
+                    }
+                )
+            };
+            return Ok(construct_value_operations(generics, ident, operation_trait, operation_func, &base_stream))
+        }
+    }
+    Err(syn::Error::new(span, "Was unable to find value variant"))
+
+}
+
+fn derive_value_operation_struct(data: DataStruct, generics: &Generics, span: Span, ident: &Ident, operation: &str, operation_trait: &TokenStream2, operation_func: &TokenStream2) -> Result<TokenStream2> {
+    let fields = match data.fields {
+        syn::Fields::Named(n) => n.named,
+        syn::Fields::Unnamed(u) => u.unnamed,
+        syn::Fields::Unit => return Err(syn::Error::new(span, format!("Can only derive {operation} for non-unit structs!"))),
+    };
+    let fields_count = fields.len();
+    if fields_count == 0 {
+        return Err(syn::Error::new(span, format!("Can only derive {operation} for non-empty structs!")))
+    }
+    let (value_field, value_i) = find_value_field(fields);
+    #[allow(clippy::option_if_let_else)]
+    let (value_ident, constructor) = if let Some(i) = value_field { // Named
+        (i.clone(), quote!(#ident {#i: sum, ..=std::default::Default::default()}))
+    } else { // Unnamed
+        let mut stream = TokenStream2::new();
+        for _ in 0..value_i {
+            stream.extend(quote!(std::default::Default::default(),));
+        }
+        stream.extend(quote!(sum,));
+        for _ in value_i+1..fields_count {
+            stream.extend(quote!(std::default::Default::default(),));
+        }
+        (Ident::new(&value_i.to_string(), Span::call_site()), stream)
+    };
+    let base_stream = quote!(
+        let sum = (self.#value_ident + rhs.#value_ident)?;
+        Ok(#constructor)
+    );
+    Ok(construct_value_operations(generics, ident, operation_trait, operation_func, &base_stream))
+}
+
+fn find_value_field(mut fields: Punctuated<Field, Comma>) -> (Option<Ident>, usize) {
+    let mut value_field = std::mem::take(&mut fields[0].ident);
+    let mut value_i = 0;
+    let mut done = false;
+    for (i, mut field) in fields.into_iter().enumerate() {
+        for attr in field.attrs {
+            if let syn::Meta::Path(path) = attr.meta {
+                if path.is_ident("value") {
+                    value_field = std::mem::take(&mut field.ident);
+                    value_i = i;
+                    done = true;
+                    break
+                }
+            }
+        }
+        if done {
+            break
+        }
+    }
+    if !done {
+        value_i = 0;
+    }
+    (value_field, value_i)
+}
+
+fn construct_value_operations(
+        generics: &Generics, 
+        ident: &Ident, 
+        operation_trait: &TokenStream2, 
+        operation_func: &TokenStream2, 
+        base_stream: &TokenStream2
+    ) -> TokenStream2 {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    quote!(
+        impl #impl_generics #operation_trait<Self> for #ident #ty_generics #where_clause {
+            type Output = wagon_value::ValueResult<Self, Self>;
+
+            fn #operation_func(self, rhs: Self) -> Self::Output {
+                #base_stream
+            }
+        }
+
+        impl #impl_generics #operation_trait<#ident #ty_generics> for wagon_value::Value<#ident #ty_generics> #where_clause {
+            type Output = wagon_value::ValueResult<#ident #ty_generics, #ident #ty_generics>;
+
+            fn #operation_func(self, rhs: #ident #ty_generics) -> Self::Output {
+                Ok(#ident::from(#operation_trait::#operation_func(self, Self::try_from(rhs)?)?))
+            }
+        }
+
+        impl<'a> #operation_trait<wagon_value::Value<Self>> for #ident #ty_generics #where_clause {
+            type Output = wagon_value::ValueResult<Self, Self>;
+
+            fn #operation_func(self, rhs: wagon_value::Value<Self>) -> Self::Output {
+                Ok(Self::from(#operation_trait::#operation_func(wagon_value::Value::try_from(self)?, rhs)?))
+            }
+        }
+    )
 }

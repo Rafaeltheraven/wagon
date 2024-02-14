@@ -20,6 +20,7 @@ rand_core = "0.6.4"
 wagon-ident = {workspace = true}
 wagon-value = {workspace = true}
 wagon-utils = {workspace = true}
+wagon-macros = {workspace = true}
 regex-automata = "0.4.4"
 
 [lints]

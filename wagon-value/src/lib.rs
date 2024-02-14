@@ -11,7 +11,7 @@ mod result;
 
 use std::fmt::Display;
 
-pub use value::Value;
+pub use value::{Value, Pow};
 pub use valueable::{Valueable, ToValue};
 pub use result::{ValueError, ValueResult};
 

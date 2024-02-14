@@ -142,6 +142,12 @@ impl<'a> From<ValueError<'a>> for GLLParseError<'a> {
     }
 }
 
+impl<'a> From<InnerValueError<Value<'a>>> for GLLParseError<'a> {
+    fn from(value: InnerValueError<Value<'a>>) -> Self {
+        Self::ValueError(ValueError::ValueError(value))
+    }
+}
+
 impl<'a> From<Utf8Error> for GLLParseError<'a> {
     fn from(value: Utf8Error) -> Self {
         Self::Utf8Error(value)

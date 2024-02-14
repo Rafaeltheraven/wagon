@@ -2,9 +2,11 @@
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::ops::{Add, Sub, Mul, Div, Not, Rem};
-use ordered_float::{NotNan, Pow};
+use ordered_float::NotNan;
 
-use crate::{Valueable, ValueResult, ValueError};
+pub use num_traits::Pow;
+
+use crate::{ValueError, ValueResult, Valueable};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 /// The most basic types that a value can ever be.
@@ -52,24 +54,6 @@ impl<T: Valueable> Valueable for Value<T> {
             Self::Float(f) => f.into_inner(),
             o => if o.is_truthy()? { 1.0 } else { 0.0 }
         })
-    }
-
-    #[allow(clippy::cast_sign_loss)]
-    fn pow(&self, rhs: &Self) -> ValueResult<Self, Self> {
-        match (self, rhs) {
-            (Self::Bool(true), Self::Natural(_)) | (Self::Natural(_), Self::Bool(false)) => Ok(Self::Natural(1)),
-            (Self::Bool(false), Self::Natural(_)) => Ok(Self::Natural(0)),
-            (Self::Natural(i), Self::Bool(true)) => Ok(Self::Natural(*i)),
-            (Self::Bool(true), Self::Float(_)) | (Self::Float(_), Self::Bool(false)) => Ok(Self::Float(NotNan::new(1.0)?)),
-            (Self::Bool(false), Self::Float(_)) => Ok(Self::Float(NotNan::new(0.0)?)),
-            (Self::Float(f), Self::Bool(true)) => Ok(Self::Float(*f)),
-            (Self::Natural(i1), Self::Natural(i2)) if i2 >= &0 => Ok(Self::Natural((*i1).pow((*i2).try_into()?))),
-            (Self::Natural(i1), Self::Natural(i2)) => Ok(Self::Float(NotNan::new(1.0 / (i1.pow((-i2) as u32) as f32))?)), // Power of negative number is division
-            (Self::Natural(i), Self::Float(f)) => Ok(Self::Float(NotNan::new(*i as f32)?.pow(f))),
-            (Self::Float(f), Self::Natural(i)) => Ok(Self::Float(f.pow(i))),
-            (Self::Float(f1), Self::Float(f2)) => Ok(Self::Float(f1.pow(f2))),
-            (v1, v2) => Err(ValueError::OperationError(v1.clone(), v2.clone(), "**".to_owned()))
-        }
     }
 
     fn display_numerical(&self) -> ValueResult<String, Self> {
@@ -253,6 +237,28 @@ impl<T: Valueable> Rem for Value<T> {
             (Self::Float(f1), Self::Float(f2)) => Self::Float(f1 % f2),
             (v1, v2) => return Err(ValueError::OperationError(v1, v2, "%".to_owned()))
         })
+    }
+}
+
+impl<T: Valueable> Pow<Self> for Value<T> {
+    type Output = ValueResult<Self, Self>;
+
+    #[allow(clippy::cast_sign_loss)]
+    fn pow(self, rhs: Self) -> Self::Output { 
+        match (self, rhs) {
+            (Self::Bool(true), Self::Natural(_)) | (Self::Natural(_), Self::Bool(false)) => Ok(Self::Natural(1)),
+            (Self::Bool(false), Self::Natural(_)) => Ok(Self::Natural(0)),
+            (Self::Natural(i), Self::Bool(true)) => Ok(Self::Natural(i)),
+            (Self::Bool(true), Self::Float(_)) | (Self::Float(_), Self::Bool(false)) => Ok(Self::Float(NotNan::new(1.0)?)),
+            (Self::Bool(false), Self::Float(_)) => Ok(Self::Float(NotNan::new(0.0)?)),
+            (Self::Float(f), Self::Bool(true)) => Ok(Self::Float(f)),
+            (Self::Natural(i1), Self::Natural(i2)) if i2 >= 0 => Ok(Self::Natural((i1).pow((i2).try_into()?))),
+            (Self::Natural(i1), Self::Natural(i2)) => Ok(Self::Float(NotNan::new(1.0 / (i1.pow((-i2) as u32) as f32))?)), // Power of negative number is division
+            (Self::Natural(i), Self::Float(f)) => Ok(Self::Float(NotNan::new(i as f32)?.pow(f))),
+            (Self::Float(f), Self::Natural(i)) => Ok(Self::Float(f.pow(i))),
+            (Self::Float(f1), Self::Float(f2)) => Ok(Self::Float(f1.pow(f2))),
+            (v1, v2) => Err(ValueError::OperationError(v1, v2, "**".to_owned()))
+        }
     }
 }
 
