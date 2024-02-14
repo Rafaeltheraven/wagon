@@ -219,3 +219,39 @@ impl<'a> PartialOrd for Value<'a> {
         }
     }
 }
+
+impl<'a> PartialEq<InnerValue<Self>> for Value<'a> {
+    fn eq(&self, other: &InnerValue<Self>) -> bool {
+        match self {
+            Value::Value(v) => v == other,
+            Value::Label(_) => false,
+        }
+    }
+}
+
+impl<'a> PartialEq<Value<'a>> for InnerValue<Value<'a>> {
+    fn eq(&self, other: &Value<'a>) -> bool {
+        match other {
+            Value::Value(v) => v == self,
+            Value::Label(_) => false,
+        }
+    }
+}
+
+impl<'a> PartialOrd<InnerValue<Self>> for Value<'a> {
+    fn partial_cmp(&self, other: &InnerValue<Self>) -> Option<std::cmp::Ordering> {
+        match self {
+            Value::Value(v) => v.partial_cmp(other),
+            Value::Label(_) => None,
+        }
+    }
+}
+
+impl<'a> PartialOrd<Value<'a>> for InnerValue<Value<'a>> {
+    fn partial_cmp(&self, other: &Value<'a>) -> Option<std::cmp::Ordering> {
+        match other {
+            Value::Value(v) => self.partial_cmp(v),
+            Value::Label(_) => None,
+        }
+    }
+}
