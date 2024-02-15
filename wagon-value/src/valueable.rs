@@ -7,16 +7,18 @@ use crate::{Value, ValueResult};
 pub trait Valueable: 
     std::fmt::Debug 
     + std::fmt::Display 
-    + PartialEq 
-    + std::hash::Hash 
-    + Eq 
     + Clone
+    + Eq 
+    + PartialEq 
+    + PartialOrd
+    + std::hash::Hash 
     + std::ops::Add
     + std::ops::Sub
     + std::ops::Mul
     + std::ops::Div
     + std::ops::Rem
-    + num_traits::Pow<Self> {
+    + num_traits::Pow<Self> 
+    {
     /// Is this value seen as `true` or `false`?
     ///
     /// # Errors
@@ -50,18 +52,20 @@ pub trait ToValue<T: Valueable> {
 impl<T: 
     ToValue<T> 
     + From<Value<T>> 
+    + Clone
+    + Eq 
+    + PartialEq 
+    + PartialOrd
     + std::fmt::Debug 
     + std::fmt::Display 
-    + PartialEq 
     + std::hash::Hash 
-    + Eq 
-    + Clone
     + std::ops::Add
     + std::ops::Sub
     + std::ops::Mul
     + std::ops::Div
     + std::ops::Rem
-    + num_traits::Pow<T>> Valueable for T {
+    + num_traits::Pow<T>> 
+    Valueable for T {
     fn is_truthy(&self) -> ValueResult<bool, Self> {
         Ok(self.to_value().is_truthy()?)
     }

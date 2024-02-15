@@ -34,7 +34,7 @@ pub use result::{ValueError, ValueResult};
 /// ```
 /// use wagon_value::RecursiveValue as Value;
 /// ```
-#[derive(Debug, Eq, PartialEq, Hash, Clone, ValueOps)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, ValueOps, PartialOrd)]
 pub struct RecursiveValue(Value<RecursiveValue>);
 
 impl Display for RecursiveValue {
