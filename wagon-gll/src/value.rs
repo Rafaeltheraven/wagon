@@ -7,9 +7,9 @@ pub(crate) use wagon_value::ValueError as InnerValueError;
 pub(crate) use wagon_value::ValueResult as InnerValueResult;
 pub use wagon_value::Valueable;
 
-use wagon_macros::{ValueAdd, ValueSub, ValueMul, ValueDiv, ValueRem, ValuePow};
+use wagon_macros::ValueOps;
 
-#[derive(Debug, Eq, Hash, Clone, ValueAdd, ValueSub, ValueMul, ValueDiv, ValueRem, ValuePow)]
+#[derive(Debug, Eq, Hash, Clone, ValueOps)]
 /// An extension of [`wagon_value::Value`] that adds [`GLLBlockLabel`] as a possible type.
 pub enum Value<'a> {
     /// Any regular [`wagon_value::Value`]

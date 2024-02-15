@@ -9,7 +9,10 @@ mod value;
 mod valueable;
 mod result;
 
+extern crate self as wagon_value; // Have to do this to get the macro to work
+
 use std::fmt::Display;
+use wagon_macros::ValueOps;
 
 pub use value::{Value, Pow};
 pub use valueable::{Valueable, ToValue};
@@ -31,7 +34,7 @@ pub use result::{ValueError, ValueResult};
 /// ```
 /// use wagon_value::RecursiveValue as Value;
 /// ```
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, ValueOps)]
 pub struct RecursiveValue(Value<RecursiveValue>);
 
 impl Display for RecursiveValue {

@@ -15,6 +15,7 @@ description = "Dynamic type value object for WAGon."
 num-traits = "0.2.18"
 ordered-float = {workspace = true}
 wagon-utils = {workspace = true}
+wagon-macros = {workspace = true}
 
 [lints]
 workspace = true

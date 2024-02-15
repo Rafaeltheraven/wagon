@@ -4,7 +4,19 @@ use crate::{Value, ValueResult};
 ///
 /// Sometimes, the basic types supported by `Value` are not enough and the newtype pattern is required to extend it.
 /// Registering this newtype as `Valueable` means that it supports all common operations associated with a `Value`.
-pub trait Valueable: std::fmt::Debug + std::fmt::Display + PartialEq + std::hash::Hash + Eq + Clone {
+pub trait Valueable: 
+    std::fmt::Debug 
+    + std::fmt::Display 
+    + PartialEq 
+    + std::hash::Hash 
+    + Eq 
+    + Clone
+    + std::ops::Add
+    + std::ops::Sub
+    + std::ops::Mul
+    + std::ops::Div
+    + std::ops::Rem
+    + num_traits::Pow<Self> {
     /// Is this value seen as `true` or `false`?
     ///
     /// # Errors
@@ -35,7 +47,21 @@ pub trait ToValue<T: Valueable> {
     fn to_value(&self) -> &Value<T>;
 }
 
-impl<T: ToValue<T> + From<Value<T>> + Clone + Eq + std::hash::Hash + std::fmt::Debug + std::fmt::Display> Valueable for T {
+impl<T: 
+    ToValue<T> 
+    + From<Value<T>> 
+    + std::fmt::Debug 
+    + std::fmt::Display 
+    + PartialEq 
+    + std::hash::Hash 
+    + Eq 
+    + Clone
+    + std::ops::Add
+    + std::ops::Sub
+    + std::ops::Mul
+    + std::ops::Div
+    + std::ops::Rem
+    + num_traits::Pow<T>> Valueable for T {
     fn is_truthy(&self) -> ValueResult<bool, Self> {
         Ok(self.to_value().is_truthy()?)
     }

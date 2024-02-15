@@ -75,3 +75,9 @@ impl<T: Valueable + From<Value<T>>> From<ValueError<Value<T>>> for ValueError<T>
         }
     }
 }
+
+impl<T: Valueable> From<std::convert::Infallible> for ValueError<T> {
+    fn from(e: std::convert::Infallible) -> Self {
+        Self::Fatal(format!("Got an error from infallible, which should be impossible: {e:?}"))
+    }
+}

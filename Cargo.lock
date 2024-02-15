@@ -645,6 +645,7 @@ version = "0.1.0"
 dependencies = [
  "num-traits",
  "ordered-float",
+ "wagon-macros",
  "wagon-utils",
 ]
 

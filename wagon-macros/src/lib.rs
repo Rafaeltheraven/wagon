@@ -5,6 +5,7 @@
 //! It would make more sense to put these in the [`wagon-utils`](../wagon_utils/index.html) crate. 
 //! But Rust does not allow use to export procedural macros and regular functions from the same crate. So here we are.
 
+use proc_macro2::Literal;
 use syn::token::Comma;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
@@ -689,7 +690,7 @@ fn derive_value_operation_struct(data: DataStruct, generics: &Generics, span: Sp
     let (value_field, value_i) = find_value_field(fields);
     #[allow(clippy::option_if_let_else)]
     let (value_ident, constructor) = if let Some(i) = value_field { // Named
-        (i.clone(), quote!(#ident {#i: sum, ..=std::default::Default::default()}))
+        (i.clone().into_token_stream(), quote!(#ident {#i: sum, ..=std::default::Default::default()}))
     } else { // Unnamed
         let mut stream = TokenStream2::new();
         for _ in 0..value_i {
@@ -699,11 +700,11 @@ fn derive_value_operation_struct(data: DataStruct, generics: &Generics, span: Sp
         for _ in value_i+1..fields_count {
             stream.extend(quote!(std::default::Default::default(),));
         }
-        (Ident::new(&value_i.to_string(), Span::call_site()), stream)
+        (Literal::usize_unsuffixed(value_i).into_token_stream(), stream)
     };
     let base_stream = quote!(
-        let sum = (self.#value_ident + rhs.#value_ident)?;
-        Ok(#constructor)
+        let sum = #operation_trait::#operation_func(self.#value_ident, rhs.#value_ident)?;
+        Ok(#ident(#constructor))
     );
     Ok(construct_value_operations(generics, ident, operation_trait, operation_func, &base_stream))
 }
