@@ -183,7 +183,7 @@ impl<'a> Label<'a> for Terminal<'a> {
         from_utf8(self).expect("Terminal was non-ut8")
     }
 
-    fn is_nullable(&self, _: &GLLState<'a>) -> ParseResult<'a, bool> {
+    fn _is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
         Ok(self.is_eps())
     }
 
@@ -264,7 +264,7 @@ impl<'a> Label<'a> for RegexTerminal<'a> {
 	    true
     }
 
-    fn is_nullable(&self, _: &GLLState<'a>) -> ParseResult<'a, bool> {
+    fn _is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
 	    Ok(self.automaton.has_empty())
     }
 }
