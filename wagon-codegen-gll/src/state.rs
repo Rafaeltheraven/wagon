@@ -393,10 +393,10 @@ impl CodeGenState {
     	let regex_len = self.regexes.len();
     	let label_len = self.first_queue.len();
     	let root_len = self.roots.len();
-    	Ok(Self::create_main_stream(&stream, label_len, root_len, regex_len))
+    	Ok(Self::gen_main_stream(&stream, label_len, root_len, regex_len))
     }
 
-    fn create_main_stream(body: &TokenStream, label_len: usize, root_len: usize, regex_len: usize) -> TokenStream {
+    fn gen_main_stream(body: &TokenStream, label_len: usize, root_len: usize, regex_len: usize) -> TokenStream {
     	quote!(
     		#[allow(non_snake_case)]
     		fn main() {
