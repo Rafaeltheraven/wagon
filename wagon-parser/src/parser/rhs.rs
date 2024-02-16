@@ -4,16 +4,15 @@ use std::matches;
 
 use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, symbol::Symbol, Peek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, Peek};
 use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A right-hand side (AKA alternative) of a rule.
 ///
 /// Any `Rhs` optionally has an expression that evaluates it's weight, enclosed by `[]`.
@@ -99,36 +98,6 @@ impl Rhs {
 			chunks: vec![Chunk::simple_terminal(term).into()],
 		}
 	}
-
-	/// Split up a rule into GLL-Blocks[^gll]. Represented as a matrix of [`Symbol`]s.
-	///
-	/// Expects all EBNF chunks to have been factored out.
-	///
-	/// # Errors
-	/// Returns an error if [`Chunk::ebnf`](`crate::parser::chunk::Chunk::ebnf`) is not `None`.
-	///
-	/// [^gll]: <https://www.semanticscholar.org/paper/Exploring-and-visualizing-GLL-parsing-Cappers/3b8c11492606a8a03fc85b224c90e672fb826024>
-	pub fn blocks(self) -> ParseResult<Vec<Vec<SpannableNode<Symbol>>>> {
-		let mut blocks = Vec::new();
-		let mut curr = Vec::new();
-		for chunk in self.chunks {
-			let span = chunk.span();
-			let symbols = match chunk.into_inner() {
-				Chunk { ebnf: Some(_), .. } => return Err(WagParseError::Fatal((span, "Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out".to_string()))),
-				c => c.extract_symbols(), // Deal with groups
-			};
-			for symbol in symbols {
-				let is_terminal = symbol.node.is_terminal();
-				curr.push(symbol);
-				if !is_terminal {
-					blocks.push(curr);
-					curr = Vec::new();
-				}
-			}
-		}
-		blocks.push(curr);
-		Ok(blocks)
-	}
 }
 
 use itertools::Itertools;
@@ -139,53 +108,4 @@ impl Display for Rhs {
         }
         write!(f, "{}", self.chunks.iter().join(" "))
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::WrapSpannable;
-    use crate::parser::chunk::ChunkP;
-	use crate::parser::{chunk::Chunk, symbol::Symbol};
-
-    use super::Rhs;
-
-    use pretty_assertions::assert_eq;
-    use wagon_macros::unspanned_tree;
-
-
-	#[test]
-	fn test_simple_gll_blocks() {
-		let rhs = unspanned_tree!(Rhs {
-		    weight: None,
-		    chunks: vec![
-		    	Chunk::simple_terminal("a"),
-		    	Chunk::simple_terminal("b"),
-		    	Chunk::simple_ident("C"),
-		    	Chunk::simple_ident("D"),
-		    	Chunk {
-		    		chunk: ChunkP::Group(vec![Chunk::simple_terminal("e"), Chunk::simple_ident("F")]),
-		    		ebnf: None
-		    	}
-		    ],
-		});
-		let blocks = rhs.blocks();
-		let expected = vec![
-			vec![
-				Symbol::simple_terminal("a"),
-		    	Symbol::simple_terminal("b"),
-		    	Symbol::simple_ident("C"),
-			].wrap_spannable(),
-			vec![
-				Symbol::simple_ident("D")
-			].wrap_spannable(),
-			vec![
-				Symbol::simple_terminal("e"),
-				Symbol::simple_ident("F")
-			].wrap_spannable(),
-			vec![]
-		];
-		assert_eq!(blocks.unwrap(), expected);
-
-	}
-
 }

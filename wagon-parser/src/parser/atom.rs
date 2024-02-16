@@ -14,7 +14,6 @@ use wagon_value::{Valueable, Value, RecursiveValue};
 
 use ordered_float::NotNan;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
@@ -32,7 +31,7 @@ impl Dictionary {
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// The base elements of each expression.
 ///
 /// The data in here is kind of similar to [`wagon_value::Value`] and `TryFrom` is implemented for it as a result.

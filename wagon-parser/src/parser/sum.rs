@@ -12,11 +12,10 @@ use super::helpers::TokenMapper;
 use wagon_macros::TokenMapper;
 use quote::{ToTokens, quote};
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A sum of any number of [`Term`]s.
 ///
 /// If `cont == None`, then this is just a `Term`.
@@ -28,7 +27,7 @@ pub struct Sum {
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// The operator, right-hand side and possible further continuation of this sum.
 pub struct SumP {
     /// The operator

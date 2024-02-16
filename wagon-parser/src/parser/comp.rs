@@ -14,11 +14,10 @@ use wagon_macros::TokenMapper;
 
 use quote::{ToTokens, quote};
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A comparison between two [`Sum`]s.
 ///
 /// If `comp == None`, then this is just a `Sum`.

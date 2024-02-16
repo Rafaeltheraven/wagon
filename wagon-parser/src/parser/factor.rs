@@ -6,11 +6,10 @@ use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ResultPeek};
 use super::atom::Atom;
 use wagon_lexer::math::Math;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A possible power equation, or just an [`Atom`].
 pub enum Factor {
 	/// Just an [`Atom`].

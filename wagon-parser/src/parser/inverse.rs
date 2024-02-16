@@ -8,11 +8,10 @@ use wagon_lexer::math::Math;
 
 use super::comp::Comparison;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// Either another `Inverse`, prepend by `!` or just a `[Comparison]`.
 pub enum Inverse {
     /// `!`

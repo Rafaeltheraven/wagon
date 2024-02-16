@@ -6,11 +6,10 @@ use wagon_lexer::math::Math;
 
 use super::inverse::Inverse;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A list of [`Inverse`] nodes. Separated by `||`.
 pub struct Conjunct(pub Vec<SpannableNode<Inverse>>);
 

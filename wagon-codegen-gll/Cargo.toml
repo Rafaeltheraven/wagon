@@ -17,12 +17,16 @@ wagon-ident = {workspace = true}
 wagon-codegen = {workspace = true}
 wagon-value = {workspace = true}
 wagon-utils = {workspace = true}
+wagon-macros = {workspace = true}
 proc-macro2 = {workspace = true}
 quote = {workspace = true}
 syn = {workspace = true}
 indexmap = {workspace = true}
 regex-automata = {workspace = true}
 regex = "1.10.3"
+
+[dev-dependencies]
+pretty_assertions = {workspace = true}
 
 [lints]
 workspace = true

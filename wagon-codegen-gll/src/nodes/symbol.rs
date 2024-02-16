@@ -183,9 +183,9 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			}
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
+					state.next(bytes)?;
 					let new_node = state.get_node_t(bytes, i);
 					state.sppf_pointer = new_node;
-					state.next(bytes)?;
 				));
 				state.add_code(label.clone(), stream);
 				return Ok(());

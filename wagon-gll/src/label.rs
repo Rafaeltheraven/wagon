@@ -75,7 +75,7 @@ pub trait Label<'a>: Debug {
 			for sub in alt {
 				if sub.first(state)? {
 					return Ok(true);
-				} else if !sub.is_nullable(state, &mut HashSet::new())? {
+				} else if !sub.is_nullable(state)? {
 					check_fin = false;
 				    break;
 				}
@@ -96,7 +96,17 @@ pub trait Label<'a>: Debug {
 	///
 	/// # Errors
 	/// Returns an error if any label in the first set can't be found.
-	fn is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
+	fn is_nullable(&self, state: &GLLState<'a>) -> ParseResult<'a, bool> {
+		self._is_nullable(state, &mut HashSet::default())
+	}
+
+	/// Internal method for [`is_nullable`] to do the recursive step.
+	///
+	/// Rust does not allow me to make this private, so it will be public.
+	///
+	/// # Errors
+	/// Returns an error if any label in the first set can't be found.
+	fn _is_nullable(&self, state: &GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
 		if self.is_eps() {
 			Ok(true)
 		} else {
@@ -106,7 +116,7 @@ pub trait Label<'a>: Debug {
 				let fst = self.first_set(state)?;
 				for (alt, _) in fst {
 					if let Some(sub) = alt.into_iter().next() {
-						if sub.is_nullable(state, seen)? {
+						if sub._is_nullable(state, seen)? {
 							return Ok(true)
 						}
 					}
@@ -115,6 +125,7 @@ pub trait Label<'a>: Debug {
 			Ok(false)
 		}
 	}
+
 	/// Optionally return the weight of this label.
 	///
 	/// This should either calculate the weight for this label, as denoted in the WAGon DSL, or `None`.
@@ -172,7 +183,7 @@ impl<'a> Label<'a> for Terminal<'a> {
         from_utf8(self).expect("Terminal was non-ut8")
     }
 
-    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
+    fn is_nullable(&self, _: &GLLState<'a>) -> ParseResult<'a, bool> {
         Ok(self.is_eps())
     }
 
@@ -253,7 +264,7 @@ impl<'a> Label<'a> for RegexTerminal<'a> {
 	    true
     }
 
-    fn is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {
+    fn is_nullable(&self, _: &GLLState<'a>) -> ParseResult<'a, bool> {
 	    Ok(self.automaton.has_empty())
     }
 }

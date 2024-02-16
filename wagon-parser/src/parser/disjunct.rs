@@ -6,11 +6,10 @@ use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode};
 use wagon_lexer::math::Math;
 use super::conjunct::Conjunct;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A list of [`Conjunct`] nodes, seperated by `&&`.
 pub struct Disjunct(pub Vec<SpannableNode<Conjunct>>);
 

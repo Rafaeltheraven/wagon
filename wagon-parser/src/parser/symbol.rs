@@ -14,11 +14,10 @@ use super::terminal::Terminal;
 use super::assignment::Assignment;
 use super::Ident;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A symbol in a [`Chunk`][super::chunk::Chunk].
 ///
 /// A symbol is any individual element of a `Chunk`.
@@ -63,7 +62,8 @@ impl Default for Symbol {
 impl Symbol {
 
     /// Check if this symbol is not a non-terminal.
-    pub(crate) const fn is_terminal(&self) -> bool {
+    #[must_use] 
+    pub const fn is_terminal(&self) -> bool {
         matches!(self, Self::Terminal(..) | Self::Assignment(..) | Self::Epsilon)
     }
 
@@ -73,15 +73,15 @@ impl Symbol {
         matches!(self, Self::Assignment(..))
     }
 
-    #[cfg(test)]
     /// Create a symbol which is just a [`Terminal::LitString`] representing the input parameter.
-    pub(crate) fn simple_terminal(ident: &str) -> Self {
+    #[must_use] 
+    pub fn simple_terminal(ident: &str) -> Self {
         Self::Terminal(SpannableNode::new(Terminal::LitString(ident.to_string()), 0..ident.len()))
     }
 
-    #[cfg(test)]
     /// Create a symbol which is just a non-terminal [`Ident::Unknown`] with no arguments, representing the input parameter.
-    pub (crate) fn simple_ident(ident: &str) -> Self {
+    #[must_use] 
+    pub fn simple_ident(ident: &str) -> Self {
         Self::NonTerminal(SpannableNode::new(Ident::Unknown(ident.to_string()), 0..ident.len()), Vec::new())
     }
 

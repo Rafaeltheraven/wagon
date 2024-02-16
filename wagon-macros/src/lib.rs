@@ -193,6 +193,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
+                    /// Constructs a [`Self::#ident`] with dummy span information.
                     pub(crate) fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident{#(#args),*}
                     }
@@ -216,14 +217,16 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    pub(crate) fn #func_name(#(#parameters),*) -> Self {
+                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    pub fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident(#(#args),*)
                     }
                 ));
             },
             syn::Fields::Unit => {
                 funcs.push(quote!(
-                    pub(crate) fn #func_name() -> Self {
+                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    pub fn #func_name() -> Self {
                         Self::#ident
                     }
                 ));
@@ -254,7 +257,8 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    pub(crate) fn new_unspanned(#(#parameters),*) -> Self {
+                    /// Constructs a [`Self`] with dummy span information.
+                    pub fn new_unspanned(#(#parameters),*) -> Self {
                         Self {#(#args),*}
                     }
                 ));
@@ -277,14 +281,16 @@ fn nonspanned_struct(s: syn::DataStruct) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    pub(crate) fn new_unspanned(#(#parameters),*) -> Self {
+                    /// Constructs a [`Self`] with dummy span information.
+                    pub fn new_unspanned(#(#parameters),*) -> Self {
                         Self (#(#args),*)
                     }
                 ));
             },
             syn::Fields::Unit => {
                 funcs.push(quote!(
-                    pub(crate) fn new_unspanned() -> Self {
+                    /// Constructs a [`Self`] with dummy span information.
+                    pub fn new_unspanned() -> Self {
                         Self
                     }
                 ));

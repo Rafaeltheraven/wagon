@@ -7,11 +7,10 @@ use wagon_lexer::{productions::{Productions, EbnfType}, Span};
 use super::CallingArgs;
 use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, ResultPeek, ResultNext};
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A chunk of an [`Rhs`].
 ///
 /// Chunks are symbols in () with optionally an EBNF token following it.
@@ -24,7 +23,7 @@ pub struct Chunk {
 }
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// The actual chunk part.
 pub enum ChunkP {
     /// Just a [`Symbol`].
@@ -248,18 +247,18 @@ impl Chunk {
     //     }
     // }
 
-    #[cfg(test)]
     /// Automatically create a `Chunk` that is just a terminal. See [`Symbol::simple_terminal`].
-    pub(crate) fn simple_terminal(term: &str) -> Self {
+    #[must_use] 
+    pub fn simple_terminal(term: &str) -> Self {
         Self { 
             ebnf: None, 
             chunk: ChunkP::Unit(Symbol::simple_terminal(term).into()) 
         }
     }
 
-    #[cfg(test)]
     /// Automatically create a `Chunk` that is just an ident. See [`Symbol::simple_ident`].
-    pub(crate) fn simple_ident(ident: &str) -> Self {
+    #[must_use] 
+    pub fn simple_ident(ident: &str) -> Self {
         Self {
             ebnf: None,
             chunk: ChunkP::Unit(Symbol::simple_ident(ident).into())
@@ -279,7 +278,8 @@ impl Chunk {
     }
 
     /// Automatically create an empty chunk.
-    pub(crate) fn empty() -> Self {
+    #[must_use] 
+    pub fn empty() -> Self {
         Self {
             ebnf: None,
             chunk: ChunkP::Unit(Symbol::Epsilon.into())
@@ -297,7 +297,8 @@ impl Chunk {
     }
 
     /// Extract all the symbols that are in this chunk.
-    pub(crate) fn extract_symbols(self) -> Vec<SpannableNode<Symbol>> {
+    #[must_use] 
+    pub fn extract_symbols(self) -> Vec<SpannableNode<Symbol>> {
         match self {
             Self {chunk: ChunkP::Unit(s), ..} => vec![s],
             Self {chunk: ChunkP::Group(g), ..} => {

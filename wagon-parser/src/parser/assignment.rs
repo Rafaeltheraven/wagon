@@ -7,11 +7,10 @@ use wagon_lexer::{math::Math, Spannable};
 
 use super::expression::Expression;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// Assigns the result of an expression to an attribute.
 ///
 /// Each assignment has the following structure: [`Ident`] = [`Expression`];

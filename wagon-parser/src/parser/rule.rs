@@ -9,11 +9,10 @@ use super::Ident;
 
 use wagon_macros::match_error;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A single rule in the WAG grammar. 
 ///
 /// A rule is of the form: [`Ident`] {ARROW} [`Rhs`] | [`Rhs`] | ...;

@@ -13,7 +13,6 @@ use quote::{ToTokens, quote};
 use super::helpers::TokenMapper;
 use super::factor::Factor;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 /*
@@ -25,7 +24,7 @@ Term' -> Op Factor Term' | epsilon
 */
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// A multiplication/division on any number of [`Factor`]s.
 ///
 /// If `cont == None`, then this is just a `Factor`.

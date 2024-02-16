@@ -562,7 +562,7 @@ impl<'a> GLLState<'a> {
             match slot.rule.first() {
                 Some(r) => {
                     let a = self.get_label(r);
-                    a.str_parts().len() == 1 && (a.is_terminal() || !(a.is_nullable(self, &mut HashSet::default())?))
+                    a.str_parts().len() == 1 && (a.is_terminal() || !(a.is_nullable(self)?))
                 },
                 None => false
             }

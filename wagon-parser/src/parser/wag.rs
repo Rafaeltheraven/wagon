@@ -7,11 +7,10 @@ use super::metadata::Metadata;
 use super::rule::Rule;
 use indexmap::IndexMap;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// The full WAG tree.
 pub struct Wag {
     /// Metadata associated with this WAG.

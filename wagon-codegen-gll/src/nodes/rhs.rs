@@ -2,11 +2,13 @@
 use proc_macro2::{Ident, Span};
 use quote::quote;
 
+use wagon_parser::parser::chunk::Chunk;
 use wagon_parser::parser::rhs::Rhs;
 use wagon_parser::{SpannableNode, Spannable};
 
 use wagon_codegen::ToTokensState;
-use crate::{CodeGenState, CodeGenArgs, CodeGen, CharBytes, CodeGenResult, CodeGenError, CodeGenErrorKind};
+use crate::{CharBytes, CodeGen, CodeGenArgs, CodeGenError, CodeGenErrorKind, CodeGenResult, CodeGenState};
+
 use std::rc::Rc;
 
 impl CodeGen for SpannableNode<Rhs> {
@@ -139,5 +141,164 @@ impl CodeGen for SpannableNode<Rhs> {
         gen_args.state.get_first(&ident)?.push((firsts, None));
         gen_args.state.get_first_ident(&ident)?.push(first_idents);
         Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct GLLBlocks(Vec<GLLBlock>);
+
+#[derive(Debug, PartialEq, Eq)]
+struct GLLBlock(Vec<SpannableNode<wagon_parser::parser::symbol::Symbol>>);
+
+impl GLLBlock {
+    fn len(&self) -> usize {
+        let mut sum = 0;
+        for s in &self.0 {
+            if !matches!(s.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) {
+                sum += 1;
+            }
+        }
+        sum
+    }
+}
+
+impl GLLBlocks {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl IntoIterator for GLLBlocks {
+    type Item = GLLBlock;
+
+    type IntoIter = <Vec<GLLBlock> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl IntoIterator for GLLBlock {
+    type Item = SpannableNode<wagon_parser::parser::symbol::Symbol>;
+
+    type IntoIter = <Vec<SpannableNode<wagon_parser::parser::symbol::Symbol>> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+
+}
+
+impl From<Vec<wagon_parser::SpannableNode<wagon_parser::parser::symbol::Symbol>>> for GLLBlock {
+    fn from(value: Vec<wagon_parser::SpannableNode<wagon_parser::parser::symbol::Symbol>>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Vec<GLLBlock>> for GLLBlocks {
+    fn from(value: Vec<GLLBlock>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Vec<Vec<wagon_parser::SpannableNode<wagon_parser::parser::symbol::Symbol>>>> for GLLBlocks {
+    fn from(value: Vec<Vec<wagon_parser::SpannableNode<wagon_parser::parser::symbol::Symbol>>>) -> Self {
+        let mut conv = Vec::with_capacity(value.len());
+        for v in value {
+            conv.push(v.into());
+        }
+        Self(conv)
+    }
+}
+
+trait ToGLLBlocks {
+    fn blocks(self) -> CodeGenResult<GLLBlocks>;
+}
+
+impl ToGLLBlocks for Rhs {
+    fn blocks(self) -> CodeGenResult<GLLBlocks> {
+        let mut blocks = GLLBlocks(Vec::new());
+        let mut curr = GLLBlock(Vec::new());
+        for chunk in self.chunks {
+            let span = chunk.span();
+            let symbols = match chunk.into_inner() {
+                Chunk { ebnf: Some(_), .. } => return Err(CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out".to_string()), span)),
+                c => c.extract_symbols(), // Deal with groups
+            };
+            for symbol in symbols {
+                let is_terminal = symbol.to_inner().is_terminal();
+                curr.0.push(symbol);
+                if !is_terminal {
+                    blocks.0.push(curr);
+                    curr = GLLBlock(Vec::new());
+                }
+            }
+        }
+        blocks.0.push(curr);
+        Ok(blocks)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use wagon_parser::WrapSpannable;
+    use wagon_parser::parser::chunk::ChunkP;
+    use wagon_parser::parser::{chunk::Chunk, symbol::Symbol};
+
+    use super::{Rhs, GLLBlocks, ToGLLBlocks, SpannableNode};
+
+    use pretty_assertions::assert_eq;
+    use wagon_macros::unspanned_tree;
+
+
+    #[test]
+    fn test_simple_gll_blocks() {
+        let rhs = unspanned_tree!(Rhs {
+            weight: None,
+            chunks: vec![
+                Chunk::simple_terminal("a"),
+                Chunk::simple_terminal("b"),
+                Chunk::simple_ident("C"),
+                Chunk::simple_ident("D"),
+                Chunk {
+                    chunk: ChunkP::Group(vec![Chunk::simple_terminal("e"), Chunk::simple_ident("F")]),
+                    ebnf: None
+                }
+            ],
+        });
+        let blocks = rhs.blocks();
+        let expected: Vec<Vec<SpannableNode<Symbol>>> = vec![
+            vec![
+                Symbol::simple_terminal("a"),
+                Symbol::simple_terminal("b"),
+                Symbol::simple_ident("C"),
+            ].wrap_spannable(),
+            vec![
+                Symbol::simple_ident("D")
+            ].wrap_spannable(),
+            vec![
+                Symbol::simple_terminal("e"),
+                Symbol::simple_ident("F")
+            ].wrap_spannable(),
+            vec![]
+        ];
+        assert_eq!(blocks.unwrap(), GLLBlocks::from(expected));
+    }
+
+    #[test]
+    fn test_single_gll_block() {
+        let rhs = unspanned_tree!(Rhs {
+            weight: None,
+            chunks: vec![
+                Chunk::simple_terminal("a")
+            ]
+        });
+        let blocks = rhs.blocks();
+        let expected: Vec<Vec<SpannableNode<Symbol>>> = vec![
+            vec![
+                Symbol::simple_terminal("a")
+            ].wrap_spannable()
+        ];
+        assert_eq!(blocks.unwrap(), GLLBlocks::from(expected));
     }
 }

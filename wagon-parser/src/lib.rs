@@ -126,9 +126,11 @@ impl<T: Parse> SpannableNode<T> {
 }
 
 /// A trait for internal use to automatically convert between nodes and [`SpannableNode`].
-pub(crate) trait WrapSpannable<T: Parse, U> {
+pub trait WrapSpannable<T: Parse, U> {
+    /// Wrap dummy span information around the node.
 	fn wrap_spannable(self) -> U;
 
+    /// Convert the node into a [`SpannableNode`] with the specified [`Span`].
 	fn into_spanned(self, _span: Span) -> U where Self: Sized {
 		unimplemented!()
 	}

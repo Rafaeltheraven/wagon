@@ -8,11 +8,10 @@ use wagon_lexer::math::Math;
 use wagon_macros::match_error;
 use super::disjunct::Disjunct;
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// An expression in the WAGon attribute evaluation DSL.
 pub enum Expression {
 	/// A subprocess that should do evaluation in the shell.

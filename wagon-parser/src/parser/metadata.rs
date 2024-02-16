@@ -5,11 +5,10 @@ use std::{collections::BTreeMap, fmt::Display};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext, SpannableNode};
 
-#[cfg(test)]
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
-#[cfg_attr(test, new_unspanned)]
+#[new_unspanned]
 /// The metadata of the WAG.
 pub struct Metadata {
     /// All imports for this grammar.
