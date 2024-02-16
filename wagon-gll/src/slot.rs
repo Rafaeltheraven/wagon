@@ -111,7 +111,7 @@ impl<'a> GrammarSlot<'a> {
 		if self.is_last(state) {
 			res.push('•');
 		};
-		res
+		res.trim_end().to_owned()
 	}
 
 	/// Get the label for the part of the rule we are currently at as defined by the dot.
