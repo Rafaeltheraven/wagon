@@ -138,9 +138,9 @@ impl Display for Rule {
             },
             Self::Generate(s, args, rhs) => {
                 if args.is_empty() {
-                    writeln!(f, "{s} <= {};", rhs.iter().join(" | "))
+                    writeln!(f, "{s} => {};", rhs.iter().join(" | "))
                 } else {
-                    writeln!(f, "{s}<{}> <= {};", comma_separated(args), rhs.iter().join(" | "))
+                    writeln!(f, "{s}<{}> => {};", comma_separated(args), rhs.iter().join(" | "))
                 }
             },
             Self::Import(s1, imp, s2) => {
