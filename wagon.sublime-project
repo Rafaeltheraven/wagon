@@ -10,7 +10,7 @@
 		{
 			"name": "Compile GLLTest",
 			"working_dir": "${project_path}/gll_test",
-			"shell_cmd": "cargo build",
+			"cmd": ["cargo",  "build"]
 		},
 	],
 	"debugger_configurations":
