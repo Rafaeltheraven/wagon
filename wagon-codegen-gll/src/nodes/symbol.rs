@@ -65,7 +65,7 @@ impl CodeGen for SpannableNode<Symbol> {
 			},
 			Symbol::Epsilon => {
 				state.add_code(label.clone(), quote!(
-					let cr = state.get_node_t(&[], state.input_pointer);
+					let cr = state.get_node_t(&[], state.input_pointer, state.input_pointer);
 					let slot = wagon_gll::GrammarSlot::new(
 						state.get_label_by_uuid(#uuid)?,
 						state.get_rule(#rule_uuid)?,
@@ -158,7 +158,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
 					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
-					let new_node = state.get_node_t(bytes, i);
+					let new_node = state.get_node_t(bytes, i, state.input_pointer);
 					state.sppf_pointer = new_node;
 				));
 				state.add_code(label.clone(), stream);
@@ -184,7 +184,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
 					state.next(bytes)?;
-					let new_node = state.get_node_t(bytes, i);
+					let new_node = state.get_node_t(bytes, i, state.input_pointer);
 					state.sppf_pointer = new_node;
 				));
 				state.add_code(label.clone(), stream);
@@ -200,7 +200,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 	};
 	let base = quote!(
 		#next_stream
-		let node = state.get_node_t(bytes, i);
+		let node = state.get_node_t(bytes, i, state.input_pointer);
 		let slot = wagon_gll::GrammarSlot::new(
 			state.get_label_by_uuid(#uuid)?, 
 			state.get_rule(#rule_uuid)?,

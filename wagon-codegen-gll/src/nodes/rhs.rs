@@ -75,11 +75,15 @@ impl CodeGen for SpannableNode<Rhs> {
             gen_args.block = Some(j);
             gen_args.label = Some(label.clone());
             gen_args.block_size = Some(block_size);
+            let mut correction = 0;
         	for (k, symbol) in block.into_iter().enumerate() {
                 if !symbol.to_inner().is_assignment() {
                     str_repr.push(symbol.to_string());
                 }
-                gen_args.symbol = Some(k);
+                gen_args.symbol = Some(k - correction);
+                if matches!(symbol.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) {
+                    correction += 1;
+                }
         		symbol.gen(gen_args)?;
         	}
             let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
