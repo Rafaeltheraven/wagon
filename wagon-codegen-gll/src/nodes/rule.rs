@@ -50,7 +50,7 @@ impl CodeGen for SpannableNode<Rule> {
                         if !candidates.is_empty() {
                             let to_add = #to_add;
                             for slot in to_add {
-                                state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root);
+                                state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root, state.gss_pointer);
                             }
                         }
                     )

@@ -142,7 +142,7 @@ impl<'a> GLLState<'a> {
             regex_map,
             errors: Vec::default(),
         };
-        state.add(root_slot, gss_root, 0, sppf_root);
+        state.add(root_slot, gss_root, 0, sppf_root, gss_root);
         Ok(state)
     }
 
@@ -178,7 +178,8 @@ impl<'a> GLLState<'a> {
                         slot.clone(), 
                         self.gss_pointer, 
                         self.get_sppf_node(*sppf_node)?.right_extend()?, 
-                        y
+                        y,
+                        v
                     );
                 }
             }
@@ -315,8 +316,8 @@ impl<'a> GLLState<'a> {
     /// Add a new slot to the `self.visited` and `self.todo` sets.
     ///
     /// `add` from the original paper.
-    pub fn add(&mut self, slot: Rc<GrammarSlot<'a>>, g: GSSNodeIndex, i: usize, s: SPPFNodeIndex) {
-        let d = Descriptor::new(slot, g, i, s, self.gss_pointer);
+    pub fn add(&mut self, slot: Rc<GrammarSlot<'a>>, g: GSSNodeIndex, i: usize, s: SPPFNodeIndex, context_pointer: GSSNodeIndex) {
+        let d = Descriptor::new(slot, g, i, s, context_pointer);
         if !self.visited.contains(&d) {
             self.visited.insert(d.clone());
             self.todo.insert(d);
@@ -354,7 +355,7 @@ impl<'a> GLLState<'a> {
                 let v = self.get_gss_edge_endpoints(edge)?.1;
                 let y = self.get_node_p(slot.clone(), *self.get_gss_edge_weight(edge)?, self.sppf_pointer, self.gss_pointer)?;
                 self.get_sppf_node_mut(y)?.add_ret_vals(&mut ret_vals.clone())?;
-                self.add(slot.clone(), v, self.input_pointer, y);
+                self.add(slot.clone(), v, self.input_pointer, y, self.gss_pointer);
             }
         }
         Ok(())
