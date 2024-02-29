@@ -1,3 +1,4 @@
+use crate::value::Value;
 use crate::ParseResult;
 use crate::GLLParseError;
 use crate::ValueError;
@@ -119,6 +120,14 @@ impl<'a> GrammarSlot<'a> {
 		state.get_label(&self.rule[self.dot])
 	}
 
+	/// Get the weight of this slot.
+	///
+	/// # Errors
+	/// Returns an error of we can not calculate the weight.
+	pub fn weight(&self, state: &GLLState<'a>) -> ParseResult<'a, Value<'a>> {
+		self.curr_block(state).weight(state)
+	}
+
 	/// Have we completely parsed this rule?
 	///
 	/// This is defined as the dot being 1 higher than the length of the rule.
@@ -131,8 +140,8 @@ impl<'a> GrammarSlot<'a> {
 	/// # Errors
 	/// Returns a wrapped [`ValueError::ComparisonError`](`InnerValueError::ComparisonError`) if the comparison is not possible.
 	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
-		let left_weight = self.curr_block(state).weight(state)?;
-		let right_weight = other.curr_block(state).weight(state)?;
+		let left_weight = self.weight(state)?;
+		let right_weight = other.weight(state)?;
 		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
 	}
 }
