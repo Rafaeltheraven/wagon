@@ -43,8 +43,10 @@ impl Parse for Rule {
                 Ok(Self::Analytic(ident, args, rhs))
             },
         	Tokens::ProductionToken(Productions::Generate) => {
+                let mut gen_ident: String = String::from("GEN_");
+                gen_ident.push_str(&ident);
                 let rhs = SpannableNode::parse_sep(lexer, Tokens::ProductionToken(Productions::Alternative))?;
-                Ok(Self::Generate(ident, args, rhs))
+                Ok(Self::Generate(gen_ident, args, rhs))
             },
         	Tokens::ProductionToken(Productions::Import(i)) => {
         		match i {
