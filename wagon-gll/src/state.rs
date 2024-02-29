@@ -246,8 +246,7 @@ impl<'a> GLLState<'a> {
     /// Find or create an [`SPPFNode::Symbol`].
     ///
     /// `get_node_t` from the original paper.
-    pub fn get_node_t(&mut self, terminal: &'a [u8], left: usize) -> SPPFNodeIndex {
-        let right = left + terminal.len();
+    pub fn get_node_t(&mut self, terminal: &'a [u8], left: usize, right: usize) -> SPPFNodeIndex {
         self.find_or_create_sppf_symbol(terminal, left, right)
     }
 
@@ -343,8 +342,7 @@ impl<'a> GLLState<'a> {
     /// Returns an error for the same reasons as [`GLLState::get_node_p`].
     pub fn pop(&mut self, ret_vals: &ReturnMap<'a>) -> ParseResult<'a, ()> {
         if self.gss_pointer != self.gss_root {
-            let curr_map = self.pop.get_mut(&self.gss_pointer);
-            if let Some(map) = curr_map {
+            if let Some(map) = self.pop.get_mut(&self.gss_pointer) {
                 map.push(self.sppf_pointer); 
             } else {
                 let map = vec![self.sppf_pointer];
