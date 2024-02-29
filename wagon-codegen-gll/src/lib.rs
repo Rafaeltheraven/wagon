@@ -47,6 +47,7 @@ type PrevArgs = Vec<SpannableIdent>;
 type FullArgs = IndexSet<SpannableIdent>;
 
 #[derive(Default)]
+#[allow(clippy::struct_excessive_bools)]
 /// Configuration options for the final GLL parser.
 pub(crate) struct WeightConfig {
 	/// Ignore the first/follow-set when choosing possible alternatives to parse.
@@ -58,7 +59,9 @@ pub(crate) struct WeightConfig {
 	/// The weights are calculated and attached to the final parse nodes though.
 	no_prune: bool,
 	/// Choose alternatives with the lowest weight as opposed to the highest.
-	min_weight: bool
+	min_weight: bool,
+	/// Allow 0-ed weights
+	allow_zero: bool
 }
 
 #[derive(Default)]

@@ -121,12 +121,21 @@ impl CodeGen for SpannableNode<Rhs> {
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
                 let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?);
-                let inner_block = quote!(
+                let mut inner_block = quote!(
                     let root = state.get_label_by_uuid(#root_str)?;
                     let rules = state.get_rule(#rule_str)?;
                     let slot = wagon_gll::GrammarSlot::new(root, rules, 0, 0, #label_str);
-                    candidates.push(std::rc::Rc::new(slot));
+                    let weight = slot.weight(state)?;
                 );
+                if gen_args.weight_config.allow_zero {
+                    inner_block.extend(quote!(candidates.push((weight, std::rc::Rc::new(slot)));));
+                } else {
+                    inner_block.extend(quote!(
+                        if wagon_value::Valueable::is_truthy(&weight)? {
+                            candidates.push((weight, std::rc::Rc::new(slot)));
+                        } 
+                    ));
+                }
                 let stream = if gen_args.weight_config.no_first {
                     inner_block
                 } else {

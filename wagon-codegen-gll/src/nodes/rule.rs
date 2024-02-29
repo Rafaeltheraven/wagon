@@ -36,20 +36,23 @@ impl CodeGen for SpannableNode<Rule> {
             	}
                 let stream = if gen_args.weight_config.no_prune {
                     quote!(
-                        for slot in candidates {
+                        for (_, slot) in candidates {
                             state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root)
                         }
                     )
                 } else {
+                    let comp_stream = quote!(
+                        |(x, _), (y, _)| x.partial_cmp(y).map_or_else(|| Err(wagon_gll::GLLParseError::ValueError(wagon_gll::value::ValueError::ValueError(wagon_value::ValueError::ComparisonError(x.to_owned(), y.to_owned())))), Ok)
+                    );
                     let to_add = if gen_args.weight_config.min_weight {
-                        quote!(wagon_utils::FallibleItertools::fallible_min_set_by(candidates.into_iter(), |x, y| x.partial_cmp(y, state))?)
+                        quote!(wagon_utils::FallibleItertools::fallible_min_set_by(candidates.into_iter(), #comp_stream))
                     } else {
-                        quote!(wagon_utils::FallibleItertools::fallible_max_set_by(candidates.into_iter(), |x, y| x.partial_cmp(y, state))?)
+                        quote!(wagon_utils::FallibleItertools::fallible_max_set_by(candidates.into_iter(), #comp_stream))
                     };
                     quote!(
                         if !candidates.is_empty() {
-                            let to_add = #to_add;
-                            for slot in to_add {
+                            let to_add = #to_add?;
+                            for (_, slot) in to_add {
                                 state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root, state.gss_pointer);
                             }
                         }
