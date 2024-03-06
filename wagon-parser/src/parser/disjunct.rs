@@ -11,6 +11,9 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[new_unspanned]
 /// A list of [`Conjunct`] nodes, seperated by `&&`.
+///
+/// # Grammar
+/// `Disjunct -> [Conjunct] ("&&" Disjunct)?;`
 pub struct Disjunct(pub Vec<SpannableNode<Conjunct>>);
 
 impl GetReqAttributes for Disjunct {

@@ -6,6 +6,7 @@ use std::{collections::HashMap, error::Error};
 use indexmap::IndexSet;
 use wagon_ident::Ident;
 
+/// Set of all attributes that are required to be in scope for something.
 pub(crate) type ReqAttributes = IndexSet<SpannableNode<Ident>>;
 
 /// Any node that can be rewritten in a different way for any reason should implement this trait.
@@ -87,6 +88,7 @@ impl FirstPassState {
 	// }
 }
 
+/// Trait to determine which attributes are required to be in scope for this part of the tree.
 pub(crate) trait GetReqAttributes {
 	fn get_req_attributes(&self) -> ReqAttributes;
 }

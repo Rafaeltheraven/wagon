@@ -99,6 +99,10 @@ struct MetaLexer<'source> {
 	peeked: VecDeque<Result<Metadata, LexingError>>
 }
 
+/// Peek implemented as a FIFO queue.
+///
+/// Any time `peek` is called, the main lexer is advanced and the result is stored in the `peeked` queue. If `next` is called,
+/// it takes from `peeked` first before taking from the lexer itself.
 impl Peek for MetaLexer<'_> {
     fn peek(&mut self) -> Option<&Self::Item> {
         let item = self.lexer.next()?;
@@ -270,6 +274,7 @@ pub trait Spannable {
 	fn set_span(&mut self, _span: Span) {}
 }
 
+/// Implemented like [`std::iter::Peekable`]. 
 impl<'source> Peek for LexerBridge<'source> {
 
     fn peek(&mut self) -> Option<&Self::Item> {

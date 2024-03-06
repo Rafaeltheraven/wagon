@@ -13,6 +13,7 @@ pub(super) trait TokenMapper {
 	fn token_to_enum(token: &Tokens) -> Option<Self> where Self: Sized;
 }
 
+/// A lambda which takes a lexerbridge and returns a ParseResult
 type ParseFunc<T> = Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>;
 
 fn __between_right<T>(lexer: &mut LexerBridge, right: &Tokens, fun: ParseFunc<T>) -> ParseResult<T> {
@@ -53,7 +54,7 @@ pub(super) fn between_sep<T: Parse>(lexer: &mut LexerBridge, left: &Tokens, righ
 	__between(lexer, left, right, Box::new(|x| T::parse_sep(x, sep)))
 }
 
-/// A macro that automatically expands to allow either a [`wagon_lexer::Tokens::ProductionToken`] or a [`wagon_lexer::Tokens::MathToken`].
+/// A macro that automatically expands to allow either a [`wagon_lexer::Tokens::ProductionToken`] or a [`wagon_lexer::Tokens::MathToken`] with the same name.
 #[macro_export] 
 macro_rules! either_token {
     ($variant:ident($($arg:tt)*)) => {

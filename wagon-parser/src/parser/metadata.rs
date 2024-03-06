@@ -10,6 +10,15 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[new_unspanned]
 /// The metadata of the WAG.
+///
+/// # Grammar
+/// ```ignore
+/// Metadata  -> Meta* MetaDelim;
+/// MetaDelim -> "==" "="+;
+/// Meta      -> Include | Config;
+/// Include   -> "include" Path;
+/// Config    -> Identifier ":" [Expression] ";";
+/// ```
 pub struct Metadata {
     /// All imports for this grammar.
 	pub includes: Vec<String>,

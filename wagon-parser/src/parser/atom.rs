@@ -19,7 +19,8 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 /// A python-style dictionary.
 ///
-/// Is of the form [`Ident`][[`Expression`]].
+/// # Grammar
+/// `Dictionary -> [Ident] "[" [Expression] "]";`
 pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
@@ -35,9 +36,20 @@ impl Dictionary {
 /// The base elements of each expression.
 ///
 /// The data in here is kind of similar to [`wagon_value::Value`] and `TryFrom` is implemented for it as a result.
-/// 
 /// However, an `Atom` includes additional syntactic data, which is not important (or even not available) for `Value` (for example, an [`Ident`]).
 /// As a result, [`Atom::Ident`], [`Atom::Dict`] and [`Atom::Group`] can not be directly converted and manual implementation is required.
+///
+/// # Grammar
+/// ```ignore
+/// Atom -> [Ident]
+///      |  [Dictionary]
+///      |  [bool]
+///      |  [i32]
+///      |  [f32]
+///      |  [String]
+///      |  "(" [Expression] ")"
+///      ;
+/// ```
 pub enum Atom {
 	/// An [`Ident`].
 	Ident(Ident),

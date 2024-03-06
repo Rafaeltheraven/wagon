@@ -25,6 +25,8 @@ use crate::GLLState;
 /// operate.
 pub trait Label<'a>: Debug {
 	/// Is this Label epsilon?
+	///
+	/// Defaults to `false`.
 	fn is_eps(&self) -> bool {
 		false
 	}
@@ -39,7 +41,7 @@ pub trait Label<'a>: Debug {
 	/// # Example
 	/// Assume we have the following rules: 
 	/// ```ignore
-	/// S -> A B 'b' | B;
+	/// S -> A B 'b' | 'b';
 	/// A -> 'a';
 	/// B -> 'b'
 	/// ```
@@ -55,7 +57,7 @@ pub trait Label<'a>: Debug {
 	/// But for now, it remains in it's current functional state.
 	///
 	/// # Errors
-	/// Will return an error if we fail to retrieve the label somewhere.
+	/// Should return an error if we fail to retrieve the label somewhere.
 	fn first_set(&self, state: &GLLState<'a>) -> ParseResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>>;
 	/// Any code to run when encountering this label.
 	///
@@ -88,7 +90,9 @@ pub trait Label<'a>: Debug {
 		}
 		Ok(false)
 	}
-	/// Is this label a terminal?
+	/// Is this label a terminal? 
+	///
+	/// Defaults to `false`.
 	fn is_terminal(&self) -> bool {
 		false
 	}
@@ -180,7 +184,7 @@ impl<'a> Label<'a> for Terminal<'a> {
     /// As such, it was decided that this function will not return a proper [`ParseResult`].
     fn to_string(&self) -> &str {
     	#[allow(clippy::expect_used)]
-        from_utf8(self).expect("Terminal was non-ut8")
+        from_utf8(self).expect("Terminal was non-utf8")
     }
 
     fn _is_nullable(&self, _: &GLLState<'a>, _: &mut HashSet<Rc<str>>) -> ParseResult<'a, bool> {

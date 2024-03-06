@@ -13,7 +13,8 @@ use wagon_macros::new_unspanned;
 #[new_unspanned]
 /// Assigns the result of an expression to an attribute.
 ///
-/// Each assignment has the following structure: [`Ident`] = [`Expression`];
+/// # Grammar
+/// `Assignment -> "{" ([Ident] "=" [Expression] ";")* "}";`
 pub struct Assignment {
 	/// The left-hand side.
 	pub ident: SpannableNode<Ident>,

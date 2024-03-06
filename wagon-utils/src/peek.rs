@@ -8,6 +8,8 @@ use std::iter::Peekable;
 /// [`Peekable`] implements this trait by calling inner methods of the same name.
 ///
 /// NOTE: The documentation of these methods are taken directly from the [`Peekable`] documentation.
+/// your implementation of these methods may work differently. This is fine and expected, as long as you
+/// know and document what you're doing and why.
 pub trait Peek: Iterator {
     /// Returns a reference to the next() value without advancing the iterator.
     ///

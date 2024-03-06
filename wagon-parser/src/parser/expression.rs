@@ -13,6 +13,13 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[new_unspanned]
 /// An expression in the WAGon attribute evaluation DSL.
+///
+/// # Grammar
+/// ```ignore
+/// Expression -> SubProc | If | [Disjunct];
+/// SubProc -> "$(" /[^)]*/ ")"; // A bash-style $() expression
+/// If -> "if" [Disjunct] "then" [Disjunct] ("else" [Expression])?;
+/// ```
 pub enum Expression {
 	/// A subprocess that should do evaluation in the shell.
 	Subproc(SpannableNode<String>),

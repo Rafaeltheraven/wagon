@@ -18,6 +18,14 @@ use wagon_macros::new_unspanned;
 /// Any `Rhs` optionally has an expression that evaluates it's weight, enclosed by `[]`.
 /// 
 /// After the weight, it has a list of chunks (which may be empty)
+///
+/// # Grammar
+/// ```ignore
+/// Rhs -> Weight? [Chunk]* "|" Rhs
+///	    |  Weight? [Chunk]* ";"
+///	    ;
+/// Weight -> "[" [Expression] "]";
+/// ```
 pub struct Rhs {
 	/// The weight expression of this alternative.
 	pub weight: Option<SpannableNode<Expression>>,

@@ -305,7 +305,7 @@ impl<'a> SPPF<'a> {
     /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
     ///
     /// # Errors 
-    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actyally exist in the graph.
+    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actually exist in the graph.
     pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> ProcessResult<Vec<HashSet<SPPFNodeIndex>>> {
         let mut trees = Vec::new();
         for root in roots {
@@ -342,6 +342,7 @@ impl<'a> SPPF<'a> {
     }
 }
 
+/// An empty forest
 impl Default for SPPF<'_> {
     fn default() -> Self {
         Self(SPPFGraph::new())

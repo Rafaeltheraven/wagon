@@ -28,6 +28,9 @@ Term' -> Op Factor Term' | epsilon
 /// A multiplication/division on any number of [`Factor`]s.
 ///
 /// If `cont == None`, then this is just a `Factor`.
+///
+/// # Grammar
+/// `Term -> [Factor] [TermP]?;`
 pub struct Term {
     /// The left-hand [`Factor`].
 	pub left: SpannableNode<Factor>,
@@ -38,6 +41,9 @@ pub struct Term {
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
 /// The operator, right-hand side and possible further continuation of this `Term`.
+///
+/// # Grammar
+/// `TermP -> [Op2] [Factor] TermP?;`
 pub struct TermP {
     /// The operator
 	pub op: Op2,
@@ -91,6 +97,9 @@ impl GetReqAttributes for TermP {
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
 /// The [`Term`] operators
+///
+/// # Grammar
+/// `Op2 -> "*" | "/" | "//" | "%";`
 pub enum Op2 {
     /// `*`
 	Mul,

@@ -101,6 +101,7 @@ enum Base {
     Path(String),
 }
 
+/// Try to find an attribute in a list. If found, remove it from the list and return the tokens.
 fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
     let mut found = None;
     for (i, attr) in attrs.iter_mut().enumerate() {

@@ -1,10 +1,12 @@
 #![warn(missing_docs)]
 //! Utility methods for the WAGon suite of libraries.
 //!
-//! Provides a number of simple functions, as well as a trait version of [`std::iter::Peekable`].
+//! Provides a number of simple functions, as well as a trait version of [`std::iter::Peekable`]
+//! and a fallible version of [`itertools::Itertools`].
 
 /// A trait version of [`std::iter::Peekable`].
 mod peek;
+/// A fallible version of [`itertools::Itertools`].
 mod fallible_itertools;
 
 use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
@@ -170,6 +172,9 @@ pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
 
 /// Same as [`comma_separated_with_or`], but takes a vector of `&str` instead.
 ///
+/// This is a separate function from [`comma_separated_with_or`] because it is slightly slower
+/// as it requires a copy operation per string instead of just a borrow.
+///
 /// # Example
 /// ```
 /// use wagon_utils::comma_separated_with_or_str;
@@ -198,6 +203,8 @@ pub fn comma_separated<T: std::fmt::Display>(input: &[T]) -> String {
 /// Given a list of values, attempt to normalize them based on their sum.
 ///
 /// This method works as long as the type inside the vec supports the [`std::ops::Div`] and [`std::iter::Sum`] traits. 
+///
+/// The algorithm "works" by summing all the values together, and then normalizes each value by calculating `val / sum`.
 ///
 /// # Example
 /// ```
@@ -393,7 +400,9 @@ impl<T, U> ConversionError<T, U> {
     /// More specifically, if we have a type `V` which implements `From<U>`, we can
     /// construct a new `ConversionError<T,V>`.
     ///
-    /// This exists for the case "We tried converting T to U, but actually we were converting T to V in this case". 
+    /// This exists for the case "We tried converting T to U, but actually we were converting T to V in this case".
+    ///
+    /// Because specialization is still not stabilized, this can not be done by a generic implementation of [`From`].
     pub fn convert<V: From<U>>(self) -> ConversionError<T, V> {
         ConversionError::<T, V>::new(self.subject)
     }

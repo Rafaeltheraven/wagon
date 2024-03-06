@@ -60,6 +60,7 @@ type CallingArgs = Vec<SpannableNode<Ident>>;
 /// let s = "S -> A;";
 /// let mut parser = Parser::new(s);
 /// assert!(parser.parse().is_ok())
+/// ```
 pub struct Parser<'source> {
 	lexer: LexerBridge<'source>
 }

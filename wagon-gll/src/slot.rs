@@ -19,7 +19,9 @@ pub struct GrammarSlot<'a> {
 	pub rule: Rc<Vec<Ident>>,
 	/// The location of the `•` inside this rule.
 	pub dot: usize,
-	/// The position of the pointer inside this rule (may be seperate from the dot)
+	/// The position of the pointer inside this rule (may be seperate from the dot).
+	///
+	/// Used only for string representation purposes.
 	pub pos: usize,
 	/// A unique identifier for this slot.
 	pub uuid: &'a str
@@ -29,7 +31,7 @@ impl<'a> Eq for GrammarSlot<'a> {}
 
 impl<'a> PartialEq for GrammarSlot<'a> {
     fn eq(&self, other: &Self) -> bool {
-    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same except when probabilistic
+    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same.
     		self.label.to_string() == other.label.to_string()
     	} else {
     		self.uuid == other.uuid && self.dot == other.dot && self.pos == other.pos
@@ -120,10 +122,10 @@ impl<'a> GrammarSlot<'a> {
 		state.get_label(&self.rule[self.dot])
 	}
 
-	/// Get the weight of this slot.
+	/// Get the weight of the current label for this slot.
 	///
 	/// # Errors
-	/// Returns an error of we can not calculate the weight.
+	/// Returns an error if we can not calculate the weight.
 	pub fn weight(&self, state: &GLLState<'a>) -> ParseResult<'a, Value<'a>> {
 		self.curr_block(state).weight(state)
 	}

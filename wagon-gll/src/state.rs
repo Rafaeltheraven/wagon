@@ -188,6 +188,7 @@ impl<'a> GLLState<'a> {
         Ok(v)
     }
 
+    /// Try finding a packed node that is a child of `parent` and matches `ref_slot` and `i`.
     fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: &Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
         for child in self.sppf.neighbors_directed(parent, Outgoing) {
             match self.sppf.node_weight(child) {
@@ -303,6 +304,10 @@ impl<'a> GLLState<'a> {
         Ok(self.find_or_create_sppf(candidate))
     }
 
+    /// Creates/Returns the index of an [`SPPFNode`].
+    ///
+    /// If a vertex with the exact same data as `candidate` already exists in the SPPF, we return that vertex. 
+    /// Otherwise, we create a new vertex with `candidate` as the data and return that.
     fn find_or_create_sppf(&mut self, candidate: SPPFNode<'a>) -> SPPFNodeIndex {
         if let Some(ix) = self.sppf_map.get(&candidate) {
             *ix
@@ -408,32 +413,32 @@ impl<'a> GLLState<'a> {
     #[must_use]
     fn _next_regex(regex: &RegexTerminal<'a>, start_pointer: usize, input: &[u8]) -> Option<usize> {
         let current_byte = &input[start_pointer..=start_pointer];
-        let Ok(mut curr_state) = regex.automaton.start_state_forward(&current_byte.into()) else {
+        let Ok(mut curr_state) = regex.automaton.start_state_forward(&current_byte.into()) else { // Check if we have a valid start state.
             return None
         };
         let input_len = input.len();
         let mut i = 0;
         let mut last_match = None;
-        while !regex.automaton.is_dead_state(curr_state) && !regex.automaton.is_quit_state(curr_state)  {
-            let pointer = start_pointer + i;
-            if pointer >= input_len {
+        while !regex.automaton.is_dead_state(curr_state) && !regex.automaton.is_quit_state(curr_state)  { // Until we encounter a dead state or a quit state
+            let pointer = start_pointer + i; // Increment the pointer.
+            if pointer >= input_len { // If our pointer exceeds the input, stop looping.
                 break;
             }
             let byte = input[pointer];
-            curr_state = regex.automaton.next_state(curr_state, byte);
-            if regex.automaton.is_match_state(curr_state) {
-                last_match = Some(i);
+            curr_state = regex.automaton.next_state(curr_state, byte); // Move the automaton forward based on the current byte.
+            if regex.automaton.is_match_state(curr_state) { // If this is a potential match, store it.
+                last_match = Some(i); // We do not break as this is a greedy algorithm and we may find a longer match.
             }
             i += 1;
         }
-        if regex.automaton.is_quit_state(curr_state) || regex.automaton.is_dead_state(curr_state) {
-            last_match
-        } else {
-            let state = regex.automaton.next_eoi_state(curr_state);
-            if regex.automaton.is_match_state(state) {
+        if regex.automaton.is_quit_state(curr_state) || regex.automaton.is_dead_state(curr_state) { // If we stopped the loop because we reached a dead or quit state.
+            last_match // Return the last found match
+        } else { // If we stopped the loop because the pointer exceeded the input
+            let state = regex.automaton.next_eoi_state(curr_state); // Move the automaton forward by 1 step (because of library reasons).
+            if regex.automaton.is_match_state(state) { // Check if this last state is accepting.
                 Some(i)
             } else {
-                last_match
+                last_match // If it is not, return the last found match.
             }
         }
     }
@@ -556,6 +561,11 @@ impl<'a> GLLState<'a> {
         self.get_sppf_node(self.sppf_pointer)?.get_ret_val(i)
     }
 
+    /// Check if we have a special case slot.
+    ///
+    /// This concept comes from the OOGLL paper and is required in [`Self::get_node_p`] to instantly return the `right`.
+    ///
+    /// A special slot is defined as any slot `S -> α•β` where |α| == 1 && α is non-terminal or a non-nullable terminal && |β| != 0. 
     fn is_special_slot(&self, slot: &GrammarSlot<'a>) -> ParseResult<'a, bool> {
         Ok(if slot.dot == 1 && slot.pos == 0 && !slot.is_last(self) {
             match slot.rule.first() {
@@ -574,6 +584,9 @@ impl<'a> GLLState<'a> {
         Ok(self.get_label(slot.rule.get(slot.dot).ok_or_else(|| GLLParseError::CompletedSlot(slot.to_string(self)))?))
     }
 
+    /// The goto function of the OOGLL paper.
+    ///
+    /// Calls [`Label::code`]. If an error occurs for any reason, we store it in the `errors` vector.
     fn goto(&mut self, slot: &GrammarSlot<'a>) {
         match self.get_current_label_slot(slot) {
             Ok(label) => {
