@@ -20,8 +20,8 @@ use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
 use extendable_data::extendable_data;
 
-/// A procedural macro to extend lexers from a base lexer. Used by [`wagon-lexers::math::Math`](../wagon_lexer/math/enum.Math.html) 
-/// and [`wagon_lexer::productions::Productions`](wagon_lexer/productions/enum.Productions.html).
+/// A procedural macro to extend lexers from a base lexer. Used by [`wagon-lexer::math::Math`](../wagon_lexer/math/enum.Math.html) 
+/// and [`wagon-lexer::productions::Productions`](../wagon_lexer/productions/enum.Productions.html).
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
@@ -121,9 +121,9 @@ fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
 }
 
 #[proc_macro_derive(TokenMapper)]
-/// Derive macro for the [`wagon-parser::helpers::TokenMapper`] trait.
+/// Derive macro for the [`wagon-parser::helpers::TokenMapper`](../wagon_parser/parser/helpers/trait.TokenMapper.html) trait.
 ///
-/// If we have an enum that has fields with the exact same names as that of specific [`wagon-lexer::math::Math`] tokens.
+/// If we have an enum that has fields with the exact same names as that of specific [`wagon-lexer::math::Math`](../wagon_lexer/math/enum.Math.html) tokens.
 /// We can automatically derive this trait to convert those tokens into instances of this enum.
 pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as DeriveInput);
@@ -589,7 +589,7 @@ fn _derive_value_operations(ast: DeriveInput) -> Result<TokenStream2> {
 macro_rules! derive_value_op {
     ($o:expr, $p:path, $f:ident, $n:ident) => {
         paste::item! {
-            /// Automatically derive [`$p`] for [`Valueable`] types.
+            /// Automatically derive this operation for [`wagon-value::Valueable`](../wagon_value/trait.Valueable.html) types.
             #[proc_macro_derive($n, attributes(value, value_variant))]
             pub fn [< derive_value_ $f >](item: TokenStream) -> TokenStream {
                 let ast = parse_macro_input!(item as DeriveInput);

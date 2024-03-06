@@ -23,7 +23,7 @@ use wagon_macros::new_unspanned;
 /// A symbol is any individual element of a `Chunk`.
 ///
 /// # Grammar
-/// ```ignore
+/// ```text
 /// Symbol -> [Ident] NTArgs?
 ///        |  [Terminal]
 ///        |  ("{" [Assignment]* "}")?

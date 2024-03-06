@@ -586,7 +586,7 @@ impl<'a> GLLState<'a> {
 
     /// The goto function of the OOGLL paper.
     ///
-    /// Calls [`Label::code`]. If an error occurs for any reason, we store it in the `errors` vector.
+    /// Calls [`crate::label::Label::code`]. If an error occurs for any reason, we store it in the `errors` vector.
     fn goto(&mut self, slot: &GrammarSlot<'a>) {
         match self.get_current_label_slot(slot) {
             Ok(label) => {

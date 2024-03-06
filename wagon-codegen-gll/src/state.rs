@@ -312,7 +312,7 @@ impl CodeGenState {
 		Ok(())
     }
 
-    /// Construct the code that returns the first_set.
+    /// Construct the code that returns the `first_set`.
     fn handle_first(alt: &Vec<TokenStream>, fin: &Option<CharBytes>) -> (bool, TokenStream) {
     	let mut ret = false;
     	let byte = match fin {
@@ -361,7 +361,7 @@ impl CodeGenState {
     	)
     }
 
-    /// Generate the code to setup the GLLState object.
+    /// Generate the code to setup the `GLLState` object.
     pub(crate) fn gen_state_stream(&self, files: &mut FileStructure) -> CodeGenResult<TokenStream> {
     	let mut stream = TokenStream::new();
     	let re = Regex::new(DELIM_REGEX).map_err(|_| CodeGenError::new(CodeGenErrorKind::Fatal("Unable to construct identifier regex".to_string())))?;

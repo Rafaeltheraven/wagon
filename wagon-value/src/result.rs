@@ -10,7 +10,7 @@ pub type ValueResult<T, U> = Result<T, ValueError<U>>;
 #[derive(Debug, Eq, PartialEq, Clone)]
 /// Errors that can occur while dealing with semi-dynamic [`Value`]s.
 ///
-/// A [`ValeError<Value<T>>`] can be automatically converted into a [`ValueError<T>`] when you are 
+/// A [`ValueError<Value<T>>`] can be automatically converted into a [`ValueError<T>`] when you are 
 /// implementing your own [`Valueable`] type, but the compiler may require some manual convincing to get it to work
 /// (as in, you will have to call `from` manually).
 pub enum ValueError<T: Valueable> {

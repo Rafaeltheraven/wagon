@@ -12,7 +12,7 @@ use wagon_macros::new_unspanned;
 /// The metadata of the WAG.
 ///
 /// # Grammar
-/// ```ignore
+/// ```text
 /// Metadata  -> Meta* MetaDelim;
 /// MetaDelim -> "==" "="+;
 /// Meta      -> Include | Config;

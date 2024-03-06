@@ -104,7 +104,7 @@ pub trait Label<'a>: Debug {
 		self._is_nullable(state, &mut HashSet::default())
 	}
 
-	/// Internal method for [`is_nullable`] to do the recursive step.
+	/// Internal method for [`Label::is_nullable`] to do the recursive step.
 	///
 	/// Rust does not allow me to make this private, so it will be public.
 	///

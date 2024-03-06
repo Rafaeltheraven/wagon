@@ -101,7 +101,7 @@ pub(crate) struct CodeGenArgs {
 pub(crate) enum CodeGenErrorKind {
 	/// Tried converting an [`Atom`] into a [`RecursiveValue`]
 	///
-	/// (this happens in [`nodes::metadata::Metadata::gen`]).
+	/// (this happens in [`nodes::metadata::atom_to_bool`](./nodes/metadata/fn.atom_to_bool.html)).
 	AtomConversionError(ConversionError<Atom, RecursiveValue>),
 	/// Encountered some kind of [`ValueError`] when dealing with [`RecursiveValue`]s.
 	ValueError(ValueError<RecursiveValue>),

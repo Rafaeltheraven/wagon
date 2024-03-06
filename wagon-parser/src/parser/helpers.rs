@@ -13,7 +13,7 @@ pub(super) trait TokenMapper {
 	fn token_to_enum(token: &Tokens) -> Option<Self> where Self: Sized;
 }
 
-/// A lambda which takes a lexerbridge and returns a ParseResult
+/// A lambda which takes a lexerbridge and returns a [`ParseResult`]
 type ParseFunc<T> = Box<dyn FnOnce(&mut LexerBridge) -> ParseResult<T>>;
 
 fn __between_right<T>(lexer: &mut LexerBridge, right: &Tokens, fun: ParseFunc<T>) -> ParseResult<T> {

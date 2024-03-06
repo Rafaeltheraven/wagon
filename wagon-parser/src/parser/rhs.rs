@@ -20,7 +20,7 @@ use wagon_macros::new_unspanned;
 /// After the weight, it has a list of chunks (which may be empty)
 ///
 /// # Grammar
-/// ```ignore
+/// ```text
 /// Rhs -> Weight? [Chunk]* "|" Rhs
 ///	    |  Weight? [Chunk]* ";"
 ///	    ;

@@ -377,7 +377,7 @@ pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Res
 pub struct ConversionError<T, U> {
     /// The thing we want to convert.
     subject: T,
-    /// Used to hold the type info for the type of [`Valueable`] we are trying to convert to.
+    /// Used to hold the type info for the type `U` we are trying to convert to.
     to: PhantomData<U>
 }
 

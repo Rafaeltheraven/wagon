@@ -85,7 +85,7 @@ impl CodeGen for SpannableNode<Symbol> {
 	}
 }
 
-/// Codegen in case the symbol is a NonTerminal.
+/// Codegen in case the symbol is a `NonTerminal`.
 fn handle_non_terminal(i: SpannableIdent, label: &Rc<Ident>, state: &mut CodeGenState, block: Block, all_args: Args, uuids: UUIDs, checks: Checks) -> CodeGenResult<Option<Vec<SpannableIdent>>> {
 	let (args, full_args) = all_args;
 	let (uuid, rule_uuid) = uuids;

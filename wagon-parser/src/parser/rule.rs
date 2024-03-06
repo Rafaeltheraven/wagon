@@ -16,7 +16,7 @@ use wagon_macros::new_unspanned;
 /// A single rule in the WAG grammar. 
 ///
 /// # Grammar
-/// ```ignore
+/// ```text
 /// Rule -> [Ident] RuleType;
 /// RuleType -> RealRule | ImportRule;
 /// RealRule -> NTArgs? RuleArrow [Rhs];
