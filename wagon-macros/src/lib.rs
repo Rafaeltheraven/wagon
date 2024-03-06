@@ -174,6 +174,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
     let mut funcs = Vec::with_capacity(e.variants.len());
     for variant in e.variants {
         let ident = variant.ident;
+        let doc = format!("Construct a [`Self::{ident}`] with dummy span information.");
         let func_name = format_ident!("new_unspanned_{}", ident.to_string().to_lowercase());
         match variant.fields {
             syn::Fields::Named(n) => {
@@ -194,7 +195,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub(crate) fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident{#(#args),*}
                     }
@@ -218,7 +219,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident(#(#args),*)
                     }
@@ -226,7 +227,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
             },
             syn::Fields::Unit => {
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub fn #func_name() -> Self {
                         Self::#ident
                     }

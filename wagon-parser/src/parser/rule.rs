@@ -91,7 +91,7 @@ Ident format:
                                - - Default again but at this layer
 
 */
-/// Convert every [`Chunk`] inside a group or with an ebnf operator into it's own separate rule.
+/// Convert every [`Chunk`](super::chunk::Chunk) inside a group or with an ebnf operator into it's own separate rule.
 ///
 /// # Rewrite rules
 /// ## `?`
