@@ -63,7 +63,25 @@ impl CodeGen for SpannableNode<Rule> {
                 gen_args.state.roots.insert(pointer);
                 Ok(())
             },
-            Rule::Generate(_, _, _) => todo!(),
+            Rule::Generate(ident, args, rhs) => {
+                let pointer: Rc<Ident> = Rc::new(Ident::new(&ident, Span::call_site()));
+
+                gen_args.state.first_queue.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
+                gen_args.state.first_idents.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
+                gen_args.state.str_repr.insert(pointer.clone(), vec![ident]);
+                gen_args.ident = Some(pointer.clone());
+
+                // for (i, alt) in rhs.into_iter().enumerate() {
+                //     gen_args.alt = Some(i);
+                //     alt.gen(gen_args)?;
+                // }
+
+                gen_args.state.add_code(pointer.clone(), quote!(println!("YASSS");));
+                println!("{:#?}", gen_args.state.code);
+                //gen_args.state.add_code(pointer.clone(), quote!(Ok(())));
+                gen_args.state.roots.insert(pointer);
+                Ok(())
+            },
             Rule::Import(..) | Rule::Exclude(..) => Err(CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Encountered import rule during codegen. These should have been converted away.".to_string()), span))
         }  
     }

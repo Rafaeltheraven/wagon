@@ -220,3 +220,17 @@ impl<T: Parse + GetReqAttributes> GetReqAttributes for SpannableNode<T> {
         self.to_inner().get_req_attributes()
     }
 }
+
+#[test]
+fn test_generative_and_analytic() {
+    let input = r#"type: analytical;
+=========================================
+
+S -> "hello" | A;
+S => "hi";
+A -> "a";"#;
+    if let Ok(output) = parse_and_check(input){
+        println!("{}", output);
+    };
+
+}

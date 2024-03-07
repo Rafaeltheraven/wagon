@@ -8,6 +8,8 @@ use super::rule::Rule;
 use indexmap::IndexMap;
 
 use wagon_macros::new_unspanned;
+use crate::parser::chunk::Chunk;
+use crate::parser::rhs::Rhs;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[new_unspanned]
@@ -55,9 +57,36 @@ impl Rewrite<()> for Wag {
             };
             Ok(())
         }
+
+        // create a vector with strings of the idents
+        let mut gen_idents = Vec::new();
+        for rule in &self.grammar {
+            match &rule.node {
+                Rule::Generate(ident, _, _) => {
+                    gen_idents.push(ident.clone());
+                },
+                _ => ()
+            }
+        }
+
         let rules = std::mem::take(&mut self.grammar);
         let mut map: IndexMap<String, SpannableNode<Rule>> = IndexMap::with_capacity(rules.len());
         for mut rule in rules {
+            match &rule.node {
+                Rule::Analytic(ident, _,  mut rhs) => {
+                    let mut gen_ident = String::from("GEN_");
+                    gen_ident.push_str(&ident);
+
+                    if gen_idents.contains(&gen_ident){
+                        for (_, alt) in rhs.iter_mut().enumerate() {
+                            let (inner_rhs, _): (&mut Rhs, &mut std::ops::Range<usize>) = alt.deconstruct();
+                            let chunks = &mut inner_rhs.chunks;
+                            chunks.push(SpannableNode::new(Chunk::simple_ident(&gen_ident), rule.span.clone()));
+                        }
+                    }
+                },
+                _ => ()
+            }
             let new_rules = rule.rewrite(depth, state)?.0;
             handle_conflict(rule, &mut map)?;
             for new_rule in new_rules {

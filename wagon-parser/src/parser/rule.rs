@@ -128,6 +128,7 @@ impl Rewrite<(Vec<Self>, ReqAttributes)> for SpannableNode<Rule> {
 
 use wagon_utils::comma_separated;
 use itertools::Itertools;
+
 impl Display for Rule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
