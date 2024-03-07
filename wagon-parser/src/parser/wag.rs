@@ -72,8 +72,9 @@ impl Rewrite<()> for Wag {
         let rules = std::mem::take(&mut self.grammar);
         let mut map: IndexMap<String, SpannableNode<Rule>> = IndexMap::with_capacity(rules.len());
         for mut rule in rules {
-            match &rule.node {
-                Rule::Analytic(ident, _,  mut rhs) => {
+            let span = rule.span();
+            match rule.to_inner_mut() {
+                Rule::Analytic(ident, _,  ref mut rhs) => {
                     let mut gen_ident = String::from("GEN_");
                     gen_ident.push_str(&ident);
 
@@ -81,7 +82,7 @@ impl Rewrite<()> for Wag {
                         for (_, alt) in rhs.iter_mut().enumerate() {
                             let (inner_rhs, _): (&mut Rhs, &mut std::ops::Range<usize>) = alt.deconstruct();
                             let chunks = &mut inner_rhs.chunks;
-                            chunks.push(SpannableNode::new(Chunk::simple_ident(&gen_ident), rule.span.clone()));
+                            chunks.push(SpannableNode::new(Chunk::simple_ident(&gen_ident), span.clone()));
                         }
                     }
                 },
