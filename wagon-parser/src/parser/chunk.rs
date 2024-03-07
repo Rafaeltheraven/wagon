@@ -30,11 +30,11 @@ pub struct Chunk {
 /// The actual chunk part.
 ///
 /// # Grammar
-/// ```text
-/// ChunkP -> [Symbol]
-///        |  "(" [Chunk]* ")"
+/// <span><pre>
+/// [ChunkP] -> [Symbol]
+///        |  `"("` [Chunk]* `")"`
 ///        ;
-/// ```
+/// </pre></span>
 pub enum ChunkP {
     /// Just a [`Symbol`].
 	Unit(SpannableNode<Symbol>),

@@ -20,12 +20,12 @@ use wagon_macros::new_unspanned;
 /// After the weight, it has a list of chunks (which may be empty)
 ///
 /// # Grammar
-/// ```text
-/// Rhs -> Weight? [Chunk]* "|" Rhs
-///	    |  Weight? [Chunk]* ";"
+/// <span><pre>
+/// [Rhs] -> Weight? [Chunk]* `"|"` [Rhs]
+///	    |  Weight? [Chunk]* `";"`
 ///	    ;
 /// Weight -> "[" [Expression] "]";
-/// ```
+/// </pre></span>
 pub struct Rhs {
 	/// The weight expression of this alternative.
 	pub weight: Option<SpannableNode<Expression>>,

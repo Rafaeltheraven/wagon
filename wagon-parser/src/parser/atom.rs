@@ -40,16 +40,16 @@ impl Dictionary {
 /// As a result, [`Atom::Ident`], [`Atom::Dict`] and [`Atom::Group`] can not be directly converted and manual implementation is required.
 ///
 /// # Grammar
-/// ```text
-/// Atom -> [Ident]
+/// <span><pre>
+/// [Atom] -> [Ident]
 ///      |  [Dictionary]
 ///      |  [bool]
 ///      |  [i32]
 ///      |  [f32]
 ///      |  [String]
-///      |  "(" [Expression] ")"
+///      |  `"("` [Expression] `")"`
 ///      ;
-/// ```
+/// </pre></span>
 pub enum Atom {
 	/// An [`Ident`].
 	Ident(Ident),

@@ -15,11 +15,11 @@ use wagon_macros::new_unspanned;
 /// An expression in the WAGon attribute evaluation DSL.
 ///
 /// # Grammar
-/// ```text
+/// <span><pre>
 /// [Expression] -> SubProc | If | [Disjunct];
-/// SubProc -> "$(" /[^)]*/ ")"; // A bash-style $() expression
+/// SubProc -> `"$(" /[^)]*/ ")"`; // A bash-style $() expression
 /// If -> "if" [Disjunct] "then" [Disjunct] ("else" [Expression])?;
-/// ```
+/// </pre></span>
 pub enum Expression {
 	/// A subprocess that should do evaluation in the shell.
 	Subproc(SpannableNode<String>),

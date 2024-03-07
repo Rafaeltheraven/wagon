@@ -16,17 +16,17 @@ use wagon_macros::new_unspanned;
 /// A single rule in the WAG grammar. 
 ///
 /// # Grammar
-/// ```text
-/// Rule -> [Ident] RuleType;
+/// <span><pre>
+/// [Rule] -> [Ident] RuleType;
 /// RuleType -> RealRule | ImportRule;
 /// RealRule -> NTArgs? RuleArrow [Rhs];
-/// RuleArrow -> "->" | "=>";
+/// RuleArrow -> `"->" | "=>"`;
 /// ImportRule -> ImportArrow Identifier;
-/// ImportArrow -> "<-" | "<=" | "<<" | "</";
+/// ImportArrow -> `"<-" | "<=" | "<<" | "</"`;
 ///
 /// NTArgs -> "<" AttrIdentifierList ">";
 /// AttrIdentifierList -> [Ident] "," AttrIdentifierList | [Ident];
-/// ```
+/// </pre></span>
 pub enum Rule {
     /// An analytic rule (`->`).
 	Analytic(String, Vec<SpannableNode<Ident>>, Vec<SpannableNode<Rhs>>),
