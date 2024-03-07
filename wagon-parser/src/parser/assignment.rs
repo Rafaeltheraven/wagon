@@ -14,7 +14,7 @@ use wagon_macros::new_unspanned;
 /// Assigns the result of an expression to an attribute.
 ///
 /// # Grammar
-/// `Assignment -> "{" ([Ident] "=" [Expression] ";")* "}";`
+/// <code>[Assignment] -> "{" ([Ident] "=" [Expression] ";")* "}";</code>
 pub struct Assignment {
 	/// The left-hand side.
 	pub ident: SpannableNode<Ident>,

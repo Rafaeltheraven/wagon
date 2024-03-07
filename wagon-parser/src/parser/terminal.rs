@@ -14,7 +14,7 @@ use wagon_macros::match_error;
 /// A terminal for the grammar.
 ///
 /// # Grammar
-/// `Terminal -> Regex | String;`
+/// <code>[Terminal] -> Regex | String;</code>
 pub enum Terminal {
     /// A terminal described as a regex. 
 	Regex(

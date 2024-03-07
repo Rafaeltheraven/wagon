@@ -631,7 +631,7 @@ impl<'a> GLLState<'a> {
     /// Checks whether the current parser state has accepted the string
     #[must_use] 
     pub fn accepts(&self) -> bool {
-        self.errors.is_empty() && !self.find_roots_sppf().is_empty()
+        !self.find_roots_sppf().is_empty()
     }
 
     fn find_roots_sppf(&self) -> Vec<SPPFNodeIndex> {

@@ -14,7 +14,7 @@ use wagon_macros::new_unspanned;
 /// The full WAG tree.
 /// 
 /// # Grammar
-/// `Wag -> [Metadata]? [Rule]*;`
+/// <code>[Wag] -> [Metadata]? [Rule]*;</code>
 pub struct Wag {
     /// Metadata associated with this WAG.
 	pub metadata: SpannableNode<Metadata>,

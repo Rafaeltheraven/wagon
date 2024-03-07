@@ -21,7 +21,7 @@ use wagon_macros::new_unspanned;
 /// If `cont == None`, then this is just a `Term`.
 ///
 /// # Grammar
-/// `Sum -> [Term] [SumP]?;`
+/// <code>[Sum] -> [Term] [SumP]?;</code>
 pub struct Sum {
     /// The left-hand [`Term`].
 	pub left: SpannableNode<Term>,
@@ -34,7 +34,7 @@ pub struct Sum {
 /// The operator, right-hand side and possible further continuation of this sum.
 ///
 /// # Grammar
-/// `SumP -> [Op1] [Term] [SumP]?;`
+/// <code>[SumP] -> [Op1] [Term] [SumP]?;</code>
 pub struct SumP {
     /// The operator
 	pub op: Op1,
@@ -90,7 +90,7 @@ impl GetReqAttributes for SumP {
 /// The sum operations
 ///
 /// # Grammar
-/// `Op1 -> "+" | "-";`
+/// <code>[Op1] -> "+" | "-";</code>
 pub enum Op1 {
     /// `+`
 	Add,

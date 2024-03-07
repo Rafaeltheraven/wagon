@@ -17,7 +17,7 @@ use wagon_macros::new_unspanned;
 /// If there are no (), there is only 1 symbol, which may still optionally have an EBNF token.
 ///
 /// # Grammar
-/// `Chunk -> [ChunkP] [EbnfType]?;`
+/// <code>[Chunk] -> [ChunkP] [EbnfType]?;</code>
 pub struct Chunk {
     /// The actual chunk part.
 	pub chunk: ChunkP,

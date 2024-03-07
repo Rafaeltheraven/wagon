@@ -15,7 +15,7 @@ use wagon_macros::new_unspanned;
 /// Either a [`Comparison`] prepend by `!` or just a [`Comparison`].
 ///
 /// # Grammar
-/// `Inverse -> "!"? [Comparison];`
+/// <code>Inverse -> "!"? [Comparison];</code>
 pub enum Inverse {
     /// `!`
 	Not(SpannableNode<Comparison>),

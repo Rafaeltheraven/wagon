@@ -13,7 +13,7 @@ use wagon_macros::new_unspanned;
 /// A possible power equation, or just an [`Atom`].
 ///
 /// # Grammar
-/// `Factor -> [Atom] ("**" Factor)?;`
+/// <code>[Factor] -> [Atom] ("**" Factor)?;</code>
 pub enum Factor {
 	/// Just an [`Atom`].
 	Primary(SpannableNode<Atom>),

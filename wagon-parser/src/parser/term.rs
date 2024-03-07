@@ -30,7 +30,7 @@ Term' -> Op Factor Term' | epsilon
 /// If `cont == None`, then this is just a `Factor`.
 ///
 /// # Grammar
-/// `Term -> [Factor] [TermP]?;`
+/// <code>[Term] -> [Factor] [TermP]?;</code>
 pub struct Term {
     /// The left-hand [`Factor`].
 	pub left: SpannableNode<Factor>,
@@ -43,7 +43,7 @@ pub struct Term {
 /// The operator, right-hand side and possible further continuation of this `Term`.
 ///
 /// # Grammar
-/// `TermP -> [Op2] [Factor] TermP?;`
+/// <code>[TermP] -> [Op2] [Factor] TermP?;</code>
 pub struct TermP {
     /// The operator
 	pub op: Op2,
@@ -99,7 +99,7 @@ impl GetReqAttributes for TermP {
 /// The [`Term`] operators
 ///
 /// # Grammar
-/// `Op2 -> "*" | "/" | "//" | "%";`
+/// <code>Op2 -> "*" | "/" | "//" | "%";</code>
 pub enum Op2 {
     /// `*`
 	Mul,

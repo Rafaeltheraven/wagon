@@ -20,7 +20,7 @@ use wagon_macros::new_unspanned;
 /// A python-style dictionary.
 ///
 /// # Grammar
-/// `Dictionary -> [Ident] "[" [Expression] "]";`
+/// <code>[Dictionary] -> [Ident] "[" [Expression] "]";</code>
 pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
@@ -40,7 +40,7 @@ impl Dictionary {
 /// As a result, [`Atom::Ident`], [`Atom::Dict`] and [`Atom::Group`] can not be directly converted and manual implementation is required.
 ///
 /// # Grammar
-/// ```ignore
+/// ```text
 /// Atom -> [Ident]
 ///      |  [Dictionary]
 ///      |  [bool]
