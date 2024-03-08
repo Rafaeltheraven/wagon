@@ -9,7 +9,7 @@ mod peek;
 /// A fallible version of [`itertools::Itertools`].
 mod fallible_itertools;
 
-use std::{collections::HashMap, error::Error, fmt::Display, marker::PhantomData, ops::Range, str::Chars};
+use std::{error::Error, fmt::Display, marker::PhantomData, ops::Range, str::Chars};
 
 use itertools::Itertools;
 pub use peek::Peek;
@@ -455,12 +455,13 @@ pub trait Spannable {
 ///
 /// # Errors
 /// Errors when unable to print to stderr.
+#[cfg(feature = "error_printing")]
 pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: &str, offset: usize) -> Result<(), std::io::Error> {
     use ariadne::{ColorGenerator, Label, Report, ReportKind};
     let mut colors = ColorGenerator::new();
     let a = colors.next();
     let mut builder = Report::build(ReportKind::Error, file_path, offset);
-    let mut sources = HashMap::new();
+    let mut sources = std::collections::HashMap::new();
     for e in err {
         let ((head, msg), span, source) = e.report();
         let data = source.map_or(file.to_string(), |data| data);

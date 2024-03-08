@@ -77,9 +77,10 @@ fn create_structure(proj_name: &PathBuf, files: FileStructure, overwrite: bool) 
 }
 
 fn create_cargo(proj_name: &PathBuf) {
+    println!("Setting up Cargo");
     let path = std::path::Path::new(proj_name);
     let libs = ["subprocess", "serde_json", "rand_dist", "itertools", "regex_automata"];
-    let local_libs = ["wagon-gll", "wagon-ident", "wagon-utils", "wagon-value"];
+    let local_libs = ["wagon-gll", "wagon-ident", "wagon-value"];
     let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
     toml.write_all(format!(
 "[package]
@@ -92,7 +93,9 @@ edition = \"2021\"
 [workspace]
 
 [dependencies]", proj_name.display()).as_bytes()).expect("Failed to write Cargo.toml");
+    println!("Setting up dependencies");
     Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
+    Command::new("cargo").current_dir(path).args(["add", "wagon-utils", "--path", "../wagon-utils", "--features", "error_printing"]).output().expect("Failed to add wagon-utils library");
     for lib in local_libs {
         let lib_path = format!("../{lib}");
         Command::new("cargo").current_dir(path).args(["add", lib, "--path", &lib_path]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));

@@ -15,7 +15,7 @@ description = "The main binary for WAGon."
 wagon-parser = {workspace = true}
 wagon-codegen-gll = {workspace = true}
 wagon-codegen = {workspace = true}
-wagon-utils = {workspace = true}
+wagon-utils = {workspace = true, features = ["error_printing"]}
 clap = { version = "4.4.8", features = ["derive", "cargo"] }
 prettyplease = "0.2.15"
 
