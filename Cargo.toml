@@ -35,6 +35,7 @@ replace_with = "0.1.7"
 derivative = "2.2.0"
 regex-automata = "0.4.5"
 itertools = "0.12.1"
+thiserror = "1.0.57"
 
 # local crates
 wagon-codegen = {path = "./wagon-codegen"}

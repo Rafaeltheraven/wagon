@@ -1,6 +1,6 @@
 use crate::value::Value;
-use crate::ParseResult;
-use crate::GLLParseError;
+use crate::ImplementationResult;
+use crate::GLLImplementationError;
 use crate::ValueError;
 use crate::InnerValueError;
 use crate::GLLState;
@@ -126,7 +126,7 @@ impl<'a> GrammarSlot<'a> {
 	///
 	/// # Errors
 	/// Returns an error if we can not calculate the weight.
-	pub fn weight(&self, state: &GLLState<'a>) -> ParseResult<'a, Value<'a>> {
+	pub fn weight(&self, state: &GLLState<'a>) -> ImplementationResult<'a, Value<'a>> {
 		self.curr_block(state).weight(state)
 	}
 
@@ -141,9 +141,9 @@ impl<'a> GrammarSlot<'a> {
 	///
 	/// # Errors
 	/// Returns a wrapped [`ValueError::ComparisonError`](`InnerValueError::ComparisonError`) if the comparison is not possible.
-	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
+	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ImplementationResult<'a, std::cmp::Ordering> {
 		let left_weight = self.weight(state)?;
 		let right_weight = other.weight(state)?;
-		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
+		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLImplementationError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
 	}
 }
