@@ -1,8 +1,7 @@
-use wagon_lexer::Spannable;
 
 use crate::parser::Tokens;
 
-use super::WagParseError;
+use super::{WagParseError, Spannable};
 use wagon_macros::match_error;
 
 use crate::either_token;

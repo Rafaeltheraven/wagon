@@ -2,12 +2,12 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::write;
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, expression::Expression, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
 use crate::firstpass::GetReqAttributes;
 
-use wagon_lexer::{math::Math, Spannable};
+use wagon_lexer::math::Math;
 use wagon_macros::match_error;
 use wagon_utils::ConversionError;
 use wagon_value::{Valueable, Value, RecursiveValue};

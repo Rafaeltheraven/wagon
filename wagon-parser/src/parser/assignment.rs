@@ -2,8 +2,8 @@ use std::{fmt::Display, write};
 
 use crate::firstpass::{GetReqAttributes, ReqAttributes};
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ResultNext};
-use wagon_lexer::{math::Math, Spannable};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, ResultNext};
+use wagon_lexer::math::Math;
 
 use super::expression::Expression;
 

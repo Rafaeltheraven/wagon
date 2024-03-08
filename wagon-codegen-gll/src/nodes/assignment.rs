@@ -1,5 +1,6 @@
 
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_utils::Spannable;
+use wagon_parser::SpannableNode;
 use wagon_parser::parser::assignment::Assignment;
 
 use quote::quote;

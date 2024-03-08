@@ -42,14 +42,14 @@ pub mod productions;
 pub mod metadata;
 
 use metadata::Metadata;
-use wagon_utils::{ResultNext, Peek, ResultPeek};
+use wagon_utils::{ResultNext, Peek, ResultPeek, Spannable};
 use logos::Logos;
 use std::{fmt::{self, Display}, collections::VecDeque, error::Error};
 use productions::Productions;
 use math::Math;
 use wagon_ident::Ident;
 use replace_with::replace_with_or_abort;
-pub use logos::Span;
+use logos::Span;
 
 /// An Enum for any errors that may occur during lexing.
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
@@ -264,14 +264,6 @@ impl<'source> LexerBridge<'source> {
 		    Lexer::Metadata(_) => lexer,
 		});
 	}
-}
-
-/// Trait for objects that provide [`Span`] information. Used for error messaging.
-pub trait Spannable {
-	/// Get the [`Span`] of the object
-	fn span(&self) -> Span;
-	/// Set the [`Span`] of the object. Possibly does nothing as implementation is optional.
-	fn set_span(&mut self, _span: Span) {}
 }
 
 /// Implemented like [`std::iter::Peekable`]. 

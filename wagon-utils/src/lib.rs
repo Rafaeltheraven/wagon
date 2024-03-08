@@ -9,7 +9,7 @@ mod peek;
 /// A fallible version of [`itertools::Itertools`].
 mod fallible_itertools;
 
-use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
+use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error, ops::Range};
 
 use itertools::Itertools;
 pub use peek::Peek;
@@ -406,4 +406,44 @@ impl<T, U> ConversionError<T, U> {
     pub fn convert<V: From<U>>(self) -> ConversionError<T, V> {
         ConversionError::<T, V>::new(self.subject)
     }
+}
+
+/// The definition of a Span as used throughout WAGon.
+pub type Span = Range<usize>;
+
+/// A trait for [`Error`]s that return a specific message and span structure.
+pub trait ErrorReport: Error {
+    /// Return the full error report
+    fn report(self) -> ((String, String), Span, Option<String>) where Self: Sized {
+        let msg = self.msg();
+        let source = ErrorReport::source(&self);
+        let span = self.span();
+        (msg, span, source)
+    }
+
+    /// Return span information for this error.
+    fn span(self) -> Span;
+
+    /// Return a tuple description of the error message.
+    ///
+    /// The first element is a "header" (for example: 'Fatal Exception!').
+    /// The second element is the actual message.
+    fn msg(&self) -> (String, String);
+
+    /// Return the text source for this error message.
+    ///
+    /// Usually the source of the error is just the input file, in which case we return `None`.
+    /// Sometimes, however, the source of the error may be a `TokenStream` or some other text. In this case,
+    /// the output of `source` should be that stream of text.
+    fn source(&self) -> Option<String> {
+        None
+    }
+}
+
+/// Trait for objects that provide [`Span`] information. Used for error messaging.
+pub trait Spannable {
+    /// Get the [`Span`] of the object
+    fn span(&self) -> Span;
+    /// Set the [`Span`] of the object. Possibly does nothing as implementation is optional.
+    fn set_span(&mut self, _span: Span) {}
 }

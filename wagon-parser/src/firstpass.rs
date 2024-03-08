@@ -1,8 +1,7 @@
 use std::fmt::Display;
-use wagon_lexer::Spannable;
-use crate::{SpannableNode, ErrorReport, Span};
+use wagon_utils::{Spannable, ErrorReport, Span};
+use crate::SpannableNode;
 use std::{collections::HashMap, error::Error};
-
 use indexmap::IndexSet;
 use wagon_ident::Ident;
 

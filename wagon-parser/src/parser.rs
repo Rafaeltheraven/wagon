@@ -41,12 +41,12 @@ use derivative::Derivative;
 use std::{error::Error, fmt::Display, write};
 use self::wag::Wag;
 use crate::firstpass::{WagCheckError, Rewrite};
-use crate::{SpannableNode, ErrorReport};
+use crate::SpannableNode;
 
 use ordered_float::FloatIsNan;
 use wagon_ident::Ident;
-use wagon_utils::{Peek, comma_separated_with_or, string_vec, ResultNext, ResultPeek};
-use wagon_lexer::{LexerBridge, Tokens, Spannable, Span, LexingError};
+use wagon_utils::{Peek, comma_separated_with_or, string_vec, ResultNext, ResultPeek, Span, Spannable, ErrorReport};
+use wagon_lexer::{LexerBridge, Tokens, LexingError};
 
 type CallingArgs = Vec<SpannableNode<Ident>>;
 
@@ -268,7 +268,7 @@ mod tests {
     use super::chunk::ChunkP;
     use super::string_vec;
 
-    use wagon_lexer::Span;
+    use super::Span;
     use pretty_assertions::assert_eq;
 
     #[test]

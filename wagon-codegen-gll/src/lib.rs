@@ -20,10 +20,9 @@ use indexmap::IndexSet;
 
 use wagon_parser::parser::WagParseError;
 use wagon_parser::parser::{wag::Wag, atom::Atom};
-use wagon_parser::{Span, ErrorReport};
 use wagon_codegen::{FileStructure, SpannableIdent};
 use wagon_value::{RecursiveValue, ValueError};
-use wagon_utils::ConversionError;
+use wagon_utils::{Span, ErrorReport, ConversionError};
 
 #[derive(Debug)]
 pub(crate) enum CharBytes {

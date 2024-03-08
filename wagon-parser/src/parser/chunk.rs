@@ -3,9 +3,9 @@ use std::fmt::Display;
 
 use crate::WrapSpannable;
 use crate::firstpass::{FirstPassResult, FirstPassState, GetReqAttributes, ReqAttributes};
-use wagon_lexer::{productions::{Productions, EbnfType}, Span};
+use wagon_lexer::productions::{Productions, EbnfType};
 use super::CallingArgs;
-use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, ResultPeek, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, Spannable, WagParseError, Ident, Rewrite, rule::Rule, rhs::Rhs, symbol::Symbol, SpannableNode, Span, ResultPeek, ResultNext};
 
 use wagon_macros::new_unspanned;
 

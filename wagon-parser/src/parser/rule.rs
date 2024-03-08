@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use super::{helpers::{check_semi, between_sep}, LexerBridge, Parse, ParseResult, Peek, ResultNext, Rewrite, SpannableNode, Tokens, WagParseError};
-use wagon_lexer::{productions::{ImportType, Productions}, Spannable};
+use super::{helpers::{check_semi, between_sep}, LexerBridge, Parse, ParseResult, Peek, ResultNext, Rewrite, SpannableNode, Spannable, Tokens, WagParseError};
+use wagon_lexer::productions::{ImportType, Productions};
 use crate::firstpass::{FirstPassResult, FirstPassState, ReqAttributes};
 
 use super::rhs::Rhs;

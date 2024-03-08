@@ -1,4 +1,5 @@
 
+use wagon_utils::Spannable;
 use crate::Block;
 use crate::BlockSize;
 use crate::FullArgs;
@@ -11,7 +12,7 @@ use quote::quote;
 
 use wagon_codegen::SpannableIdent;
 use wagon_parser::parser::{symbol::Symbol, terminal::Terminal};
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_parser::SpannableNode;
 use proc_macro2::{Literal, TokenStream};
 
 use crate::state::CodeGenState;

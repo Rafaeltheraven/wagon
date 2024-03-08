@@ -497,7 +497,7 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     };
     let wc_arm: Arm = syn::parse_quote!(
         _error => {
-            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
+            Err(WagParseError::Unexpected{span: wagon_utils::Spannable::span(lexer), offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);

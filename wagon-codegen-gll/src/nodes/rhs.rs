@@ -1,10 +1,11 @@
 
+use wagon_utils::Spannable;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 
 use wagon_parser::parser::chunk::Chunk;
 use wagon_parser::parser::rhs::Rhs;
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_parser::SpannableNode;
 
 use wagon_codegen::ToTokensState;
 use crate::{CharBytes, CodeGen, CodeGenArgs, CodeGenError, CodeGenErrorKind, CodeGenResult, CodeGenState};

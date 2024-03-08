@@ -2,9 +2,8 @@ use crate::parser::Span;
 use std::fmt::Display;
 use std::matches;
 
-use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, Peek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, Peek, Spannable};
 use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};

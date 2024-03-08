@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use clap::ArgMatches;
-use wagon_parser::ErrorReport;
+use wagon_utils::ErrorReport;
 use wagon_parser::parse_and_check;
 use wagon_codegen_gll::gen_parser;
 use wagon_codegen::FileStructure;
@@ -111,6 +111,7 @@ edition = \"2021\"
 
 [dependencies]", proj_name.display()).as_bytes()).expect("Failed to write Cargo.toml");
     Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
+    Command::new("cargo").current_dir(path).args(["add", "ariadne", "--features", "auto-color"]).output().expect("Failed to add ariadne library");
     for lib in local_libs {
         let lib_path = format!("../{lib}");
         Command::new("cargo").current_dir(path).args(["add", lib, "--path", &lib_path]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));
