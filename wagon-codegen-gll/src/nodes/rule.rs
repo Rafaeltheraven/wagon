@@ -29,6 +29,8 @@ impl CodeGen for SpannableNode<Rule> {
                 gen_args.state.str_repr.insert(pointer.clone(), vec![ident]);
                 gen_args.state.add_code(pointer.clone(), quote!(
                     let mut candidates = Vec::with_capacity(#alt_count);
+                    let alt_count = #alt_count;
+                    let mut zero_weights = 0;
                 ));
                 let as_set = IndexSet::from_iter(args);
                 gen_args.full_args = Some(as_set);
@@ -45,7 +47,7 @@ impl CodeGen for SpannableNode<Rule> {
                     )
                 } else {
                     let comp_stream = quote!(
-                        |(x, _), (y, _)| x.partial_cmp(y).map_or_else(|| Err(wagon_gll::GLLParseError::ValueError(wagon_gll::value::ValueError::ValueError(wagon_value::ValueError::ComparisonError(x.to_owned(), y.to_owned())))), Ok)
+                        |(x, _), (y, _)| x.partial_cmp(y).map_or_else(|| Err(wagon_gll::GLLImplementationError::ValueError(wagon_gll::value::ValueError::ValueError(wagon_value::ValueError::ComparisonError(x.to_owned(), y.to_owned())))), Ok)
                     );
                     let to_add = if gen_args.weight_config.min_weight { // Either take options with the minimum or with the maximum weight
                         quote!(wagon_utils::FallibleItertools::fallible_min_set_by(candidates.into_iter(), #comp_stream))
@@ -59,6 +61,10 @@ impl CodeGen for SpannableNode<Rule> {
                             for (_, slot) in to_add {
                                 state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root, state.gss_pointer);
                             }
+                        } else if zero_weights == alt_count {
+                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::ZeroWeights{pointer: state.input_pointer, rule: self.to_string().to_owned()}))
+                        } else {
+                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::NoCandidates{pointer: state.input_pointer, rule: self.to_string().to_owned()}))
                         }
                     )
                 };

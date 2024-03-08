@@ -106,7 +106,7 @@ impl CodeGen for SpannableNode<Rhs> {
                 }
                 // Pop all the synthesized attributes back.
                 gen_args.state.add_code(label.clone(), quote!(
-                    state.pop(&vec![#(#ret_vals,)*])
+                    Ok(state.pop(&vec![#(#ret_vals,)*])?)
                 ));
             }
             if j == 0 { // If this is the first block
@@ -114,7 +114,7 @@ impl CodeGen for SpannableNode<Rhs> {
                     let stream = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
                     let weight_attrs = gen_args.state.collect_attrs(&label, gen_args.state.get_req_weight_attrs(&label));
                     quote!(
-                        fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>> {
+                        fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
                             #(#weight_attrs)*
                             Ok(#stream)
                         }
@@ -139,7 +139,9 @@ impl CodeGen for SpannableNode<Rhs> {
                     inner_block.extend(quote!(
                         if wagon_value::Valueable::is_truthy(&weight)? {
                             candidates.push((weight, std::rc::Rc::new(slot)));
-                        } 
+                        } else {
+                            zero_weights = zero_weights + 1;
+                        }
                     ));
                 }
                 let stream = if gen_args.weight_config.no_first { // If we do not care about the first_set, just add the slot.

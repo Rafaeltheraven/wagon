@@ -160,7 +160,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			state.regexes.push((r, dfa));
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
-					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLImplementationError::Fatal("Failed to get match with regex, even though we already checked."))?;
 					let new_node = state.get_node_t(bytes, i, state.input_pointer);
 					state.sppf_pointer = new_node;
 				));
@@ -169,7 +169,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			}
 			let next_stream = if first_symbol && block_size == 1 {
 				quote!(
-					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLImplementationError::Fatal("Failed to get match with regex, even though we already checked."))?;
 				)
 			} else {
 				TokenStream::new()

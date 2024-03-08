@@ -60,14 +60,14 @@ pub type GLLResult<'a, T> = Result<T, GLLError<'a>>;
 /// Result of the GLL parse.
 pub type ParseResult<'a, T> = Result<T, GLLParseError<'a>>;
 
-pub(crate) type ImplementationResult<'a, T> = Result<T, GLLImplementationError<'a>>;
+pub type ImplementationResult<'a, T> = Result<T, GLLImplementationError<'a>>;
 
 #[derive(Debug, Error)]
 /// Errors possible during the GLL process.
 pub enum GLLError<'a> {
-	#[error("{0}")]
+	#[error(transparent)]
 	ImplementationError(GLLImplementationError<'a>),
-	#[error("{0}")]
+	#[error(transparent)]
 	ParseError(GLLParseError<'a>),
 	#[error("{0}")]
 	ProcessError(#[from] GLLProcessError)
@@ -137,6 +137,16 @@ pub enum GLLParseError<'a> {
 		pointer: usize,
 		/// What character we expected to see.
 		offender: Terminal<'a>
+	},
+	#[error("No parse candidates were found for rule {rule}")]
+	NoCandidates {
+		pointer: usize,
+		rule: String
+	},
+	#[error("All weights for rule {rule} were 0")]
+	ZeroWeights {
+		pointer: usize,
+		rule: String
 	}
 }
 
@@ -155,6 +165,18 @@ impl<'a> From<GLLParseError<'a>> for GLLError<'a> {
 impl<'a> From<InnerValueError<Value<'a>>> for GLLImplementationError<'a> {
     fn from(value: InnerValueError<Value<'a>>) -> Self {
         Self::ValueError(ValueError::ValueError(value))
+    }
+}
+
+impl<'a> From<ValueError<'a>> for GLLError<'a> {
+    fn from(value: ValueError<'a>) -> Self {
+        Self::ImplementationError(GLLImplementationError::ValueError(value))
+    }
+}
+
+impl<'a> From<InnerValueError<Value<'a>>> for GLLError<'a> {
+    fn from(value: InnerValueError<Value<'a>>) -> Self {
+        Self::ImplementationError(GLLImplementationError::ValueError(ValueError::ValueError(value)))
     }
 }
 
