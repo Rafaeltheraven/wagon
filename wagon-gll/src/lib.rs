@@ -138,15 +138,17 @@ pub enum GLLParseError<'a> {
 		/// What character we expected to see.
 		offender: Terminal<'a>
 	},
-	#[error("No parse candidates were found for rule {rule}")]
+	#[error("No parse candidates were found for rule `{rule}` in context `{context}`")]
 	NoCandidates {
 		pointer: usize,
-		rule: String
+		rule: String,
+		context: String
 	},
-	#[error("All weights for rule {rule} were 0")]
+	#[error("All weights for rule `{rule}` in context `{context}` were 0")]
 	ZeroWeights {
 		pointer: usize,
-		rule: String
+		rule: String,
+		context: String
 	}
 }
 

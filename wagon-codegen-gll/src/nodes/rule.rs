@@ -63,9 +63,9 @@ impl CodeGen for SpannableNode<Rule> {
                                 state.add(slot, state.gss_pointer, state.input_pointer, state.sppf_root, state.gss_pointer);
                             }
                         } else if zero_weights == alt_count {
-                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::ZeroWeights{pointer: state.input_pointer, rule: self.to_string().to_owned()}))
+                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::ZeroWeights{pointer: state.input_pointer, rule: self.to_string().to_owned(), context: state.get_current_gss_node()?.get_slot().to_string(state)}))
                         } else {
-                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::NoCandidates{pointer: state.input_pointer, rule: self.to_string().to_owned()}))
+                            return Err(wagon_gll::GLLError::ParseError(wagon_gll::GLLParseError::NoCandidates{pointer: state.input_pointer, rule: self.to_string().to_owned(), context: state.get_current_gss_node()?.get_slot().to_string(state)}))
                         }
                     )
                 };

@@ -260,6 +260,10 @@ impl<'a> GLLState<'a> {
         self.get_gss_node(self.gss_pointer)
     }
 
+    pub fn get_context_gss_node(&self) -> ImplementationResult<'a, &Rc<GSSNode<'a>>> {
+        self.get_gss_node(self.context_pointer)
+    }
+
     /// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
     ///
     /// # Errors
