@@ -137,7 +137,7 @@ pub trait Label<'a>: Debug {
 	/// Returns either the weight of this label as calculated by [`_weight`](`Label::_weight`), or `1`.
 	///
 	/// # Errors
-	/// Should return a [`ValueError`] if something goes wrong during the evaluation of the weight.
+	/// Should return a [`GLLImplementationError::ValueError`] if something goes wrong during the evaluation of the weight.
 	fn weight(&self, state: &GLLState<'a>) -> ImplementationResult<'a, Value<'a>> {
 		self._weight(state).map_or_else(|| Ok(1.into()), |weight| weight)
 	}
@@ -181,7 +181,7 @@ impl<'a> Label<'a> for Terminal<'a> {
     /// This will panic if the byte array is not a string. 
     /// This should never happen
     /// and also is an issue specifically only for [`Terminal`] (any other [`Label`] can not crash here.)
-    /// As such, it was decided that this function will not return a proper [`ParseResult`].
+    /// As such, it was decided that this function will not return a proper [`GLLResult`].
     fn to_string(&self) -> &str {
     	#[allow(clippy::expect_used)]
         from_utf8(self).expect("Terminal was non-utf8")

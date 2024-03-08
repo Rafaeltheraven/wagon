@@ -55,20 +55,25 @@ pub type ReturnMap<'a> = Vec<Option<Value<'a>>>;
 /// The key for the [`AttributeMap`].
 pub type AttributeKey = usize;
 
+/// Result of anything in the GLL process that can return an error.
 pub type GLLResult<'a, T> = Result<T, GLLError<'a>>;
 
 /// Result of the GLL parse.
 pub type ParseResult<'a, T> = Result<T, GLLParseError<'a>>;
 
+/// Result for something that can only have issues in the implementation.
 pub type ImplementationResult<'a, T> = Result<T, GLLImplementationError<'a>>;
 
 #[derive(Debug, Error)]
 /// Errors possible during the GLL process.
 pub enum GLLError<'a> {
+	/// An error in the implementation occurred. There is nothing wrong with the file being parsed.
 	#[error(transparent)]
 	ImplementationError(GLLImplementationError<'a>),
+	/// An error in the parsing occurred. The input file is probably wrong.
 	#[error(transparent)]
 	ParseError(GLLParseError<'a>),
+	/// An error occurred while processing the final state. Similar to a [`Self::ImplementationError`].
 	#[error("{0}")]
 	ProcessError(#[from] GLLProcessError)
 }
@@ -138,16 +143,24 @@ pub enum GLLParseError<'a> {
 		/// What character we expected to see.
 		offender: Terminal<'a>
 	},
+	/// All the alternatives to this rule failed the first_set check.
 	#[error("No parse candidates were found for rule `{rule}` in context `{context}`")]
 	NoCandidates {
+		/// Where in the input stream this happened.
 		pointer: usize,
+		/// String representation of the rule it happened in.
 		rule: String,
+		/// String representation of the parse context at this time.
 		context: String
 	},
+	/// All the alternatives to this rule had a 0 weight.
 	#[error("All weights for rule `{rule}` in context `{context}` were 0")]
 	ZeroWeights {
+		/// Where in the input stream this happened.
 		pointer: usize,
+		/// String representation of the rule it happened in.
 		rule: String,
+		/// String representation of the parse context at this time.
 		context: String
 	}
 }

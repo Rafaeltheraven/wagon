@@ -475,10 +475,10 @@ impl CodeGenState {
 			            }
 			        }
 			        if !real_errors.is_empty() {
-			            wagon_utils::handle_error(real_errors, input_file_str, content_string, offset).unwrap()
+			            wagon_utils::handle_error(real_errors, input_file_str, &content_string, offset).unwrap()
 			        }
 			    } else {
-			        wagon_utils::handle_error(state.errors, input_file_str, content_string, offset).unwrap()
+			        wagon_utils::handle_error(state.errors, input_file_str, &content_string, offset).unwrap()
 			    }
     		}
     	)

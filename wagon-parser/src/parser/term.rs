@@ -40,10 +40,10 @@ pub struct Term {
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[cfg_attr(test, new_unspanned)]
-/// The operator, right-hand side and possible further continuation of this `Term`.
+/// The operator, right-hand side and possible further continuation of this [`Term`].
 ///
 /// # Grammar
-/// <code>[TermP] -> [Op2] [Factor] TermP?;</code>
+/// <code>[`TermP`] -> [Op2] [Factor] [`TermP`]?;</code>
 pub struct TermP {
     /// The operator
 	pub op: Op2,

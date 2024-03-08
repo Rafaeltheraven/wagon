@@ -215,7 +215,7 @@ impl<'a> SPPF<'a> {
     /// Convert the [`SPPF`] to `.dot` representation.
     ///
     /// # Errors
-    /// This method will return a [`GLLParseError`] if it fails to represent either a [`SPPFNode`] or a [`Value`] as a string properly.
+    /// This method will return a [`GLLImplementationError`] if it fails to represent either a [`SPPFNode`] or a [`Value`] as a string properly.
     ///
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.

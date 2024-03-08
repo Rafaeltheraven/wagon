@@ -110,7 +110,7 @@ impl<'a> GLLState<'a> {
     /// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule. 
     ///
     /// # Errors
-    /// Returns [`GLLParseError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
+    /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
     pub fn init(input: &'a [u8], label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
@@ -255,19 +255,15 @@ impl<'a> GLLState<'a> {
     /// Get the [`GSSNode`] `self.gss_pointer` is currently pointing to.
     ///
     /// # Errors
-    /// Returns [`GLLParseError::MissingGSSNode`] if for some inexplicable reason the node does not exist.
+    /// Returns [`GLLImplementationError::MissingGSSNode`] if for some inexplicable reason the node does not exist.
     pub fn get_current_gss_node(&self) -> ImplementationResult<'a, &Rc<GSSNode<'a>>> {
         self.get_gss_node(self.gss_pointer)
-    }
-
-    pub fn get_context_gss_node(&self) -> ImplementationResult<'a, &Rc<GSSNode<'a>>> {
-        self.get_gss_node(self.context_pointer)
     }
 
     /// Get the [`SPPFNode`] `self.sppf_pointer` is currently pointing to.
     ///
     /// # Errors
-    /// Returns [`GLLParseError::MissingSPPFNode`] if for some inexplicable reason the node does not exist.
+    /// Returns [`GLLImplementationError::MissingSPPFNode`] if for some inexplicable reason the node does not exist.
     pub fn get_current_sppf_node(&self) -> ImplementationResult<'a, &SPPFNode<'a>> {
         self.get_sppf_node(self.sppf_pointer)
     }
@@ -505,7 +501,7 @@ impl<'a> GLLState<'a> {
     /// Get a specific rule by its uuid.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::UnknownRule`] if the rule does not exist.
+    /// Returns a [`GLLImplementationError::UnknownRule`] if the rule does not exist.
     pub fn get_rule(&self, ident: &'a str) -> ImplementationResult<'a, Rc<Vec<Ident>>> {
         Ok(self.rule_map.get(ident).ok_or_else(|| GLLImplementationError::UnknownRule(ident))?.clone())
     }
@@ -520,7 +516,7 @@ impl<'a> GLLState<'a> {
     /// Get a specific [`Label`](crate::Label) by its uuid.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::UnknownLabel`] if the label can not be found.
+    /// Returns a [`GLLImplementationError::UnknownLabel`] if the label can not be found.
     pub fn get_label_by_uuid(&self, label: &'a str) -> ImplementationResult<'a, GLLBlockLabel<'a>> {
         Ok(self.label_map.get(label).ok_or_else(|| GLLImplementationError::UnknownLabel(label))?.clone())
     }
@@ -530,7 +526,7 @@ impl<'a> GLLState<'a> {
     /// This differs from [`Self::get_label_by_uuid`] in that it specifically returns a [`RegexTerminal`], as opposed to some trait object.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::UnknownLabel`] if the dfa can not be found.
+    /// Returns a [`GLLImplementationError::UnknownLabel`] if the dfa can not be found.
     pub fn get_regex_automaton(&self, regex: &'a str) -> ImplementationResult<'a, Rc<RegexTerminal<'a>>> {
         Ok(self.regex_map.get(regex).ok_or_else(|| GLLImplementationError::UnknownLabel(regex))?.clone())
     }
@@ -538,7 +534,7 @@ impl<'a> GLLState<'a> {
     /// Get an attribute from the node pointed at by `self.gss_pointer`.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::MissingAttribute`] if the `i`th attribute was never passed.
+    /// Returns a [`GLLImplementationError::MissingAttribute`] if the `i`th attribute was never passed.
     pub fn get_attribute(&self, i: AttributeKey) -> ImplementationResult<'a, &Value<'a>> {
         let node = self.get_gss_node(self.gss_pointer)?;
         node.get_attribute(i).ok_or_else(|| GLLImplementationError::MissingAttribute(i, node.clone()))
@@ -547,7 +543,7 @@ impl<'a> GLLState<'a> {
     /// Get an attribute from the node pointed at by `self.context_pointer`.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::MissingContext`] if the `i`th attribute is not in context.
+    /// Returns a [`GLLImplementationError::MissingContext`] if the `i`th attribute is not in context.
     pub fn restore_attribute(&self, i: AttributeKey) -> ImplementationResult<'a, &Value<'a>> {
         let node = self.get_gss_node(self.context_pointer)?;
         node.get_attribute(i).ok_or_else(|| GLLImplementationError::MissingContext(i, node.clone()))
@@ -560,7 +556,7 @@ impl<'a> GLLState<'a> {
     /// Get an attribute from the return arguments at the node currently pointed to by `self.sppf_pointer`.
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::MissingSPPFNode`] if [`GLLState::sppf_pointer`] inexplicably points at a non-existant SPPF node.
+    /// Returns a [`GLLImplementationError::MissingSPPFNode`] if [`GLLState::sppf_pointer`] inexplicably points at a non-existant SPPF node.
     pub fn get_ret_val(&self, i: AttributeKey) -> ImplementationResult<'a, Option<&Value<'a>>> {
         self.get_sppf_node(self.sppf_pointer)?.get_ret_val(i)
     }
@@ -618,7 +614,7 @@ impl<'a> GLLState<'a> {
     /// Print current SPPF graph in graphviz format
     ///
     /// # Errors
-    /// Returns a [`GLLParseError::Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
+    /// Returns a [`GLLImplementationError::Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
     pub fn print_sppf_dot(&mut self, crop: bool) -> ImplementationResult<'a, String> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());

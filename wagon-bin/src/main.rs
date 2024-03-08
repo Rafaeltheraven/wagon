@@ -28,10 +28,10 @@ fn main() {
         Ok(wag) => {
             match gen_parser(wag) {
                 Ok(code) => write_parser(code, proj_name, *overwrite),
-                Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), contents, 0).expect("Failed to construct error reporter"),
+                Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), &contents, 0).expect("Failed to construct error reporter"),
             }
         },
-        Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), contents, 0).expect("Failed to construct error reporter"),
+        Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), &contents, 0).expect("Failed to construct error reporter"),
     }
 }
 

@@ -448,7 +448,14 @@ pub trait Spannable {
     fn set_span(&mut self, _span: Span) {}
 }
 
-pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: String, offset: usize) -> Result<(), std::io::Error> {
+/// Prints out a nice error message to stderr using [`ariadne`].
+///
+/// See [`ariadne`] for more information. The `file_path` **must** be static because of requirements in that library. I recommend simply,
+/// leaking that string to make it static, given that you likely end the program immediately afterwards anyway.
+///
+/// # Errors
+/// Errors when unable to print to stderr.
+pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: &str, offset: usize) -> Result<(), std::io::Error> {
     use ariadne::{ColorGenerator, Label, Report, ReportKind};
     let mut colors = ColorGenerator::new();
     let a = colors.next();
@@ -456,7 +463,7 @@ pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: 
     let mut sources = HashMap::new();
     for e in err {
         let ((head, msg), span, source) = e.report();
-        let data = source.map_or(file.clone(), |data| data);
+        let data = source.map_or(file.to_string(), |data| data);
         sources.insert(file_path, data);
         builder = builder.with_message(head)
             .with_label(
