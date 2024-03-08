@@ -9,7 +9,7 @@ mod peek;
 /// A fallible version of [`itertools::Itertools`].
 mod fallible_itertools;
 
-use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error, ops::Range};
+use std::{collections::HashMap, error::Error, fmt::Display, marker::PhantomData, ops::Range, str::Chars};
 
 use itertools::Itertools;
 pub use peek::Peek;
@@ -446,4 +446,24 @@ pub trait Spannable {
     fn span(&self) -> Span;
     /// Set the [`Span`] of the object. Possibly does nothing as implementation is optional.
     fn set_span(&mut self, _span: Span) {}
+}
+
+pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: String, offset: usize) -> Result<(), std::io::Error> {
+    use ariadne::{ColorGenerator, Label, Report, ReportKind};
+    let mut colors = ColorGenerator::new();
+    let a = colors.next();
+    let mut builder = Report::build(ReportKind::Error, file_path, offset);
+    let mut sources = HashMap::new();
+    for e in err {
+        let ((head, msg), span, source) = e.report();
+        let data = source.map_or(file.clone(), |data| data);
+        sources.insert(file_path, data);
+        builder = builder.with_message(head)
+            .with_label(
+                Label::new((file_path, span))
+                    .with_message(msg)
+                    .with_color(a),
+            );
+    }
+    builder.finish().eprint(ariadne::sources(sources))
 }

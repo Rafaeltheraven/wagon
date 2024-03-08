@@ -10,7 +10,7 @@ use gss::{GSSNodeIndex, GSSNode};
 use petgraph::prelude::EdgeIndex;
 use thiserror::Error;
 
-use wagon_utils::comma_separated_with_or_str;
+use wagon_utils::{comma_separated_with_or_str, ErrorReport};
 use std::{hash::{Hash, Hasher}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, mem::Discriminant};
 
 use self::{value::Value, value::InnerValueError};
@@ -177,6 +177,26 @@ impl<'a> From<ValueError<'a>> for GLLError<'a> {
 impl<'a> From<InnerValueError<Value<'a>>> for GLLError<'a> {
     fn from(value: InnerValueError<Value<'a>>) -> Self {
         Self::ImplementationError(GLLImplementationError::ValueError(ValueError::ValueError(value)))
+    }
+}
+
+impl ErrorReport for GLLError<'_> {
+    fn span(self) -> wagon_utils::Span {
+        match self {
+            GLLError::ParseError(e) => match e {
+                GLLParseError::UnexpectedByte { pointer, .. } | GLLParseError::TooLong { pointer, .. } 
+                | GLLParseError::NoCandidates { pointer, .. } | GLLParseError::ZeroWeights { pointer, .. } => pointer..pointer,
+            },
+            _ => wagon_utils::Span::default(),
+        }
+    }
+
+    fn msg(&self) -> (String, String) {
+        match self {
+            GLLError::ImplementationError(e) => ("Fatal Implementation Error".to_string(), e.to_string()),
+            GLLError::ParseError(e) => ("Parse Error".to_string(), e.to_string()),
+            GLLError::ProcessError(e) => ("Post-Processing Error".to_string(), e.to_string()),
+        }
     }
 }
 

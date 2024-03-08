@@ -451,6 +451,7 @@ impl CodeGenState {
 			        )
 			        .get_matches();
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
+			    let input_file_str = Box::leak(input_file.to_str().unwrap().into());
 			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
 			    let contents: &'static [u8] = Box::leak(content_string.trim().as_bytes().into()); // This is required to tell Rust the input data lasts forever.
@@ -460,17 +461,25 @@ impl CodeGenState {
     			#body
     			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map, regex_map).unwrap();
     			state.main();
-    			if state.errors.len() > 0 {
-			        for error in state.errors {
-			            println!("Error: {error}");
-			        }
-			        std::process::exit(1);
-			    }
-    			match state.print_sppf_dot(crop) {
+			    match state.print_sppf_dot(crop) {
 			        Ok(t) => println!("{t}"),
-			        Err(e) => println!("Error: {e}")
+			        Err(e) => println!("Error: {e}"),
 			    }
-    			assert!(state.accepts());
+			    let offset = content_string.len() - contents.len();
+			    if state.accepts() {
+			        let mut real_errors = Vec::new();
+			        for error in state.errors {
+			            match error {
+			                wagon_gll::GLLError::ParseError(_) => {},
+			                other => real_errors.push(other)
+			            }
+			        }
+			        if !real_errors.is_empty() {
+			            wagon_utils::handle_error(real_errors, input_file_str, content_string, offset).unwrap()
+			        }
+			    } else {
+			        wagon_utils::handle_error(state.errors, input_file_str, content_string, offset).unwrap()
+			    }
     		}
     	)
     }
