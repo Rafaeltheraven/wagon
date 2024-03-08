@@ -442,20 +442,20 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 ///
 /// This macro is intended specifically for [wagon-parser](../wagon_parser/index.html) and thus expects a lexer to be present and returns a specific error. 
 /// This macro is not intended to be used for any other match statements.
-/// If you do want to use it, make sure there is a variable called `lexer` with the function `span` and an enum `WagParseError` with variant `Unexpected`,
-/// which has the fields `span`, `offender` and `expected`.
+/// If you do want to use it, make sure there is a variable called `lexer` which is a reference to something that implements [`wagon_utils::Spannable`] 
+/// and an enum `WagParseError` with variant `Unexpected`, which has the fields `span`, `offender` and `expected`.
 ///
 /// # Example
 /// ```
 /// # struct Lexer;
-/// # impl Lexer {
-/// #     fn span(&self) -> i32 {
-/// #         0        
+/// # impl wagon_utils::Spannable for Lexer {
+/// #     fn span(&self) -> wagon_utils::Span {
+/// #         wagon_utils::Span::default()        
 /// #     }
 /// # }
 /// # enum WagParseError {
 /// #     Unexpected {
-/// #         span: i32,
+/// #         span: wagon_utils::Span,
 /// #         offender: A,
 /// #         expected: Vec<String>
 /// #     }   
@@ -470,7 +470,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 /// # fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", "Bar") } 
 /// }
 /// let a = A::One;
-/// let lexer = Lexer;
+/// let lexer = &Lexer;
 /// assert!(match_error!(match a {
 ///     #[expect("Foo")]
 ///     A::Two => Ok(()),

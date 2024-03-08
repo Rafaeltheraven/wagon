@@ -23,13 +23,13 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 /// # Example
 /// ```
 /// # use std::collections::HashMap;
-/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel, value::Value, LabelMap, RuleMap, RegexMap};
+/// use wagon_gll::{GLLState, ParseResult, ROOT_UUID, Label, GLLBlockLabel, value::Value, LabelMap, RuleMap, RegexMap, ImplementationResult, GLLResult};
 /// use wagon_ident::Ident;
 /// use std::rc::Rc;
 /// #[derive(Debug)]
 /// struct Root;
 /// impl<'a> Label<'a> for Root {
-///#    fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> ParseResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+///#    fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
 ///#        Ok(vec![(vec![state.get_label_by_uuid(ROOT_UUID)?], None)])
 ///#    }
 ///#    fn is_eps(&self) -> bool {
@@ -44,17 +44,17 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 ///#    fn str_parts(&self) -> Vec<&str> {
 ///#        vec![ROOT_UUID]
 ///#    }
-///#    fn code(&self, _: &mut wagon_gll::GLLState<'a>) -> ParseResult<'a, ()> {
+///#    fn code(&self, _: &mut wagon_gll::GLLState<'a>) -> GLLResult<'a, ()> {
 ///#        unreachable!("This should never be called");
 ///#    }
 ///#    fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 ///#        (Vec::new(), Vec::new())
 ///#    }
-///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<ParseResult<'a, Value<'a>>> {
+///#    fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<ImplementationResult<'a, Value<'a>>> {
 ///#        unreachable!("This should never be called");
 ///#    }
 /// }
-///# fn main() -> ParseResult<'static, ()> {
+///# fn main() -> GLLResult<'static, ()> {
 ///     let mut l_map: LabelMap = HashMap::new();
 ///     let mut r_map: RuleMap = HashMap::new();
 ///     let mut regex_map: RegexMap = HashMap::new();
