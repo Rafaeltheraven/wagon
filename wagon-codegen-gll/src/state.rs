@@ -275,7 +275,7 @@ impl CodeGenState {
 
 			impl<'a> wagon_gll::Label<'a> for #id {
 				#[allow(unused_variables)]
-				fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+				fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
 					#(#first_attr_stream)*
 					Ok(vec![#(#first_stream,)*])
 				}
@@ -286,7 +286,7 @@ impl CodeGenState {
 					#uuid
 				}
 				#[allow(unused_variables)]
-				fn code(&self, state: &mut wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, ()> {
+				fn code(&self, state: &mut wagon_gll::GLLState<'a>) -> wagon_gll::GLLResult<'a, ()> {
 					#(#code_attr_stream)*
 					#(#code)*
 				}
@@ -300,7 +300,7 @@ impl CodeGenState {
 					(vec![#(#pop_repr,)*], vec![#(#ctx_repr,)*])
 				}
 				#[allow(unused_variables)]
-				fn _weight(&self, state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>>> {
+				fn _weight(&self, state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>>> {
 					#weight_stream
 				}
 			}
@@ -333,7 +333,7 @@ impl CodeGenState {
     		struct _S;
 
     		impl<'a> wagon_gll::Label<'a> for _S {
-    			fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+    			fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
 					Ok(vec![(vec![state.get_label_by_uuid(#uuid)?], None)])
 				}
 				fn is_eps(&self) -> bool {
@@ -348,13 +348,13 @@ impl CodeGenState {
 				fn str_parts(&self) -> Vec<&str> {
 					vec![wagon_gll::ROOT_UUID]
 				}
-				fn code(&self, _: &mut wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, ()> {
+				fn code(&self, _: &mut wagon_gll::GLLState<'a>) -> wagon_gll::GLLResult<'a, ()> {
 					unreachable!("This should never be called");
 				}
 				fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>) { 
 					(Vec::new(), Vec::new())
 				}
-				fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>>> {
+				fn _weight(&self, _state: &wagon_gll::GLLState<'a>) -> Option<wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>>> {
 					unreachable!("This should never be called");
 				}
     		}
