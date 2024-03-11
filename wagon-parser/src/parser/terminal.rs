@@ -12,6 +12,9 @@ use wagon_macros::match_error;
 #[derive(Debug, Clone, Derivative)]
 #[derivative(PartialEq, Hash)]
 /// A terminal for the grammar.
+///
+/// # Grammar
+/// <code>[Terminal] -> Regex | String;</code>
 pub enum Terminal {
     /// A terminal described as a regex. 
 	Regex(

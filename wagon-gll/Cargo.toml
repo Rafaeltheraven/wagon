@@ -16,6 +16,7 @@ derivative = {workspace = true}
 indexmap = {workspace = true}
 ordered-float = {workspace = true}
 petgraph = {workspace = true}
+thiserror = {workspace = true}
 rand_core = "0.6.4"
 wagon-ident = {workspace = true}
 wagon-value = {workspace = true}

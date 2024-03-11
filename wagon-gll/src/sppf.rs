@@ -2,7 +2,7 @@ use std::{rc::Rc, str::from_utf8, collections::{HashMap, HashSet}, ops::{DerefMu
 use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}, Incoming, Outgoing, visit::EdgeRef};
 use derivative::Derivative;
 
-use crate::{state::GLLState, value::{Value, ValueError}, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}, ParseResult, GLLParseError, ProcessResult, GLLProcessError};
+use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}, ImplementationResult, GLLImplementationError, ProcessResult, GLLProcessError};
 
 use wagon_value::Valueable;
 
@@ -76,21 +76,21 @@ pub enum SPPFNode<'a> {
 
 impl<'a> SPPFNode<'a> {
 
-    pub(crate) fn right_extend(&self) -> ParseResult<'a, usize> {
+    pub(crate) fn right_extend(&self) -> ImplementationResult<'a, usize> {
         match self {
             Self::Intermediate { right, .. } | Self::Symbol { right, .. } => Ok(*right),
-            other => Err(crate::GLLParseError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
+            other => Err(GLLImplementationError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) fn left_extend(&self) -> ParseResult<'a, usize> {
+    pub(crate) fn left_extend(&self) -> ImplementationResult<'a, usize> {
         match self {
             Self::Intermediate { left, .. } | Self::Symbol { left, .. } => Ok(*left),
-            other => Err(crate::GLLParseError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
+            other => Err(GLLImplementationError::IncorrectSPPFType(vec!["Intermediate", "Symbol"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) fn to_string(&self, state: &GLLState<'a>) -> ParseResult<'a, String> {
+    pub(crate) fn to_string(&self, state: &GLLState<'a>) -> ImplementationResult<'a, String> {
         Ok(match self {
             SPPFNode::Dummy => "D".to_string(),
             SPPFNode::Symbol { terminal, left, right } => {
@@ -113,7 +113,7 @@ impl<'a> SPPFNode<'a> {
                 let ret_len = from_ret.len();
                 let slot_str = slot.to_string(state);
                 for (i, attr) in from_ctx.iter().enumerate() {
-                    attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLParseError::MissingContext(i + ret_len, context.clone()))?);
+                    attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLImplementationError::MissingContext(i + ret_len, context.clone()))?);
                 }
                 for (i, attr) in from_ret.iter().enumerate() {
                     if let Some(Some(v)) = ret.get(i) {
@@ -143,19 +143,19 @@ impl<'a> SPPFNode<'a> {
         }
     }
 
-    pub(crate) fn get_ret_val(&self, i: AttributeKey) -> ParseResult<'a, Option<&Value<'a>>> {
+    pub(crate) fn get_ret_val(&self, i: AttributeKey) -> ImplementationResult<'a, Option<&Value<'a>>> {
         match self {
             SPPFNode::Intermediate { ret, .. } => {
                 Ok(ret.get(i).and_then(|v| v.as_ref()))
             },
-            other => Err(GLLParseError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
+            other => Err(GLLImplementationError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
         }
     }
 
-    pub(crate) fn add_ret_vals(&mut self, atts: &mut ReturnMap<'a>) -> ParseResult<'a, ()> {
+    pub(crate) fn add_ret_vals(&mut self, atts: &mut ReturnMap<'a>) -> ImplementationResult<'a, ()> {
         match self {
             SPPFNode::Intermediate { ret, .. } => {ret.append(atts); Ok(())},
-            other => Err(GLLParseError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
+            other => Err(GLLImplementationError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
         }
     }
 }
@@ -215,12 +215,12 @@ impl<'a> SPPF<'a> {
     /// Convert the [`SPPF`] to `.dot` representation.
     ///
     /// # Errors
-    /// This method will return a [`GLLParseError`] if it fails to represent either a [`SPPFNode`] or a [`Value`] as a string properly.
+    /// This method will return a [`GLLImplementationError`] if it fails to represent either a [`SPPFNode`] or a [`Value`] as a string properly.
     ///
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
     /// This should be fundamentally impossible.
-    pub fn to_dot(&self, state: &GLLState<'a>) -> ParseResult<'a, String>  {
+    pub fn to_dot(&self, state: &GLLState<'a>) -> ImplementationResult<'a, String>  {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {
@@ -231,7 +231,7 @@ impl<'a> SPPF<'a> {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));
                 if let Some(value) = edge.weight() {
-                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical().map_err(ValueError::from)?));
+                    res.push_str(&format!(" [label=\"{}\"]", value.display_numerical()?));
                 }
                 res.push('\n');
             }
@@ -305,7 +305,7 @@ impl<'a> SPPF<'a> {
     /// just add the current tree to the return list. At the end, we should have a complete list of all possible trees.
     ///
     /// # Errors 
-    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actyally exist in the graph.
+    /// Returns a [`GLLProcessError::MissingSPPFNode`] if any of the nodes in `roots` does not actually exist in the graph.
     pub fn deforest_indices(&self, roots: Vec<SPPFNodeIndex>) -> ProcessResult<Vec<HashSet<SPPFNodeIndex>>> {
         let mut trees = Vec::new();
         for root in roots {
@@ -342,6 +342,7 @@ impl<'a> SPPF<'a> {
     }
 }
 
+/// An empty forest
 impl Default for SPPF<'_> {
     fn default() -> Self {
         Self(SPPFGraph::new())

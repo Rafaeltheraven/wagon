@@ -8,9 +8,10 @@
 //! are probably faster implementations out there that do not have to consider the possibility of the grammar changing at runtime.
 use gss::{GSSNodeIndex, GSSNode};
 use petgraph::prelude::EdgeIndex;
+use thiserror::Error;
 
-use wagon_utils::comma_separated_with_or_str;
-use std::{hash::{Hash, Hasher}, fmt::Display, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, error::Error, mem::Discriminant};
+use wagon_utils::{comma_separated_with_or_str, ErrorReport};
+use std::{hash::{Hash, Hasher}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, mem::Discriminant};
 
 use self::{value::Value, value::InnerValueError};
 use sppf::{SPPFNodeIndex, SPPFNode};
@@ -54,13 +55,78 @@ pub type ReturnMap<'a> = Vec<Option<Value<'a>>>;
 /// The key for the [`AttributeMap`].
 pub type AttributeKey = usize;
 
+/// Result of anything in the GLL process that can return an error.
+pub type GLLResult<'a, T> = Result<T, GLLError<'a>>;
+
 /// Result of the GLL parse.
 pub type ParseResult<'a, T> = Result<T, GLLParseError<'a>>;
 
-#[derive(Debug)]
+/// Result for something that can only have issues in the implementation.
+pub type ImplementationResult<'a, T> = Result<T, GLLImplementationError<'a>>;
+
+#[derive(Debug, Error)]
+/// Errors possible during the GLL process.
+pub enum GLLError<'a> {
+	/// An error in the implementation occurred. There is nothing wrong with the file being parsed.
+	#[error(transparent)]
+	ImplementationError(GLLImplementationError<'a>),
+	/// An error in the parsing occurred. The input file is probably wrong.
+	#[error(transparent)]
+	ParseError(GLLParseError<'a>),
+	/// An error occurred while processing the final state. Similar to a [`Self::ImplementationError`].
+	#[error("{0}")]
+	ProcessError(#[from] GLLProcessError)
+}
+
+#[derive(Debug, Error)]
+/// Errors possible because of implementation mistakes.
+pub enum GLLImplementationError<'a> {
+	/// Data was not utf8 compatible.
+	#[error("{0}")]
+	Utf8Error(#[from] Utf8Error),
+	/// A [`ValueError`] occurred during parsing.
+	#[error("{0}")]
+	ValueError(ValueError<'a>),
+	/// Tried to get a rule that does not exists.
+	#[error("No rule with id {0} exists in the state object.")]
+	UnknownRule(&'a str),
+	/// Tried to get a label that does not exist.
+	#[error("No label with id {0} exists in the state object.")]
+	UnknownLabel(&'a str),
+	/// The non-terminal identified by [`ROOT_UUID`] could not be found.
+	#[error("{ROOT_UUID} could not be found.")]
+	MissingRoot,
+	/// An SPPF node that we expect to exist in the graph is inexplicably missing.
+	#[error("Expected to find SPPF node {0:?} in the graph, but it was not there.")]
+	MissingSPPFNode(SPPFNodeIndex),
+	/// We expected a specific type of SPPF Node, but got another.
+	#[error("Expected SPPFNode of type {}, got {1:?}", comma_separated_with_or_str(.0))]
+	IncorrectSPPFType(Vec<&'a str>, Discriminant<SPPFNode<'a>>),
+	/// A GSS node that we expect to exist in the graph is inexplicably missing.
+	#[error("Expected to find GSS node {0:?} in the graph, but it was not there.")]
+	MissingGSSNode(GSSNodeIndex),
+	/// A GSS edge is inexplicably missing.
+	#[error("Expected to find GSS edge {0:?} in the graph, but it was not there.")]
+	MissingGSSEdge(EdgeIndex),
+	/// An attribute that is expected to have been passed does not exist.
+	#[error("The {0}th attribute is not at GSS node {1:?}")]
+	MissingAttribute(AttributeKey, Rc<GSSNode<'a>>),
+	/// An attribute that is expected to be in the context does not exist.
+	#[error("The {0}th attribute is not in the context of GSS node {1:?}")]
+	MissingContext(AttributeKey, Rc<GSSNode<'a>>),
+	/// Tried to do something with a completed slot
+	#[error("Tried to access completed slot {0} as if it were not completed.")]
+	CompletedSlot(String),
+	/// Any generic fatal error for which we have no specific variant.
+	#[error("A fatal error occurred! {0}.")]
+	Fatal(&'a str),
+}
+
+#[derive(Debug, Error)]
 /// Errors possible while GLL parsing.
 pub enum GLLParseError<'a> {
 	/// Encountered an unexpected byte.
+	#[error("Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}.")]
 	UnexpectedByte {
 		/// Where in the string the byte was encountered.
 		pointer: usize,
@@ -70,87 +136,82 @@ pub enum GLLParseError<'a> {
 		offender: u8
 	},
 	/// Expected more bytes than found in the input string.
+	#[error("Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}.")]
 	TooLong {
 		/// Where we are at the input string.
 		pointer: usize,
 		/// What character we expected to see.
 		offender: Terminal<'a>
 	},
-	/// Data was not utf8 compatible.
-	Utf8Error(Utf8Error),
-	/// A [`ValueError`] occurred during parsing.
-	ValueError(ValueError<'a>),
-	/// Tried to get a rule that does not exists.
-	UnknownRule(&'a str),
-	/// Tried to get a label that does not exist.
-	UnknownLabel(&'a str),
-	/// The non-terminal identified by [`ROOT_UUID`] could not be found.
-	MissingRoot,
-	/// An SPPF node that we expect to exist in the graph is inexplicably missing.
-	MissingSPPFNode(SPPFNodeIndex),
-	/// We expected a specific type of SPPF Node, but got another.
-	IncorrectSPPFType(Vec<&'a str>, Discriminant<SPPFNode<'a>>),
-	/// A GSS node that we expect to exist in the graph is inexplicably missing.
-	MissingGSSNode(GSSNodeIndex),
-	/// A GSS edge is inexplicably missing.
-	MissingGSSEdge(EdgeIndex),
-	/// An attribute that is expected to have been passed does not exist.
-	MissingAttribute(AttributeKey, Rc<GSSNode<'a>>),
-	/// An attribute that is expected to be in the context does not exist.
-	MissingContext(AttributeKey, Rc<GSSNode<'a>>),
-	/// Tried to do something with a completed slot
-	CompletedSlot(String),
-	/// Any generic fatal error for which we have no specific variant.
-	Fatal(&'a str),
+	/// All the alternatives to this rule failed the first_set check.
+	#[error("No parse candidates were found for rule `{rule}` in context `{context}`")]
+	NoCandidates {
+		/// Where in the input stream this happened.
+		pointer: usize,
+		/// String representation of the rule it happened in.
+		rule: String,
+		/// String representation of the parse context at this time.
+		context: String
+	},
+	/// All the alternatives to this rule had a 0 weight.
+	#[error("All weights for rule `{rule}` in context `{context}` were 0")]
+	ZeroWeights {
+		/// Where in the input stream this happened.
+		pointer: usize,
+		/// String representation of the rule it happened in.
+		rule: String,
+		/// String representation of the parse context at this time.
+		context: String
+	}
 }
 
-impl<'a> Display for GLLParseError<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnexpectedByte { pointer, expected, offender } => write!(f, "Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}."),
-            Self::TooLong { pointer, offender } => write!(f, "Tried reading more than possible from input. Current pointer at {pointer}, tried reading {offender:?}."),
-            Self::Utf8Error(e) => e.fmt(f),
-            Self::UnknownRule(s) => write!(f, "No rule with id {s} exists in the state object."),
-            Self::UnknownLabel(s) => write!(f, "No label with id {s} exists in the state object."),
-            Self::ValueError(e) => e.fmt(f),
-            Self::MissingRoot => write!(f, "{ROOT_UUID} could not be found."),
-            Self::MissingSPPFNode(i) => write!(f, "Expected to find SPPF node {i:?} in the graph, but it was not there."),
-            Self::IncorrectSPPFType(e, c) => write!(f, "Expected SPPFNode of type {}, got {c:?}", comma_separated_with_or_str(e)),
-            Self::MissingGSSNode(i) => write!(f, "Expected to find GSS node {i:?} in the graph, but it was not there."),
-            Self::MissingGSSEdge(i) => write!(f, "Expected to find GSS edge {i:?} in the graph, but it was not there."),
-            Self::MissingAttribute(i, g) => write!(f, "The {i}th attribute is not at GSS node {g:?}"),
-            Self::MissingContext(i, g) => write!(f, "The {i}th attribute is not in the context of GSS node {g:?}"),
-            Self::CompletedSlot(s) => write!(f, "Tried to access completed slot {s} as if it were not completed."),
-            Self::Fatal(s) => write!(f, "A fatal error occurred! {s}."),
-        }
+impl<'a> From<GLLImplementationError<'a>> for GLLError<'a> {
+    fn from(value: GLLImplementationError<'a>) -> Self {
+        Self::ImplementationError(value)
     }
 }
 
-impl Error for GLLParseError<'static> {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::ValueError(e) => Some(e),
-            Self::Utf8Error(e) => Some(e),
-            _ => None
-        }
+impl<'a> From<GLLParseError<'a>> for GLLError<'a> {
+    fn from(value: GLLParseError<'a>) -> Self {
+        Self::ParseError(value)
     }
 }
 
-impl<'a> From<ValueError<'a>> for GLLParseError<'a> {
-    fn from(value: ValueError<'a>) -> Self {
-        Self::ValueError(value)
-    }
-}
-
-impl<'a> From<InnerValueError<Value<'a>>> for GLLParseError<'a> {
+impl<'a> From<InnerValueError<Value<'a>>> for GLLImplementationError<'a> {
     fn from(value: InnerValueError<Value<'a>>) -> Self {
         Self::ValueError(ValueError::ValueError(value))
     }
 }
 
-impl<'a> From<Utf8Error> for GLLParseError<'a> {
-    fn from(value: Utf8Error) -> Self {
-        Self::Utf8Error(value)
+impl<'a> From<ValueError<'a>> for GLLError<'a> {
+    fn from(value: ValueError<'a>) -> Self {
+        Self::ImplementationError(GLLImplementationError::ValueError(value))
+    }
+}
+
+impl<'a> From<InnerValueError<Value<'a>>> for GLLError<'a> {
+    fn from(value: InnerValueError<Value<'a>>) -> Self {
+        Self::ImplementationError(GLLImplementationError::ValueError(ValueError::ValueError(value)))
+    }
+}
+
+impl ErrorReport for GLLError<'_> {
+    fn span(self) -> wagon_utils::Span {
+        match self {
+            GLLError::ParseError(e) => match e {
+                GLLParseError::UnexpectedByte { pointer, .. } | GLLParseError::TooLong { pointer, .. } 
+                | GLLParseError::NoCandidates { pointer, .. } | GLLParseError::ZeroWeights { pointer, .. } => pointer..pointer,
+            },
+            _ => wagon_utils::Span::default(),
+        }
+    }
+
+    fn msg(&self) -> (String, String) {
+        match self {
+            GLLError::ImplementationError(e) => ("Fatal Implementation Error".to_string(), e.to_string()),
+            GLLError::ParseError(e) => ("Parse Error".to_string(), e.to_string()),
+            GLLError::ProcessError(e) => ("Post-Processing Error".to_string(), e.to_string()),
+        }
     }
 }
 
@@ -158,18 +219,9 @@ impl<'a> From<Utf8Error> for GLLParseError<'a> {
 pub type ProcessResult<T> = Result<T, GLLProcessError>;
 
 /// Errors that can occur when processing the finished state object.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum GLLProcessError {
 	/// An SPPF node that we expect to exist in the graph is inexplicably missing.
+	#[error("Expected to find SPPF node {0:?} in the graph, but it was not there.")]
 	MissingSPPFNode(SPPFNodeIndex),
 }
-
-impl Display for GLLProcessError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-        	Self::MissingSPPFNode(i) => write!(f, "Expected to find SPPF node {i:?} in the graph, but it was not there."),
-        }
-    }
-}
-
-impl Error for GLLProcessError {}

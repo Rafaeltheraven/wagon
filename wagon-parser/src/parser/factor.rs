@@ -11,6 +11,9 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[new_unspanned]
 /// A possible power equation, or just an [`Atom`].
+///
+/// # Grammar
+/// <code>[Factor] -> [Atom] ("**" Factor)?;</code>
 pub enum Factor {
 	/// Just an [`Atom`].
 	Primary(SpannableNode<Atom>),

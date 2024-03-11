@@ -9,6 +9,10 @@ pub type ValueResult<T, U> = Result<T, ValueError<U>>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 /// Errors that can occur while dealing with semi-dynamic [`Value`]s.
+///
+/// A [`ValueError<Value<T>>`] can be automatically converted into a [`ValueError<T>`] when you are 
+/// implementing your own [`Valueable`] type, but the compiler may require some manual convincing to get it to work
+/// (as in, you will have to call `from` manually).
 pub enum ValueError<T: Valueable> {
     /// Something horrible happened for which we have no specific error.
     Fatal(String),
@@ -16,11 +20,11 @@ pub enum ValueError<T: Valueable> {
     OperationError(T, T, String),
     /// Tried to perform an operation on a float which is NaN.
     FloatIsNan(ordered_float::FloatIsNan),
-    /// Tried to convert something to an int and failed.
+    /// Tried to convert something from an int and failed.
     IntConversionError(std::num::TryFromIntError),
     /// This type can not be negated.
     NegationError(T),
-    /// Tried to compare a value of to another value and failed.
+    /// Tried to compare a value to another value and failed.
     ComparisonError(T, T),
     /// Tried to convert `T` to [`Value`] but failed
     ConversionError(T),

@@ -3,6 +3,8 @@ use super::alloc::{vec, vec::Vec};
 use std::cmp::Ordering;
 
 /// Implementation guts for `min_set`, `min_set_by`, and `min_set_by_key`.
+/// 
+/// This was taken directly from [`itertools`] and then modified to return [`Result`] instead.
 pub fn min_set_impl<I, K, F, E, Compare>(
     mut it: I,
     mut key_for: F,

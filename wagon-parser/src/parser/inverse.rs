@@ -12,10 +12,13 @@ use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[new_unspanned]
-/// Either another `Inverse`, prepend by `!` or just a `[Comparison]`.
+/// Either a [`Comparison`] prepend by `!` or just a [`Comparison`].
+///
+/// # Grammar
+/// <code>Inverse -> "!"? [Comparison];</code>
 pub enum Inverse {
     /// `!`
-	Not(Box<SpannableNode<Inverse>>),
+	Not(SpannableNode<Comparison>),
     /// The next layer down.
 	Comparison(SpannableNode<Comparison>)
 }
@@ -24,7 +27,7 @@ impl Parse for Inverse {
 
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
         if lexer.next_if_eq(&Ok(Tokens::MathToken(Math::Not))).is_some() {
-            Ok(Self::Not(Box::new(SpannableNode::parse(lexer)?)))
+            Ok(Self::Not(SpannableNode::parse(lexer)?))
         } else {
             Ok(Self::Comparison(SpannableNode::parse(lexer)?))
         }

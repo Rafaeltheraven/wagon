@@ -51,6 +51,9 @@ impl Display for ImportType {
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 /// Enum to specify a type of EBNF operator.
+///
+/// # Grammar
+/// `EbnfType -> "+" | "*" | "?";`
 pub enum EbnfType {
 	/// `+`
 	Some,

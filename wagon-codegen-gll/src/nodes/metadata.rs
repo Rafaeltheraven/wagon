@@ -1,7 +1,8 @@
+use wagon_utils::Spannable;
 use wagon_value::{Valueable, RecursiveValue};
 use wagon_parser::parser::metadata::Metadata;
 use wagon_parser::parser::atom::Atom;
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_parser::SpannableNode;
 
 use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError};
 

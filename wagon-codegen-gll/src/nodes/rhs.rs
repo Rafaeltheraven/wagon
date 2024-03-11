@@ -1,10 +1,11 @@
 
+use wagon_utils::Spannable;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 
 use wagon_parser::parser::chunk::Chunk;
 use wagon_parser::parser::rhs::Rhs;
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_parser::SpannableNode;
 
 use wagon_codegen::ToTokensState;
 use crate::{CharBytes, CodeGen, CodeGenArgs, CodeGenError, CodeGenErrorKind, CodeGenResult, CodeGenState};
@@ -16,6 +17,7 @@ impl CodeGen for SpannableNode<Rhs> {
     fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
         let span = self.span();
         let mut node = self.into_inner();
+        // Get all the function arguments.
         let ident = gen_args.ident.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("ident".to_string()), span.clone()))?.clone();
         let alt = gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?;
         let mut firsts = Vec::with_capacity(node.chunks.len());
@@ -23,24 +25,25 @@ impl CodeGen for SpannableNode<Rhs> {
         let weight = std::mem::take(&mut node.weight);
         let blocks = node.blocks()?;
         let blocks_count = blocks.len();
+        // We have not yet completed the first_set for this alternative.
         gen_args.found_first = Some(false);
         gen_args.prev_args = Some(Vec::new());
         for (j, block) in blocks.into_iter().enumerate() {
             let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
             let prev_args = gen_args.prev_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("prev_args".to_string()), span.clone()))?;
-
+            // Construct a label for this alternative + block
             let label_str = format!("{ident}_{alt}_{j}");
             let label = Rc::new(Ident::new(&label_str, Span::call_site()));
             gen_args.state.first_queue.insert(label.clone(), vec![(Vec::with_capacity(block.len()), None)]);
             gen_args.state.first_idents.insert(label.clone(), vec![Vec::with_capacity(block.len())]);
-            if let Some(alts) = gen_args.state.alt_map.get_mut(&ident) {
+            if let Some(alts) = gen_args.state.alt_map.get_mut(&ident) { // Add this alt to the list of alts for the root.
                 alts.push(label.clone());
             } else {
                 gen_args.state.alt_map.insert(ident.clone(), vec![label.clone()]);
             };
             let block_size = block.len();
             let mut str_repr = Vec::with_capacity(block_size);
-            if block_size == 0 {
+            if block_size == 0 { // If we have 0 blocks, this is an empty alternative.
                 gen_args.state.get_first(&label)?[0].1 = Some(CharBytes::Epsilon);
             } 
             let mut counter: usize = 0;
@@ -53,7 +56,8 @@ impl CodeGen for SpannableNode<Rhs> {
                     gen_args.state.add_ret_attr(label.clone(), arg.to_string());
                 } else {
                     let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
-                    if prev_args.contains(arg) {
+                    if prev_args.contains(arg) { // If this attribute was used in whatever NT came before this one.
+                        // The attribute could either come from the context, or be returned from whatever NT we just finished parsing.
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = if let Some(v) = state.get_ret_val(#counter)? {
                                 v
@@ -65,6 +69,7 @@ impl CodeGen for SpannableNode<Rhs> {
                         gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                         counter += 1;
                     } else {
+                        // The attribute can only come from the context.
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = state.restore_attribute(#skipped_k)?.clone();
                         ));
@@ -81,14 +86,14 @@ impl CodeGen for SpannableNode<Rhs> {
                     str_repr.push(symbol.to_string());
                 }
                 gen_args.symbol = Some(k - correction);
-                if matches!(symbol.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) {
+                if matches!(symbol.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) { // Assignments mess up our count, so we need to correct for them.
                     correction += 1;
                 }
         		symbol.gen(gen_args)?;
         	}
             let args = gen_args.full_args.as_ref().ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("full_args".to_string()), span.clone()))?;
             gen_args.state.str_repr.insert(label.clone(), str_repr);
-            if j == blocks_count - 1 {
+            if j == blocks_count - 1 { // If this is the last block.
                 let mut ret_vals = Vec::new();
                 for arg in args {
                     match arg.to_inner() {
@@ -100,16 +105,17 @@ impl CodeGen for SpannableNode<Rhs> {
                         _ => ret_vals.push(quote!(None))
                     }
                 }
+                // Pop all the synthesized attributes back.
                 gen_args.state.add_code(label.clone(), quote!(
-                    state.pop(&vec![#(#ret_vals,)*])
+                    Ok(state.pop(&vec![#(#ret_vals,)*])?)
                 ));
             }
-            if j == 0 {
-                let weight_stream = if let Some(ref expr) = weight {
+            if j == 0 { // If this is the first block
+                let weight_stream = if let Some(ref expr) = weight { // Construct code for the weight if needed.
                     let stream = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
                     let weight_attrs = gen_args.state.collect_attrs(&label, gen_args.state.get_req_weight_attrs(&label));
                     quote!(
-                        fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ParseResult<'a, wagon_gll::value::Value<'a>> {
+                        fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
                             #(#weight_attrs)*
                             Ok(#stream)
                         }
@@ -121,6 +127,7 @@ impl CodeGen for SpannableNode<Rhs> {
                 gen_args.state.add_weight_code(label.clone(), weight_stream);
                 let root_str = ident.to_string();
                 let rule_str = format!("{}_{}", ident, gen_args.alt.ok_or_else(|| CodeGenError::new_spanned(CodeGenErrorKind::MissingArg("alt".to_string()), span.clone()))?);
+                // Construct the slot.
                 let mut inner_block = quote!(
                     let root = state.get_label_by_uuid(#root_str)?;
                     let rules = state.get_rule(#rule_str)?;
@@ -129,16 +136,18 @@ impl CodeGen for SpannableNode<Rhs> {
                 );
                 if gen_args.weight_config.allow_zero {
                     inner_block.extend(quote!(candidates.push((weight, std::rc::Rc::new(slot)));));
-                } else {
+                } else { // If we do not allow 0 weights, make sure only those that resolve to `true` are added to the candidates list.
                     inner_block.extend(quote!(
                         if wagon_value::Valueable::is_truthy(&weight)? {
                             candidates.push((weight, std::rc::Rc::new(slot)));
-                        } 
+                        } else {
+                            zero_weights = zero_weights + 1;
+                        }
                     ));
                 }
-                let stream = if gen_args.weight_config.no_first {
+                let stream = if gen_args.weight_config.no_first { // If we do not care about the first_set, just add the slot.
                     inner_block
-                } else {
+                } else { // If we do care, only add it after checking whether it accepts.
                     quote!(
                        let fst = state.get_label_by_uuid(#label_str)?;
                        if state.test_next(&fst)? {
@@ -157,6 +166,7 @@ impl CodeGen for SpannableNode<Rhs> {
     }
 }
 
+/// GLL Blocks as defined by the OOGLL paper.
 #[derive(Debug, PartialEq, Eq)]
 struct GLLBlocks(Vec<GLLBlock>);
 
@@ -167,7 +177,7 @@ impl GLLBlock {
     fn len(&self) -> usize {
         let mut sum = 0;
         for s in &self.0 {
-            if !matches!(s.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) {
+            if !matches!(s.to_inner(), wagon_parser::parser::symbol::Symbol::Assignment(_)) { // Assignments do not count for the length of a GLL block.
                 sum += 1;
             }
         }

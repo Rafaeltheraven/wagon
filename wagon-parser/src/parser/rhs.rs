@@ -2,9 +2,8 @@ use crate::parser::Span;
 use std::fmt::Display;
 use std::matches;
 
-use wagon_lexer::Spannable;
 use super::SpannableNode;
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, Peek};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, chunk::Chunk, expression::Expression, Peek, Spannable};
 use super::helpers::between;
 
 use wagon_lexer::{productions::Productions, math::Math};
@@ -18,6 +17,14 @@ use wagon_macros::new_unspanned;
 /// Any `Rhs` optionally has an expression that evaluates it's weight, enclosed by `[]`.
 /// 
 /// After the weight, it has a list of chunks (which may be empty)
+///
+/// # Grammar
+/// <span><pre>
+/// [Rhs] -> Weight? [Chunk]* `"|"` [Rhs]
+///	    |  Weight? [Chunk]* `";"`
+///	    ;
+/// Weight -> "[" [Expression] "]";
+/// </pre></span>
 pub struct Rhs {
 	/// The weight expression of this alternative.
 	pub weight: Option<SpannableNode<Expression>>,

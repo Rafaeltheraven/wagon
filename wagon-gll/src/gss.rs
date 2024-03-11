@@ -56,7 +56,7 @@ impl<'a> GSSNode<'a> {
 		orig.attributes == other.attributes
 	}
 
-	/// Call [`hash`] on the attributes only.
+	/// Call [`Hash::hash`] on the attributes only.
 	pub(crate) fn hash_attributes<H: Hasher>(cand: &Self, state: &mut H) {
 		cand.attributes.hash(state);
 	}

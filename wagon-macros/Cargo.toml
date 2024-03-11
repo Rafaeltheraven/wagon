@@ -18,6 +18,9 @@ proc-macro2 = {workspace = true}
 extendable-data = "0.1.5"
 paste = "1.0.14"
 
+[dev-dependencies]
+wagon-utils = {workspace = true}
+
 [lib]
 proc-macro = true
 

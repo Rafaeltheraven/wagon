@@ -1,13 +1,15 @@
 #![warn(missing_docs)]
 //! Utility methods for the WAGon suite of libraries.
 //!
-//! Provides a number of simple functions, as well as a trait version of [`std::iter::Peekable`].
+//! Provides a number of simple functions, as well as a trait version of [`std::iter::Peekable`]
+//! and a fallible version of [`itertools::Itertools`].
 
 /// A trait version of [`std::iter::Peekable`].
 mod peek;
+/// A fallible version of [`itertools::Itertools`].
 mod fallible_itertools;
 
-use std::{str::Chars, marker::PhantomData, fmt::Display, error::Error};
+use std::{error::Error, fmt::Display, marker::PhantomData, ops::Range, str::Chars};
 
 use itertools::Itertools;
 pub use peek::Peek;
@@ -170,6 +172,9 @@ pub fn comma_separated_with_or(strings: &Vec<String>) -> String {
 
 /// Same as [`comma_separated_with_or`], but takes a vector of `&str` instead.
 ///
+/// This is a separate function from [`comma_separated_with_or`] because it is slightly slower
+/// as it requires a copy operation per string instead of just a borrow.
+///
 /// # Example
 /// ```
 /// use wagon_utils::comma_separated_with_or_str;
@@ -198,6 +203,8 @@ pub fn comma_separated<T: std::fmt::Display>(input: &[T]) -> String {
 /// Given a list of values, attempt to normalize them based on their sum.
 ///
 /// This method works as long as the type inside the vec supports the [`std::ops::Div`] and [`std::iter::Sum`] traits. 
+///
+/// The algorithm "works" by summing all the values together, and then normalizes each value by calculating `val / sum`.
 ///
 /// # Example
 /// ```
@@ -370,7 +377,7 @@ pub trait UnsafePeek<'a, T, E: std::fmt::Debug + 'a>: Peek + Iterator<Item = Res
 pub struct ConversionError<T, U> {
     /// The thing we want to convert.
     subject: T,
-    /// Used to hold the type info for the type of [`Valueable`] we are trying to convert to.
+    /// Used to hold the type info for the type `U` we are trying to convert to.
     to: PhantomData<U>
 }
 
@@ -393,8 +400,78 @@ impl<T, U> ConversionError<T, U> {
     /// More specifically, if we have a type `V` which implements `From<U>`, we can
     /// construct a new `ConversionError<T,V>`.
     ///
-    /// This exists for the case "We tried converting T to U, but actually we were converting T to V in this case". 
+    /// This exists for the case "We tried converting T to U, but actually we were converting T to V in this case".
+    ///
+    /// Because specialization is still not stabilized, this can not be done by a generic implementation of [`From`].
     pub fn convert<V: From<U>>(self) -> ConversionError<T, V> {
         ConversionError::<T, V>::new(self.subject)
     }
+}
+
+/// The definition of a Span as used throughout WAGon.
+pub type Span = Range<usize>;
+
+/// A trait for [`Error`]s that return a specific message and span structure.
+pub trait ErrorReport: Error {
+    /// Return the full error report
+    fn report(self) -> ((String, String), Span, Option<String>) where Self: Sized {
+        let msg = self.msg();
+        let source = ErrorReport::source(&self);
+        let span = self.span();
+        (msg, span, source)
+    }
+
+    /// Return span information for this error.
+    fn span(self) -> Span;
+
+    /// Return a tuple description of the error message.
+    ///
+    /// The first element is a "header" (for example: 'Fatal Exception!').
+    /// The second element is the actual message.
+    fn msg(&self) -> (String, String);
+
+    /// Return the text source for this error message.
+    ///
+    /// Usually the source of the error is just the input file, in which case we return `None`.
+    /// Sometimes, however, the source of the error may be a `TokenStream` or some other text. In this case,
+    /// the output of `source` should be that stream of text.
+    fn source(&self) -> Option<String> {
+        None
+    }
+}
+
+/// Trait for objects that provide [`Span`] information. Used for error messaging.
+pub trait Spannable {
+    /// Get the [`Span`] of the object
+    fn span(&self) -> Span;
+    /// Set the [`Span`] of the object. Possibly does nothing as implementation is optional.
+    fn set_span(&mut self, _span: Span) {}
+}
+
+/// Prints out a nice error message to stderr using [`ariadne`].
+///
+/// See [`ariadne`] for more information. The `file_path` **must** be static because of requirements in that library. I recommend simply,
+/// leaking that string to make it static, given that you likely end the program immediately afterwards anyway.
+///
+/// # Errors
+/// Errors when unable to print to stderr.
+#[cfg(feature = "error_printing")]
+pub fn handle_error<T: ErrorReport>(err: Vec<T>, file_path: &'static str, file: &str, offset: usize) -> Result<(), std::io::Error> {
+    use ariadne::{ColorGenerator, Label, Report, ReportKind};
+    let mut colors = ColorGenerator::new();
+    let a = colors.next();
+    let mut builder = Report::build(ReportKind::Error, file_path, offset);
+    let mut sources = std::collections::HashMap::new();
+    for e in err {
+        let ((head, msg), span, source) = e.report();
+        let data = source.map_or(file.to_string(), |data| data);
+        sources.insert(file_path, data);
+        builder = builder.with_message(head)
+            .with_label(
+                Label::new((file_path, span))
+                    .with_message(msg)
+                    .with_color(a),
+            );
+    }
+    builder.finish().eprint(ariadne::sources(sources))
 }

@@ -1,4 +1,5 @@
 
+use wagon_utils::Spannable;
 use crate::Block;
 use crate::BlockSize;
 use crate::FullArgs;
@@ -11,7 +12,7 @@ use quote::quote;
 
 use wagon_codegen::SpannableIdent;
 use wagon_parser::parser::{symbol::Symbol, terminal::Terminal};
-use wagon_parser::{SpannableNode, Spannable};
+use wagon_parser::SpannableNode;
 use proc_macro2::{Literal, TokenStream};
 
 use crate::state::CodeGenState;
@@ -29,6 +30,7 @@ type Checks = (FirstSymbol, FoundFirst);
 
 type Args<'a> = (PrevArgs, &'a FullArgs);
 
+/// Codegen here is directly lifted from the OOGLL paper.
 impl CodeGen for SpannableNode<Symbol> {
 	fn gen(self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
 		let span = self.span();
@@ -84,10 +86,12 @@ impl CodeGen for SpannableNode<Symbol> {
 	}
 }
 
+/// Codegen in case the symbol is a `NonTerminal`.
 fn handle_non_terminal(i: SpannableIdent, label: &Rc<Ident>, state: &mut CodeGenState, block: Block, all_args: Args, uuids: UUIDs, checks: Checks) -> CodeGenResult<Option<Vec<SpannableIdent>>> {
 	let (args, full_args) = all_args;
 	let (uuid, rule_uuid) = uuids;
 	let (first_symbol, found_first) = checks;
+	// Because there is always an empty final block, we can safely increment this.
 	let next_block = block + 1;
 	let args_idents = args.iter().map(|x| x.to_inner().to_ident());
 	let mut full_args_idents = Vec::with_capacity(full_args.len());
@@ -157,7 +161,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			state.regexes.push((r, dfa));
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
-					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLImplementationError::Fatal("Failed to get match with regex, even though we already checked."))?;
 					let new_node = state.get_node_t(bytes, i, state.input_pointer);
 					state.sppf_pointer = new_node;
 				));
@@ -166,7 +170,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			}
 			let next_stream = if first_symbol && block_size == 1 {
 				quote!(
-					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLParseError::Fatal("Failed to get match with regex, even though we already checked."))?;
+					let bytes = state.next_regex(pattern)?.ok_or_else(|| wagon_gll::GLLImplementationError::Fatal("Failed to get match with regex, even though we already checked."))?;
 				)
 			} else {
 				TokenStream::new()

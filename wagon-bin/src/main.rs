@@ -9,13 +9,13 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use clap::ArgMatches;
-use wagon_parser::ErrorReport;
+use wagon_utils::handle_error;
 use wagon_parser::parse_and_check;
 use wagon_codegen_gll::gen_parser;
 use wagon_codegen::FileStructure;
 
 fn main() {
-    let args = parse_args();
+    let args = Box::leak(Box::new(parse_args()));
     let input_file = args
         .get_one::<std::path::PathBuf>("filename")
         .expect("Input file required");
@@ -28,10 +28,10 @@ fn main() {
         Ok(wag) => {
             match gen_parser(wag) {
                 Ok(code) => write_parser(code, proj_name, *overwrite),
-                Err(e) => handle_error(e, input_file.to_str().expect("Input file path was empty"), contents),
+                Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), &contents, 0).expect("Failed to construct error reporter"),
             }
         },
-        Err(e) => handle_error(e, input_file.to_str().expect("Input file path was empty"), contents),
+        Err(e) => handle_error(vec![e], input_file.to_str().expect("Input file path was empty"), &contents, 0).expect("Failed to construct error reporter"),
     }
 }
 
@@ -48,24 +48,6 @@ fn parse_args() -> ArgMatches {
         )
         .arg(clap::arg!(- - "overwrite" "Delete any existing project with the same name").num_args(0))
         .get_matches()
-}
-
-fn handle_error<T: ErrorReport>(err: T, file_path: &str, file: String) {
-    use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
-    let mut colors = ColorGenerator::new();
-    let a = colors.next();
-    let ((head, msg), span, source) = err.report();
-    let data = source.map_or(file, |data| data);
-    Report::build(ReportKind::Error, file_path, 0)
-        .with_message(head)
-        .with_label(
-            Label::new((file_path, span))
-                .with_message(msg)
-                .with_color(a),
-        )
-        .finish()
-        .eprint((file_path, Source::from(data)))
-        .expect("Failed to construct error reporter");
 }
 
 fn write_parser(files: FileStructure, proj_name: &PathBuf, overwrite: bool) {
@@ -95,9 +77,10 @@ fn create_structure(proj_name: &PathBuf, files: FileStructure, overwrite: bool) 
 }
 
 fn create_cargo(proj_name: &PathBuf) {
+    println!("Setting up Cargo");
     let path = std::path::Path::new(proj_name);
     let libs = ["subprocess", "serde_json", "rand_dist", "itertools", "regex_automata"];
-    let local_libs = ["wagon-gll", "wagon-ident", "wagon-utils", "wagon-value"];
+    let local_libs = ["wagon-gll", "wagon-ident", "wagon-value"];
     let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
     toml.write_all(format!(
 "[package]
@@ -110,7 +93,9 @@ edition = \"2021\"
 [workspace]
 
 [dependencies]", proj_name.display()).as_bytes()).expect("Failed to write Cargo.toml");
+    println!("Setting up dependencies");
     Command::new("cargo").current_dir(path).args(["add", "clap", "--features", "derive,cargo"]).output().expect("Failed to add clap library");
+    Command::new("cargo").current_dir(path).args(["add", "wagon-utils", "--path", "../wagon-utils", "--features", "error_printing"]).output().expect("Failed to add wagon-utils library");
     for lib in local_libs {
         let lib_path = format!("../{lib}");
         Command::new("cargo").current_dir(path).args(["add", lib, "--path", &lib_path]).output().unwrap_or_else(|_| panic!("Failed to add {lib} library"));

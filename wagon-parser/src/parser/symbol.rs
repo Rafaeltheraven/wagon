@@ -21,6 +21,15 @@ use wagon_macros::new_unspanned;
 /// A symbol in a [`Chunk`][super::chunk::Chunk].
 ///
 /// A symbol is any individual element of a `Chunk`.
+///
+/// # Grammar
+/// <span><pre>
+/// [Symbol] -> [Ident] NTArgs?
+///        |  [Terminal]
+///        |  (`"{"` [Assignment]* `"}"`)?
+///        |  
+///        ;
+/// </pre></span>
 pub enum Symbol {
     /// A non-terminal with optional parameters.
 	NonTerminal(SpannableNode<Ident>, Vec<SpannableNode<Ident>>),

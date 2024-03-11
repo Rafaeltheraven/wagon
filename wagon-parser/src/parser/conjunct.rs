@@ -11,6 +11,9 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 #[new_unspanned]
 /// A list of [`Inverse`] nodes. Separated by `||`.
+///
+/// # Grammar
+/// `Conjunct -> [Inverse] ("||" Conjunct)?;`
 pub struct Conjunct(pub Vec<SpannableNode<Inverse>>);
 
 impl GetReqAttributes for Conjunct {

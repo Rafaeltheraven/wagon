@@ -4,8 +4,8 @@
 //! This (and the associated [`wagon-gll`](../wagon_gll/index.html) crate) can be seen as examples of
 //! what the WAGon ecosystem can do. 
 //!
-//! This crate holds code specifically for creating a GLL parser out of a [`WAG`](wagon_parser::parser::wag::Wag).
-//! As opposed to the [`wagon_codegen`] crate, which holds generic code to help with any codegen and is intended for internal use.
+//! This crate holds code specifically for creating a GLL parser out of a [`WAG`](wagon_parser::parser::wag::Wag),
+//! as opposed to the [`wagon_codegen`] crate which holds generic code to help with any codegen, and is intended for internal use.
 
 /// Various implementations of codegen on the necessary [`wagon_parser::parser`] nodes.
 mod nodes;
@@ -20,10 +20,9 @@ use indexmap::IndexSet;
 
 use wagon_parser::parser::WagParseError;
 use wagon_parser::parser::{wag::Wag, atom::Atom};
-use wagon_parser::{Span, ErrorReport};
 use wagon_codegen::{FileStructure, SpannableIdent};
 use wagon_value::{RecursiveValue, ValueError};
-use wagon_utils::ConversionError;
+use wagon_utils::{Span, ErrorReport, ConversionError};
 
 #[derive(Debug)]
 pub(crate) enum CharBytes {
@@ -70,17 +69,29 @@ pub(crate) struct WeightConfig {
 /// Because Rust does not allow for variable arguments, but we still need a trait to implement on the nodes, we pass
 /// along this struct for any arguments we need from higher up in the chain.
 pub(crate) struct CodeGenArgs {
+	/// The current state of the codegen.
 	pub(crate) state: CodeGenState,
+	/// Is this the first symbol of a rule?
 	pub(crate) fst: Option<bool>,
+	/// The identifier we are currently working with.
 	pub(crate) ident: Option<Rc<Ident>>,
+	/// The numeric identifier of the alternative we are working on.
 	pub(crate) alt: Option<Alt>,
+	/// The numeric identifier of the GLLBlock inside the alternative we are working on.
 	pub(crate) block: Option<Block>,
+	/// The numberic identifier of the symbol inside the block we are working on.
 	pub(crate) symbol: Option<Symbol>,
+	/// The name of the label.
 	pub(crate) label: Option<Rc<Ident>>,
+	/// How big the current block is.
 	pub(crate) block_size: Option<BlockSize>,
+	/// Whether we can stop building a firstset for this label.
 	pub(crate) found_first: Option<bool>,
+	/// All the arguments needed for this rule.
 	pub(crate) full_args: Option<FullArgs>,
+	/// The arguments we encountered previously.
 	pub(crate) prev_args: Option<PrevArgs>,
+	/// Various config options.
 	pub(crate) weight_config: WeightConfig
 }
 
@@ -89,7 +100,7 @@ pub(crate) struct CodeGenArgs {
 pub(crate) enum CodeGenErrorKind {
 	/// Tried converting an [`Atom`] into a [`RecursiveValue`]
 	///
-	/// (this happens in [`nodes::metadata::Metadata::gen`]).
+	/// (this happens in [`nodes::metadata::atom_to_bool`](./nodes/metadata/fn.atom_to_bool.html)).
 	AtomConversionError(ConversionError<Atom, RecursiveValue>),
 	/// Encountered some kind of [`ValueError`] when dealing with [`RecursiveValue`]s.
 	ValueError(ValueError<RecursiveValue>),
@@ -108,7 +119,7 @@ pub(crate) enum CodeGenErrorKind {
 #[derive(Debug)]
 /// Struct for errors that occur during codegen, as well as their span.
 pub struct CodeGenError {
-	/// The type of error the occurred (see [`CodeGenErrorKind`]).
+	/// The type of error that occurred (see [`CodeGenErrorKind`]).
 	kind: CodeGenErrorKind,
 	/// Span for where the error occurred.
 	span: Span

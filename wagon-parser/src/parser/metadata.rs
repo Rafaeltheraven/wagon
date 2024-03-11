@@ -3,13 +3,22 @@ use wagon_ident::Ident;
 use wagon_macros::match_error;
 use std::{collections::BTreeMap, fmt::Display};
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, Spannable, ResultNext, SpannableNode};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, atom::Atom, Peek, ResultNext, SpannableNode};
 
 use wagon_macros::new_unspanned;
 
 #[derive(PartialEq, Debug, Eq, Hash)]
 #[new_unspanned]
 /// The metadata of the WAG.
+///
+/// # Grammar
+/// <span><pre>
+/// [Metadata]  -> Meta* MetaDelim;
+/// MetaDelim -> `"=="` `"="`+;
+/// Meta      -> Include | Config;
+/// Include   -> `"include"` Path;
+/// Config    -> Identifier `":"` [Expression](super::expression::Expression) `";"`;
+/// </pre></span>
 pub struct Metadata {
     /// All imports for this grammar.
 	pub includes: Vec<String>,

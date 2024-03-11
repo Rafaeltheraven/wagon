@@ -2,12 +2,12 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::write;
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, expression::Expression, ResultNext};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
 use crate::firstpass::GetReqAttributes;
 
-use wagon_lexer::{math::Math, Spannable};
+use wagon_lexer::math::Math;
 use wagon_macros::match_error;
 use wagon_utils::ConversionError;
 use wagon_value::{Valueable, Value, RecursiveValue};
@@ -19,7 +19,8 @@ use wagon_macros::new_unspanned;
 #[derive(PartialEq, Debug, Eq, Hash, Clone)]
 /// A python-style dictionary.
 ///
-/// Is of the form [`Ident`][[`Expression`]].
+/// # Grammar
+/// <code>[Dictionary] -> [Ident] "[" [Expression] "]";</code>
 pub struct Dictionary(Ident, Expression);
 
 impl Dictionary {
@@ -35,9 +36,20 @@ impl Dictionary {
 /// The base elements of each expression.
 ///
 /// The data in here is kind of similar to [`wagon_value::Value`] and `TryFrom` is implemented for it as a result.
-/// 
 /// However, an `Atom` includes additional syntactic data, which is not important (or even not available) for `Value` (for example, an [`Ident`]).
 /// As a result, [`Atom::Ident`], [`Atom::Dict`] and [`Atom::Group`] can not be directly converted and manual implementation is required.
+///
+/// # Grammar
+/// <span><pre>
+/// [Atom] -> [Ident]
+///      |  [Dictionary]
+///      |  [bool]
+///      |  [i32]
+///      |  [f32]
+///      |  [String]
+///      |  `"("` [Expression] `")"`
+///      ;
+/// </pre></span>
 pub enum Atom {
 	/// An [`Ident`].
 	Ident(Ident),

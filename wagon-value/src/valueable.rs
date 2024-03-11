@@ -4,6 +4,25 @@ use crate::{Value, ValueResult};
 ///
 /// Sometimes, the basic types supported by `Value` are not enough and the newtype pattern is required to extend it.
 /// Registering this newtype as `Valueable` means that it supports all common operations associated with a `Value`.
+///
+/// Besides implementing the required methods. Any type that implements [`Valueable`] is required to implement the following traits: 
+/// * [`std::fmt::Debug`]
+/// * [`std::fmt::Display`]
+/// * [`Clone`]
+/// * [`Eq`]
+/// * [`PartialEq`]
+/// * [`PartialOrd`]
+/// * [`std::hash::Hash`]
+/// * [`std::ops::Add`]
+/// * [`std::ops::Sub`]
+/// * [`std::ops::Mul`]
+/// * [`std::ops::Div`]
+/// * [`std::ops::Rem`]
+/// * [`num_traits::Pow<Self>`]
+/// This is required such that we can expect any `Valueable` type to work more or less the same.
+///
+/// Most of the required traits can be automatically derived. You can use [`wagon_macros::ValueOps`] (or it's associated methods) to 
+/// automatically derive implementations for all the operative traits (`Add`, `Sub`, etc).
 pub trait Valueable: 
     std::fmt::Debug 
     + std::fmt::Display 
@@ -43,7 +62,11 @@ pub trait Valueable:
 
 /// A second trait for "extension" of the [`Value`] enum.
 ///
-/// This is intended to "extract" the inner value if possible.
+/// This is intended to "extract" the inner value if possible and makes automatic implementation
+/// of [`Valueable`] possible. 
+/// If your type properly wraps [`Value`] (as in, it implements [`ToValue`], [`From<Value<Self>>`] and all the expected operations),
+/// [`Valueable`] is automatically implemented by simply taking the value returned by [`ToValue::to_value`] and using that implementation. 
+/// If you do not desire this behaviour, do not implement [`ToValue`].
 pub trait ToValue<T: Valueable> {
     /// Return a reference to the [`Value`] that this type encompasses.
     fn to_value(&self) -> &Value<T>;

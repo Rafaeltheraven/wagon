@@ -2,8 +2,8 @@ use std::{fmt::Display, write};
 
 use crate::firstpass::{GetReqAttributes, ReqAttributes};
 
-use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, ResultNext};
-use wagon_lexer::{math::Math, Spannable};
+use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, ResultNext};
+use wagon_lexer::math::Math;
 
 use super::expression::Expression;
 
@@ -13,7 +13,8 @@ use wagon_macros::new_unspanned;
 #[new_unspanned]
 /// Assigns the result of an expression to an attribute.
 ///
-/// Each assignment has the following structure: [`Ident`] = [`Expression`];
+/// # Grammar
+/// <code>[Assignment] -> "{" ([Ident] "=" [Expression] ";")* "}";</code>
 pub struct Assignment {
 	/// The left-hand side.
 	pub ident: SpannableNode<Ident>,

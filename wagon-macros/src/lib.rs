@@ -20,8 +20,8 @@ use quote::{quote, ToTokens, format_ident};
 use syn::{parse_macro_input, ExprMatch, Arm};
 use extendable_data::extendable_data;
 
-/// A procedural macro to extend lexers from a base lexer. Used by [`wagon-lexers::math::Math`](../wagon_lexer/math/enum.Math.html) 
-/// and [`wagon_lexer::productions::Productions`](wagon_lexer/productions/enum.Productions.html).
+/// A procedural macro to extend lexers from a base lexer. Used by [`wagon-lexer::math::Math`](../wagon_lexer/math/enum.Math.html) 
+/// and [`wagon-lexer::productions::Productions`](../wagon_lexer/productions/enum.Productions.html).
 #[extendable_data(inherit_from_base)]
 #[derive(Clone, Debug, PartialEq, Display, Logos)]
 #[display_concat(" or ")]
@@ -101,6 +101,7 @@ enum Base {
     Path(String),
 }
 
+/// Try to find an attribute in a list. If found, remove it from the list and return the tokens.
 fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
     let mut found = None;
     for (i, attr) in attrs.iter_mut().enumerate() {
@@ -120,9 +121,9 @@ fn pop_attr(attrs: &mut Vec<Attribute>, key: &str) -> Option<TokenStream2> {
 }
 
 #[proc_macro_derive(TokenMapper)]
-/// Derive macro for the [`wagon-parser::helpers::TokenMapper`] trait.
+/// Derive macro for the [`wagon-parser::helpers::TokenMapper`](../wagon_parser/parser/helpers/trait.TokenMapper.html) trait.
 ///
-/// If we have an enum that has fields with the exact same names as that of specific [`wagon-lexer::math::Math`] tokens.
+/// If we have an enum that has fields with the exact same names as that of specific [`wagon-lexer::math::Math`](../wagon_lexer/math/enum.Math.html) tokens.
 /// We can automatically derive this trait to convert those tokens into instances of this enum.
 pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(stream as DeriveInput);
@@ -173,6 +174,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
     let mut funcs = Vec::with_capacity(e.variants.len());
     for variant in e.variants {
         let ident = variant.ident;
+        let doc = format!("Construct a [`Self::{ident}`] with dummy span information.");
         let func_name = format_ident!("new_unspanned_{}", ident.to_string().to_lowercase());
         match variant.fields {
             syn::Fields::Named(n) => {
@@ -193,7 +195,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub(crate) fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident{#(#args),*}
                     }
@@ -217,7 +219,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
                     }
                 }
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub fn #func_name(#(#parameters),*) -> Self {
                         Self::#ident(#(#args),*)
                     }
@@ -225,7 +227,7 @@ fn nonspanned_enum(e: syn::DataEnum) -> Vec<TokenStream2> {
             },
             syn::Fields::Unit => {
                 funcs.push(quote!(
-                    /// Constructs a [`Self::#ident`] with dummy span information.
+                    #[doc = #doc]
                     pub fn #func_name() -> Self {
                         Self::#ident
                     }
@@ -440,20 +442,20 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 ///
 /// This macro is intended specifically for [wagon-parser](../wagon_parser/index.html) and thus expects a lexer to be present and returns a specific error. 
 /// This macro is not intended to be used for any other match statements.
-/// If you do want to use it, make sure there is a variable called `lexer` with the function `span` and an enum `WagParseError` with variant `Unexpected`,
-/// which has the fields `span`, `offender` and `expected`.
+/// If you do want to use it, make sure there is a variable called `lexer` which is a reference to something that implements [`wagon_utils::Spannable`] 
+/// and an enum `WagParseError` with variant `Unexpected`, which has the fields `span`, `offender` and `expected`.
 ///
 /// # Example
 /// ```
 /// # struct Lexer;
-/// # impl Lexer {
-/// #     fn span(&self) -> i32 {
-/// #         0        
+/// # impl wagon_utils::Spannable for Lexer {
+/// #     fn span(&self) -> wagon_utils::Span {
+/// #         wagon_utils::Span::default()        
 /// #     }
 /// # }
 /// # enum WagParseError {
 /// #     Unexpected {
-/// #         span: i32,
+/// #         span: wagon_utils::Span,
 /// #         offender: A,
 /// #         expected: Vec<String>
 /// #     }   
@@ -468,7 +470,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 /// # fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", "Bar") } 
 /// }
 /// let a = A::One;
-/// let lexer = Lexer;
+/// let lexer = &Lexer;
 /// assert!(match_error!(match a {
 ///     #[expect("Foo")]
 ///     A::Two => Ok(()),
@@ -495,7 +497,7 @@ pub fn match_error(stream: TokenStream) -> TokenStream {
     };
     let wc_arm: Arm = syn::parse_quote!(
         _error => {
-            Err(WagParseError::Unexpected{span: lexer.span(), offender: _error, expected: vec![#joined]})
+            Err(WagParseError::Unexpected{span: wagon_utils::Spannable::span(lexer), offender: _error, expected: vec![#joined]})
         }
     );
     ast.arms.push(wc_arm);
@@ -588,7 +590,7 @@ fn _derive_value_operations(ast: DeriveInput) -> Result<TokenStream2> {
 macro_rules! derive_value_op {
     ($o:expr, $p:path, $f:ident, $n:ident) => {
         paste::item! {
-            /// Automatically derive [`$p`] for [`Valueable`] types.
+            /// Automatically derive this operation for [`wagon-value::Valueable`](../wagon_value/trait.Valueable.html) types.
             #[proc_macro_derive($n, attributes(value, value_variant))]
             pub fn [< derive_value_ $f >](item: TokenStream) -> TokenStream {
                 let ast = parse_macro_input!(item as DeriveInput);

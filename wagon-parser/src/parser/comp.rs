@@ -21,6 +21,9 @@ use wagon_macros::new_unspanned;
 /// A comparison between two [`Sum`]s.
 ///
 /// If `comp == None`, then this is just a `Sum`.
+///
+/// # Grammar
+/// `Comparison -> [Sum] ([CompOp] [Sum])?;`
 pub struct Comparison {
     /// The left-hand side of the comparison
 	pub sum: SpannableNode<Sum>,
@@ -40,6 +43,9 @@ pub struct Comp {
 
 #[derive(TokenMapper, PartialEq, Debug, Eq, Hash, Clone)]
 /// All possible comparison operators.
+///
+/// # Grammar
+/// `CompOp -> "<" | "<=" | ">" | ">=" | "==" | "!=" | "in";`
 pub enum CompOp {
     /// `==`
 	Eq,

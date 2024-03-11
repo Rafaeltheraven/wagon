@@ -1,6 +1,6 @@
 use crate::value::Value;
-use crate::ParseResult;
-use crate::GLLParseError;
+use crate::ImplementationResult;
+use crate::GLLImplementationError;
 use crate::ValueError;
 use crate::InnerValueError;
 use crate::GLLState;
@@ -19,7 +19,9 @@ pub struct GrammarSlot<'a> {
 	pub rule: Rc<Vec<Ident>>,
 	/// The location of the `•` inside this rule.
 	pub dot: usize,
-	/// The position of the pointer inside this rule (may be seperate from the dot)
+	/// The position of the pointer inside this rule (may be seperate from the dot).
+	///
+	/// Used only for string representation purposes.
 	pub pos: usize,
 	/// A unique identifier for this slot.
 	pub uuid: &'a str
@@ -29,7 +31,7 @@ impl<'a> Eq for GrammarSlot<'a> {}
 
 impl<'a> PartialEq for GrammarSlot<'a> {
     fn eq(&self, other: &Self) -> bool {
-    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same except when probabilistic
+    	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same.
     		self.label.to_string() == other.label.to_string()
     	} else {
     		self.uuid == other.uuid && self.dot == other.dot && self.pos == other.pos
@@ -120,11 +122,11 @@ impl<'a> GrammarSlot<'a> {
 		state.get_label(&self.rule[self.dot])
 	}
 
-	/// Get the weight of this slot.
+	/// Get the weight of the current label for this slot.
 	///
 	/// # Errors
-	/// Returns an error of we can not calculate the weight.
-	pub fn weight(&self, state: &GLLState<'a>) -> ParseResult<'a, Value<'a>> {
+	/// Returns an error if we can not calculate the weight.
+	pub fn weight(&self, state: &GLLState<'a>) -> ImplementationResult<'a, Value<'a>> {
 		self.curr_block(state).weight(state)
 	}
 
@@ -139,9 +141,9 @@ impl<'a> GrammarSlot<'a> {
 	///
 	/// # Errors
 	/// Returns a wrapped [`ValueError::ComparisonError`](`InnerValueError::ComparisonError`) if the comparison is not possible.
-	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ParseResult<'a, std::cmp::Ordering> {
+	pub fn partial_cmp(&self, other: &Self, state: &GLLState<'a>) -> ImplementationResult<'a, std::cmp::Ordering> {
 		let left_weight = self.weight(state)?;
 		let right_weight = other.weight(state)?;
-		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLParseError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
+		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLImplementationError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
 	}
 }

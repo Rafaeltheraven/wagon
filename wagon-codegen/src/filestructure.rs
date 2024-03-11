@@ -15,7 +15,7 @@ pub struct FileStructure {
 
 /// The types of file this filestructure can represent.
 ///
-/// Because [`TokenStream`s](proc_macro2::TokenStream) are kinda funky and they just get converted to strings
+/// Because [`TokenStream`]s are kinda funky and they just get converted to strings
 /// for writing to disk anyway, they are not supported. Just convert them to string instead.
 #[derive(Debug, Eq, PartialEq)]
 pub enum FileType {
