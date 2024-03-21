@@ -1,6 +1,5 @@
 use wagon_utils::Spannable;
 use quote::quote;
-use std::todo;
 
 use indexmap::IndexSet;
 use proc_macro2::{Ident, Span};
@@ -8,7 +7,7 @@ use proc_macro2::{Ident, Span};
 use wagon_parser::parser::rule::Rule;
 use wagon_parser::SpannableNode;
 
-use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError, CodeGenErrorKind};
+use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError, CodeGenErrorKind, CharBytes};
 use std::rc::Rc;
 
 
@@ -74,22 +73,22 @@ impl CodeGen for SpannableNode<Rule> {
                 gen_args.state.roots.insert(pointer);
                 Ok(())
             },
-            Rule::Generate(ident, args, rhs) => {
+            Rule::Generate(ident, _, rhs) => {
                 let pointer: Rc<Ident> = Rc::new(Ident::new(&ident, Span::call_site()));
 
-                gen_args.state.first_queue.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
+                gen_args.state.first_queue.insert(pointer.clone(), vec![(Vec::with_capacity(1), Some(CharBytes::Epsilon))]);
                 gen_args.state.first_idents.insert(pointer.clone(), Vec::with_capacity(rhs.len()));
                 gen_args.state.str_repr.insert(pointer.clone(), vec![ident]);
                 gen_args.ident = Some(pointer.clone());
+                gen_args.state.alt_map.insert(pointer.clone(), vec![]);
 
-                // for (i, alt) in rhs.into_iter().enumerate() {
-                //     gen_args.alt = Some(i);
-                //     alt.gen(gen_args)?;
-                // }
-
-                gen_args.state.add_code(pointer.clone(), quote!(println!("YASSS");));
-                println!("{:#?}", gen_args.state.code);
-                //gen_args.state.add_code(pointer.clone(), quote!(Ok(())));
+                let mut gen_value: String = String::new();
+                for (_, alt) in rhs.into_iter().enumerate() {
+                    let str_value = alt.to_string();
+                    gen_value.push_str(&*str_value);
+                }
+                gen_args.state.add_code(pointer.clone(), quote!(println!(#gen_value);));
+                gen_args.state.add_code(pointer.clone(), quote!(Ok(state.pop(&vec![])?)));
                 gen_args.state.roots.insert(pointer);
                 Ok(())
             },
