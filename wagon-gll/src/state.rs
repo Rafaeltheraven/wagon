@@ -62,7 +62,7 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 ///     let root_rule = Rc::new(vec![]);
 ///     l_map.insert(ROOT_UUID, root_label);
 ///     r_map.insert(ROOT_UUID, root_rule);
-///     let input = "".as_bytes();
+///     let input = Vec::from("".as_bytes());
 ///     let mut state = GLLState::init(input, l_map, r_map, regex_map)?;
 ///     state.main();
 ///#    Ok(())
@@ -70,7 +70,7 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 /// ```
 pub struct GLLState<'a> {
     // Main structures
-    input: &'a [u8],
+    input: &'a Vec<u8>,
     gss: GSS<'a>,
     sppf: SPPF<'a>,
     // Pointers
@@ -111,7 +111,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
-    pub fn init(input: &'a [u8], label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
+    pub fn init(input: &'a Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
         let mut sppf_map = HashMap::new();
