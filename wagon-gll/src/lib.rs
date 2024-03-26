@@ -183,6 +183,12 @@ impl<'a> From<InnerValueError<Value<'a>>> for GLLImplementationError<'a> {
     }
 }
 
+impl<'a> From<ValueError<'a>> for GLLImplementationError<'a> {
+    fn from(value: ValueError<'a>) -> Self {
+        Self::ValueError(value)
+    }
+}
+
 impl<'a> From<ValueError<'a>> for GLLError<'a> {
     fn from(value: ValueError<'a>) -> Self {
         Self::ImplementationError(GLLImplementationError::ValueError(value))
