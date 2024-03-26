@@ -18,7 +18,7 @@ impl<U> ToTokensState<U> for Atom {
             Self::LitNum(n) => quote!(wagon_value::Value::from(#n)),
             Self::LitFloat(f) => {
                 let real_float: f32 = **f;
-                quote!(wagon_value::Value::try_from(#real_float?))
+                quote!(wagon_value::Value::try_from(#real_float)?)
             },
             Self::LitString(s) => quote!(wagon_value::Value::from(#s)),
             Self::Group(g) => {
