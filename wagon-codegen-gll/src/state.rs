@@ -442,30 +442,25 @@ impl CodeGenState {
     		fn main() {
     			let args = clap::command!()
 			        .arg(
-			            clap::arg!(<filename> "Input file to parse")
-			                .value_parser(clap::value_parser!(std::path::PathBuf))
-			        )
-			        .arg(
 			            clap::arg!(--"no-crop" "Don't crop resulting sppf")
 			                .num_args(0)
 			        )
 			        .get_matches();
-			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
-			    let input_file_str = Box::leak(input_file.to_str().unwrap().into());
-			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
-			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
-			    let contents: &'static [u8] = Box::leak(content_string.trim().as_bytes().into()); // This is required to tell Rust the input data lasts forever.
+			    let mut buffer = String::new();
+				io::stdin().read_line(&mut buffer).unwrap();
+    			let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
+			    let mut contents: Vec<u8> = vec![];
+    			contents.extend(buffer.trim().bytes());
     			let mut label_map: wagon_gll::LabelMap = std::collections::HashMap::with_capacity(#label_len);
     			let mut rule_map: wagon_gll::RuleMap = std::collections::HashMap::with_capacity(#root_len);
     			let mut regex_map: wagon_gll::RegexMap = std::collections::HashMap::with_capacity(#regex_len);
     			#body
-    			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map, regex_map).unwrap();
+    			let mut state = wagon_gll::GLLState::init(&contents, label_map, rule_map, regex_map).unwrap();
     			state.main();
 			    match state.print_sppf_dot(crop) {
 			        Ok(t) => println!("{t}"),
 			        Err(e) => println!("Error: {e}"),
 			    }
-			    let offset = content_string.len() - contents.len();
 			    if state.accepts() {
 			        let mut real_errors = Vec::new();
 			        for error in state.errors {
@@ -475,10 +470,10 @@ impl CodeGenState {
 			            }
 			        }
 			        if !real_errors.is_empty() {
-			            wagon_utils::handle_error(real_errors, input_file_str, &content_string, offset).unwrap()
+            			println!("error occurred");
 			        }
 			    } else {
-			        wagon_utils::handle_error(state.errors, input_file_str, &content_string, offset).unwrap()
+            			println!("error occurred");
 			    }
     		}
     	)

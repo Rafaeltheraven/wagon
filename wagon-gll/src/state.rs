@@ -63,14 +63,14 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 ///     l_map.insert(ROOT_UUID, root_label);
 ///     r_map.insert(ROOT_UUID, root_rule);
 ///     let input = Vec::from("".as_bytes());
-///     let mut state = GLLState::init(input, l_map, r_map, regex_map)?;
+///     let mut state = GLLState::init(&input, l_map, r_map, regex_map)?;
 ///     state.main();
 ///#    Ok(())
 ///# }
 /// ```
 pub struct GLLState<'a> {
     // Main structures
-    input: &'a Vec<u8>,
+    input: &'a mut Vec<u8>,
     gss: GSS<'a>,
     sppf: SPPF<'a>,
     // Pointers
@@ -111,7 +111,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
-    pub fn init(input: &'a Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
+    pub fn init(input: &'a mut Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
         let mut sppf_map = HashMap::new();
@@ -186,6 +186,11 @@ impl<'a> GLLState<'a> {
             self.pop = pop;
         }
         Ok(v)
+    }
+
+    pub fn add_input(&'a mut self, added_input: String){
+        //let mut current_input = &mut self.input;
+        &mut self.input.extend(added_input.trim().as_bytes());
     }
 
     /// Try finding a packed node that is a child of `parent` and matches `ref_slot` and `i`.

@@ -224,6 +224,7 @@ pub fn gen_parser(wag: Wag) -> CodeGenResult<FileStructure> {
 	let main = state.gen_state_stream(&mut fs)?;
 	let fin = quote!(
 		mod nonterminals;
+		use std::io;
 		#start
 		#main
 	);
