@@ -70,7 +70,7 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 /// ```
 pub struct GLLState<'a> {
     // Main structures
-    input: &'a mut Vec<u8>,
+    input: Vec<u8>,
     gss: GSS<'a>,
     sppf: SPPF<'a>,
     // Pointers
@@ -111,7 +111,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
-    pub fn init(input: &'a mut Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
+    pub fn init(input: Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
         let mut sppf_map = HashMap::new();
@@ -188,9 +188,8 @@ impl<'a> GLLState<'a> {
         Ok(v)
     }
 
-    pub fn add_input(&'a mut self, added_input: String){
-        //let mut current_input = &mut self.input;
-        &mut self.input.extend(added_input.trim().as_bytes());
+    pub fn add_input(&mut self, added_input: String) {
+        self.input.extend(added_input.trim().as_bytes());
     }
 
     /// Try finding a packed node that is a child of `parent` and matches `ref_slot` and `i`.
@@ -372,7 +371,7 @@ impl<'a> GLLState<'a> {
     }
 
     // TODO: Make this cached
-    fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &'a [u8]) -> ParseResult<'a, usize> {
+    fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &[u8]) -> ParseResult<'a, usize> {
         let mut pointer = start_pointer;
         let input_len = input.len();
         while pointer < input_len && input[pointer].is_ascii_whitespace() { // left trim the input
@@ -393,7 +392,7 @@ impl<'a> GLLState<'a> {
 
     // This one only exists to work around the borrow checker.
     fn _next(&self, bytes: Terminal<'a>) -> ParseResult<'a, usize> {
-        Self::__next(bytes, self.input_pointer, self.input)
+        Self::__next(bytes, self.input_pointer, &self.input)
     }
 
     /// Consume the following bytes from the input string. 
@@ -415,7 +414,6 @@ impl<'a> GLLState<'a> {
         self._next(bytes).is_ok()
     }
 
-    #[must_use]
     fn _next_regex(regex: &RegexTerminal<'a>, start_pointer: usize, input: &[u8]) -> Option<usize> {
         let current_byte = &input[start_pointer..=start_pointer];
         let Ok(mut curr_state) = regex.automaton.start_state_forward(&current_byte.into()) else { // Check if we have a valid start state.
@@ -456,7 +454,7 @@ impl<'a> GLLState<'a> {
     /// Returns an error if the regex completely fails to build.
     pub fn next_regex(&mut self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
         let regex = self.get_regex_automaton(pattern)?;
-        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
+        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, &self.input) {
             let result = &self.input[self.input_pointer..self.input_pointer + j];
             self.input_pointer += j + 1;
             Ok(Some(result))
@@ -469,9 +467,9 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn has_regex(&mut self, pattern: &'a str) -> GLLResult<'a, bool> {
+    pub fn has_regex(&self, pattern: &'a str) -> GLLResult<'a, bool> {
         let regex = self.get_regex_automaton(pattern)?;
-        Ok(Self::_next_regex(&regex, self.input_pointer, self.input).is_some())
+        Ok(Self::_next_regex(&regex, self.input_pointer, &self.input).is_some())
     }
 
     /// Get the bytes matched by the pattern based on where the current input pointer is, but do not consume these bytes.
@@ -480,9 +478,9 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn regex_bytes(&mut self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
+    pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
         let regex = self.get_regex_automaton(pattern)?;
-        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
+        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, &self.input) {
             Ok(Some(&self.input[self.input_pointer..self.input_pointer + j]))
         } else {
             Ok(None)
