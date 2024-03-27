@@ -13,9 +13,8 @@ use thiserror::Error;
 use wagon_utils::{comma_separated_with_or_str, ErrorReport};
 use std::{hash::{Hash, Hasher}, rc::Rc, str::{from_utf8, Utf8Error}, collections::HashSet, mem::Discriminant};
 
-use self::{value::Value, value::InnerValueError};
 use sppf::{SPPFNodeIndex, SPPFNode};
-use value::ValueError;
+use value::{Value, ValueError, InnerValue, InnerValueError};
 use wagon_ident::Ident;
 
 /// An implementation of the SPPF.
@@ -198,6 +197,18 @@ impl<'a> From<ValueError<'a>> for GLLError<'a> {
 impl<'a> From<InnerValueError<Value<'a>>> for GLLError<'a> {
     fn from(value: InnerValueError<Value<'a>>) -> Self {
         Self::ImplementationError(GLLImplementationError::ValueError(ValueError::ValueError(value)))
+    }
+}
+
+impl<'a> From<InnerValueError<InnerValue<Value<'a>>>> for GLLImplementationError<'a> {
+    fn from(value: InnerValueError<InnerValue<Value<'a>>>) -> Self {
+        Self::ValueError(ValueError::ValueError(value.into()))
+    }
+}
+
+impl<'a> From<InnerValueError<InnerValue<Value<'a>>>> for GLLError<'a> {
+    fn from(value: InnerValueError<InnerValue<Value<'a>>>) -> Self {
+        Self::ImplementationError(GLLImplementationError::from(value))
     }
 }
 
