@@ -150,7 +150,7 @@ pub fn derive_token_mapper(stream: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-/// Given a struct/enum with [`wagon-parser::SpannableNode`] fields, creates constructors which do not require any `SpannableNode` wrapping.
+/// Given a struct/enum with [`wagon-parser::SpannableNode`](../wagon_parser/struct.SpannableNode.html) fields, creates constructors which do not require any `SpannableNode` wrapping.
 pub fn new_unspanned(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
     let orig_stream = quote!(#ast);
@@ -442,7 +442,7 @@ fn handle_expr(expr: Expr) -> Result<TokenStream2> {
 ///
 /// This macro is intended specifically for [wagon-parser](../wagon_parser/index.html) and thus expects a lexer to be present and returns a specific error. 
 /// This macro is not intended to be used for any other match statements.
-/// If you do want to use it, make sure there is a variable called `lexer` which is a reference to something that implements [`wagon_utils::Spannable`] 
+/// If you do want to use it, make sure there is a variable called `lexer` which is a reference to something that implements [`wagon-utils::Spannable`](../wagon_utils/trait.Spannable.html) 
 /// and an enum `WagParseError` with variant `Unexpected`, which has the fields `span`, `offender` and `expected`.
 ///
 /// # Example
