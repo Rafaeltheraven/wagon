@@ -449,7 +449,6 @@ pub trait Spannable {
 }
 
 #[cfg(feature = "error_printing")]
-#[doc(cfg(error_printing))]
 /// Prints out a nice error message to stderr using [`ariadne`].
 ///
 /// See [`ariadne`] for more information. The `file_path` **must** be static because of requirements in that library. I recommend simply,
