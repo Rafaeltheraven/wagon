@@ -67,7 +67,7 @@ impl CodeGen for SpannableNode<Symbol> {
 			},
 			Symbol::Epsilon => {
 				state.add_code(label.clone(), quote!(
-					let cr = state.get_node_t(&[], state.input_pointer, state.input_pointer);
+					let cr = state.get_node_t((&[]).to_vec(), state.input_pointer, state.input_pointer);
 					let slot = wagon_gll::GrammarSlot::new(
 						state.get_label_by_uuid(#uuid)?,
 						state.get_rule(#rule_uuid)?,
@@ -180,14 +180,14 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 		Terminal::LitString(s) => {
 			let bytes = Literal::byte_string(s.as_bytes());
 			stream.extend(quote!(
-				let bytes = #bytes;
+				let bytes = (#bytes).to_vec();
 			));
 			if !found_first {
 				state.get_first(label)?[0].1 = Some(CharBytes::Bytes(bytes));
 			}
 			if first_symbol && block_size != 1 {
 				stream.extend(quote!(
-					state.next(bytes)?;
+					state.next(bytes.clone())?;
 					let new_node = state.get_node_t(bytes, i, state.input_pointer);
 					state.sppf_pointer = new_node;
 				));

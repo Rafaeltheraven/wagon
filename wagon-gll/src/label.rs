@@ -58,7 +58,7 @@ pub trait Label<'a>: Debug {
 	///
 	/// # Errors
 	/// Should return an error if we fail to retrieve the label somewhere.
-	fn first_set(&self, state: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>>;
+	fn first_set(&self, state: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal>)>>;
 	/// Any code to run when encountering this label.
 	///
 	/// This is called by `GLLState::goto` and is used to make the `goto` from the original paper work.
@@ -154,17 +154,17 @@ pub trait Label<'a>: Debug {
 	fn attr_rep_map(&self) -> (Vec<&str>, Vec<&str>);
 }
 
-impl<'a> Label<'a> for Terminal<'a> {
+impl<'a> Label<'a> for Terminal {
     fn is_eps(&self) -> bool {
         self.is_empty()
     }
 
-    fn first_set(&self, _: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>> {
-        Ok(vec![(Vec::new(), Some(*self))])
+    fn first_set(&self, _: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal>)>> {
+        Ok(vec![(Vec::new(), Some(self.to_vec()))])
     }
 
     fn first(&self, state: &mut GLLState<'a>) -> GLLResult<'a, bool> {
-        Ok(self.is_eps() || state.has_next(self))
+        Ok(self.is_eps() || state.has_next(self.to_vec()))
     }
 
     fn code(&self, _: &mut GLLState<'a>) -> GLLResult<'a, ()> {
@@ -227,7 +227,7 @@ impl<'a> RegexTerminal<'a> {
 }
 
 impl<'a> Label<'a> for RegexTerminal<'a> {
-    fn first_set(&self, _: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal<'a>>)>> {
+    fn first_set(&self, _: &GLLState<'a>) -> ImplementationResult<'a, Vec<(Vec<GLLBlockLabel<'a>>, Option<Terminal>)>> {
         Err(GLLImplementationError::Fatal("Attempted running the `first_set` method on a regex."))
     }
 

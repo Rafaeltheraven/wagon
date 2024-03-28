@@ -107,10 +107,10 @@ pub struct GLLState<'a> {
 impl<'a> GLLState<'a> {
     /// Initialize the state.
     ///
-    /// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule. 
+    /// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule.
     ///
     /// # Errors
-    /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
+    /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`].
     pub fn init(input: Vec<u8>, label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
         let mut gss = GSS::new();
@@ -122,20 +122,20 @@ impl<'a> GLLState<'a> {
         let gss_root = gss.add_node(gss_root_node.clone());
         sppf_map.insert(SPPFNode::Dummy, sppf_root);
         gss_map.insert(gss_root_node, gss_root);
-        let mut state = GLLState { 
-            input, 
-            gss, 
-            sppf, 
-            input_pointer: 0, 
+        let mut state = GLLState {
+            input,
+            gss,
+            sppf,
+            input_pointer: 0,
             gss_pointer: gss_root,
-            gss_root, 
+            gss_root,
             context_pointer: gss_root,
-            sppf_pointer: sppf_root, 
-            sppf_root, 
-            todo: IndexSet::default(), 
-            visited: HashSet::default(), 
-            pop: HashMap::default(), 
-            gss_map, 
+            sppf_pointer: sppf_root,
+            sppf_root,
+            todo: IndexSet::default(),
+            visited: HashSet::default(),
+            pop: HashMap::default(),
+            gss_map,
             sppf_map,
             rule_map,
             label_map,
@@ -175,9 +175,9 @@ impl<'a> GLLState<'a> {
                 for sppf_node in nodes {
                     let y = self.get_node_p(slot.clone(), self.sppf_pointer, *sppf_node, v)?;
                     self.add(
-                        slot.clone(), 
-                        self.gss_pointer, 
-                        self.get_sppf_node(*sppf_node)?.right_extend()?, 
+                        slot.clone(),
+                        self.gss_pointer,
+                        self.get_sppf_node(*sppf_node)?.right_extend()?,
                         y,
                         v
                     );
@@ -197,7 +197,7 @@ impl<'a> GLLState<'a> {
         for child in self.sppf.neighbors_directed(parent, Outgoing) {
             match self.sppf.node_weight(child) {
                 Some(SPPFNode::Packed { slot, split, .. }) if slot == ref_slot && *split == i => return Some(child),
-                _ => {} 
+                _ => {}
             }
         }
         None
@@ -252,7 +252,7 @@ impl<'a> GLLState<'a> {
     /// Find or create an [`SPPFNode::Symbol`].
     ///
     /// `get_node_t` from the original paper.
-    pub fn get_node_t(&mut self, terminal: &'a [u8], left: usize, right: usize) -> SPPFNodeIndex {
+    pub fn get_node_t(&mut self, terminal: Vec<u8>, left: usize, right: usize) -> SPPFNodeIndex {
         self.find_or_create_sppf_symbol(terminal, left, right)
     }
 
@@ -292,17 +292,17 @@ impl<'a> GLLState<'a> {
         self.gss.edge_weight(i).ok_or_else(|| GLLImplementationError::MissingGSSEdge(i))
     }
 
-    fn find_or_create_sppf_symbol(&mut self, terminal: &'a [u8], left: usize, right: usize) -> SPPFNodeIndex {
+    fn find_or_create_sppf_symbol(&mut self, terminal: Vec<u8>, left: usize, right: usize) -> SPPFNodeIndex {
         let candidate = SPPFNode::Symbol { terminal, left, right };
         self.find_or_create_sppf(candidate)
     }
 
     fn find_or_create_sppf_intermediate(&mut self, slot: &Rc<GrammarSlot<'a>>, left: usize, right: usize, context_pointer: GSSNodeIndex) -> ImplementationResult<'a, SPPFNodeIndex> {
-        let candidate = SPPFNode::Intermediate { 
-            slot: slot.clone(), 
-            left, 
-            right, 
-            ret: Vec::default(), 
+        let candidate = SPPFNode::Intermediate {
+            slot: slot.clone(),
+            left,
+            right,
+            ret: Vec::default(),
             context: self.get_gss_node(context_pointer)?.clone(),
         };
         Ok(self.find_or_create_sppf(candidate))
@@ -310,7 +310,7 @@ impl<'a> GLLState<'a> {
 
     /// Creates/Returns the index of an [`SPPFNode`].
     ///
-    /// If a vertex with the exact same data as `candidate` already exists in the SPPF, we return that vertex. 
+    /// If a vertex with the exact same data as `candidate` already exists in the SPPF, we return that vertex.
     /// Otherwise, we create a new vertex with `candidate` as the data and return that.
     fn find_or_create_sppf(&mut self, candidate: SPPFNode<'a>) -> SPPFNodeIndex {
         if let Some(ix) = self.sppf_map.get(&candidate) {
@@ -353,7 +353,7 @@ impl<'a> GLLState<'a> {
     pub fn pop(&mut self, ret_vals: &ReturnMap<'a>) -> ImplementationResult<'a, ()> {
         if self.gss_pointer != self.gss_root {
             if let Some(map) = self.pop.get_mut(&self.gss_pointer) {
-                map.push(self.sppf_pointer); 
+                map.push(self.sppf_pointer);
             } else {
                 let map = vec![self.sppf_pointer];
                 self.pop.insert(self.gss_pointer, map);
@@ -371,13 +371,13 @@ impl<'a> GLLState<'a> {
     }
 
     // TODO: Make this cached
-    fn __next(bytes: Terminal<'a>, start_pointer: usize, input: &[u8]) -> ParseResult<'a, usize> {
+    fn __next(bytes: Terminal, start_pointer: usize, input: &[u8]) -> ParseResult<'a, usize> {
         let mut pointer = start_pointer;
         let input_len = input.len();
         while pointer < input_len && input[pointer].is_ascii_whitespace() { // left trim the input
             pointer += 1;
         }
-        for expected in bytes {
+        for expected in &bytes {
             if pointer >= input_len {
                 return Err(GLLParseError::TooLong { pointer, offender: bytes })
             }
@@ -391,11 +391,11 @@ impl<'a> GLLState<'a> {
     }
 
     // This one only exists to work around the borrow checker.
-    fn _next(&self, bytes: Terminal<'a>) -> ParseResult<'a, usize> {
+    fn _next(&self, bytes: Terminal) -> ParseResult<'a, usize> {
         Self::__next(bytes, self.input_pointer, &self.input)
     }
 
-    /// Consume the following bytes from the input string. 
+    /// Consume the following bytes from the input string.
     ///
     /// If the bytes we just consumed are not the expected bytes, we return an error.
     ///
@@ -403,14 +403,14 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns either a [`GLLParseError::TooLong`] or [`GLLParseError::UnexpectedByte`] depending on the expected bytes and state of the input.
-    pub fn next(&mut self, bytes: Terminal<'a>) -> ParseResult<'a, ()> {
+    pub fn next(&mut self, bytes: Terminal) -> ParseResult<'a, ()> {
         let pointer = self._next(bytes)?;
         self.input_pointer = pointer;
         Ok(())
     }
 
     /// Check if the following bytes **can** be consumed, but do not consume them.
-    pub fn has_next(&mut self, bytes: Terminal<'a>) -> bool {
+    pub fn has_next(&mut self, bytes: Terminal) -> bool {
         self._next(bytes).is_ok()
     }
 
@@ -452,10 +452,10 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn next_regex(&mut self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
+    pub fn next_regex(&mut self, pattern: &'a str) -> GLLResult<'a, Option<Terminal>> {
         let regex = self.get_regex_automaton(pattern)?;
         if let Some(j) = Self::_next_regex(&regex, self.input_pointer, &self.input) {
-            let result = &self.input[self.input_pointer..self.input_pointer + j];
+            let result = self.input[self.input_pointer..self.input_pointer + j].to_vec();
             self.input_pointer += j + 1;
             Ok(Some(result))
         } else {
@@ -478,10 +478,10 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
+    pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal>> {
         let regex = self.get_regex_automaton(pattern)?;
         if let Some(j) = Self::_next_regex(&regex, self.input_pointer, &self.input) {
-            Ok(Some(&self.input[self.input_pointer..self.input_pointer + j]))
+            Ok(Some(self.input[self.input_pointer..self.input_pointer + j].to_vec()))
         } else {
             Ok(None)
         }

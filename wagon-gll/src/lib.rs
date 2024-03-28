@@ -37,7 +37,7 @@ pub use slot::GrammarSlot;
 /// A single byte in a [`Terminal`].
 pub type TerminalBit<'a> = &'a u8;
 /// A Terminal, represented as a byte array.
-pub type Terminal<'a> = &'a[u8];
+pub type Terminal = Vec<u8>;
 
 /// The ID of the initial non-terminal.
 ///
@@ -58,7 +58,7 @@ pub type AttributeKey = usize;
 pub type GLLResult<'a, T> = Result<T, GLLError<'a>>;
 
 /// Result of the GLL parse.
-pub type ParseResult<'a, T> = Result<T, GLLParseError<'a>>;
+pub type ParseResult<'a, T> = Result<T, GLLParseError>;
 
 /// Result for something that can only have issues in the implementation.
 pub type ImplementationResult<'a, T> = Result<T, GLLImplementationError<'a>>;
@@ -71,7 +71,7 @@ pub enum GLLError<'a> {
 	ImplementationError(GLLImplementationError<'a>),
 	/// An error in the parsing occurred. The input file is probably wrong.
 	#[error(transparent)]
-	ParseError(GLLParseError<'a>),
+	ParseError(GLLParseError),
 	/// An error occurred while processing the final state. Similar to a [`Self::ImplementationError`].
 	#[error("{0}")]
 	ProcessError(#[from] GLLProcessError)
@@ -123,7 +123,7 @@ pub enum GLLImplementationError<'a> {
 
 #[derive(Debug, Error)]
 /// Errors possible while GLL parsing.
-pub enum GLLParseError<'a> {
+pub enum GLLParseError {
 	/// Encountered an unexpected byte.
 	#[error("Encountered unexpected byte at {pointer}. Expected {expected} saw {offender}.")]
 	UnexpectedByte {
@@ -140,7 +140,7 @@ pub enum GLLParseError<'a> {
 		/// Where we are at the input string.
 		pointer: usize,
 		/// What character we expected to see.
-		offender: Terminal<'a>
+		offender: Terminal
 	},
 	/// All the alternatives to this rule failed the first_set check.
 	#[error("No parse candidates were found for rule `{rule}` in context `{context}`")]
@@ -170,8 +170,8 @@ impl<'a> From<GLLImplementationError<'a>> for GLLError<'a> {
     }
 }
 
-impl<'a> From<GLLParseError<'a>> for GLLError<'a> {
-    fn from(value: GLLParseError<'a>) -> Self {
+impl<'a> From<GLLParseError> for GLLError<'a> {
+    fn from(value: GLLParseError) -> Self {
         Self::ParseError(value)
     }
 }

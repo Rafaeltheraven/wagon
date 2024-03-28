@@ -88,6 +88,10 @@ impl CodeGen for SpannableNode<Rule> {
                     gen_value.push_str(&*str_value);
                 }
                 gen_args.state.add_code(pointer.clone(), quote!(println!(#gen_value);));
+                gen_args.state.add_code(pointer.clone(), quote!(
+                    let mut buffer = String::new();
+                    io::stdin().read_line(&mut buffer).unwrap();
+                    state.add_input(buffer);));
                 gen_args.state.add_code(pointer.clone(), quote!(Ok(state.pop(&vec![])?)));
                 gen_args.state.roots.insert(pointer);
                 Ok(())

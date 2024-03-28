@@ -264,6 +264,9 @@ impl CodeGenState {
 					));
 				}
 			}
+			if root_uuid.len() > 4 && root_uuid[..3].eq("GEN"){
+				stream.extend(quote!(use std::io;))
+			}
 			format!("nonterminals/{root_uuid}.rs")
 		} else {
 			format!("nonterminals/{root_uuid}/{uuid}.rs")
@@ -275,7 +278,7 @@ impl CodeGenState {
 
 			impl<'a> wagon_gll::Label<'a> for #id {
 				#[allow(unused_variables)]
-				fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+				fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal>)>> {
 					#(#first_attr_stream)*
 					Ok(vec![#(#first_stream,)*])
 				}
@@ -316,8 +319,8 @@ impl CodeGenState {
     fn handle_first(alt: &Vec<TokenStream>, fin: &Option<CharBytes>) -> (bool, TokenStream) {
     	let mut ret = false;
     	let byte = match fin {
-	        Some(CharBytes::Bytes(b)) => quote!(Some(#b)),
-	        Some(CharBytes::Epsilon) => {ret = true; quote!(Some(&[]))},
+	        Some(CharBytes::Bytes(b)) => quote!(Some((#b).to_vec())),
+	        Some(CharBytes::Epsilon) => {ret = true; quote!(Some((&[]).to_vec()))},
 	        None => quote!(None),
 	    };
 	    let stream = quote!(
@@ -333,7 +336,7 @@ impl CodeGenState {
     		struct _S;
 
     		impl<'a> wagon_gll::Label<'a> for _S {
-    			fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal<'a>>)>> {
+    			fn first_set(&self, state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, Vec<(Vec<wagon_gll::GLLBlockLabel<'a>>, Option<wagon_gll::Terminal>)>> {
 					Ok(vec![(vec![state.get_label_by_uuid(#uuid)?], None)])
 				}
 				fn is_eps(&self) -> bool {
@@ -455,7 +458,7 @@ impl CodeGenState {
     			let mut rule_map: wagon_gll::RuleMap = std::collections::HashMap::with_capacity(#root_len);
     			let mut regex_map: wagon_gll::RegexMap = std::collections::HashMap::with_capacity(#regex_len);
     			#body
-    			let mut state = wagon_gll::GLLState::init(&contents, label_map, rule_map, regex_map).unwrap();
+    			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map, regex_map).unwrap();
     			state.main();
 			    match state.print_sppf_dot(crop) {
 			        Ok(t) => println!("{t}"),

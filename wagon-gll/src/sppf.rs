@@ -33,7 +33,7 @@ pub enum SPPFNode<'a> {
     /// Symbol node
     Symbol {
         /// The [`Terminal`] this symbol node represents
-        terminal: Terminal<'a>,
+        terminal: Terminal,
         /// Where this terminal starts in the input string.
         left: usize,
         /// Where it ends.
