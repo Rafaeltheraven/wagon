@@ -117,7 +117,7 @@ impl CodeGen for SpannableNode<Rhs> {
                     quote!(
                         fn actual_weight<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
                             #(#weight_attrs)*
-                            Ok(#stream)
+                            Ok(wagon_gll::value::Value::from(#stream))
                         }
                         Some(actual_weight(state))
                     )

@@ -464,7 +464,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn has_regex(&mut self, pattern: &'a str) -> GLLResult<'a, bool> {
+    pub fn has_regex(&self, pattern: &'a str) -> GLLResult<'a, bool> {
         let regex = self.get_regex_automaton(pattern)?;
         Ok(Self::_next_regex(&regex, self.input_pointer, self.input).is_some())
     }
@@ -475,13 +475,9 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error if the regex completely fails to build.
-    pub fn regex_bytes(&mut self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
+    pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal<'a>>> {
         let regex = self.get_regex_automaton(pattern)?;
-        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, self.input) {
-            Ok(Some(&self.input[self.input_pointer..self.input_pointer + j]))
-        } else {
-            Ok(None)
-        }
+        Ok(Self::_next_regex(&regex, self.input_pointer, self.input).map(|j| &self.input[self.input_pointer..self.input_pointer + j]))
     }
 
     /// Get the current input byte for the state
