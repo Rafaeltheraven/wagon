@@ -62,8 +62,8 @@ pub type RegexMap<'a> = HashMap<&'a str, Rc<RegexTerminal<'a>>>;
 ///     let root_rule = Rc::new(vec![]);
 ///     l_map.insert(ROOT_UUID, root_label);
 ///     r_map.insert(ROOT_UUID, root_rule);
-///     let input = Vec::from("".as_bytes());
-///     let mut state = GLLState::init(&input, l_map, r_map, regex_map)?;
+///     let input = "".as_bytes();
+///     let mut state = GLLState::init(input, l_map, r_map, regex_map)?;
 ///     state.main();
 ///#    Ok(())
 ///# }
@@ -107,7 +107,7 @@ pub struct GLLState<'a> {
 impl<'a> GLLState<'a> {
     /// Initialize the state.
     ///
-    /// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule.
+    /// Takes the input data as a byte-array. As well as a mapping of specific [`Label::uuid`](`crate::Label::uuid`) to the associated label and another mapping of a uuid to a specific rule. 
     ///
     /// # Errors
     /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`].
@@ -480,11 +480,7 @@ impl<'a> GLLState<'a> {
     /// Returns an error if the regex completely fails to build.
     pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal>> {
         let regex = self.get_regex_automaton(pattern)?;
-        if let Some(j) = Self::_next_regex(&regex, self.input_pointer, &self.input) {
-            Ok(Some(self.input[self.input_pointer..self.input_pointer + j].to_vec()))
-        } else {
-            Ok(None)
-        }
+        Ok(Self::_next_regex(&regex, self.input_pointer, self.input).map(|j| &self.input[self.input_pointer..self.input_pointer + j].to_vec()))
     }
 
     /// Get the current input byte for the state

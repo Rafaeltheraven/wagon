@@ -12,6 +12,11 @@
 			"working_dir": "${project_path}/gll_test",
 			"cmd": ["cargo",  "build"]
 		},
+		{
+			"name": "Compile GenTest",
+			"working_dir": "${project_path}/gen_test",
+			"cmd": ["cargo",  "build"]
+		}
 	],
 	"debugger_configurations":
 	[
@@ -36,6 +41,15 @@
 			"args": ["input"],
 			"cwd": "${project_path}/gll_test/",
 			"program": "${project_path}/gll_test/target/debug/gll_test"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "GenTest Run",
+			"pre_debug_task": "Compile GenTest",
+			"args": ["input"],
+			"cwd": "${project_path}/gen_test/",
+			"program": "${project_path}/gen_test/target/debug/gen_test"
 		}
 	],
 }
