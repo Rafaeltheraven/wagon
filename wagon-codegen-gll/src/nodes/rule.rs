@@ -93,11 +93,13 @@ impl CodeGen for SpannableNode<Rule> {
                     let mut rng = rand::thread_rng();
                     let random_no: f32 = rng.gen(); // generates a float between 0 and 1
                     let mut lower_limit = 0.0;
+                    let mut upper_limit;
                 );
 
                 let mut weight_counter = 0;
                 let mut weight_decide_stream = quote!();
                 let amount_rhs = rhs.len() as f32;
+                let mut right_part = quote!(wagon_value::Value::from(0i32));
 
                 for (_, alt) in rhs.into_iter().enumerate() {
                     let mut node = alt.into_inner();
@@ -127,22 +129,30 @@ impl CodeGen for SpannableNode<Rule> {
                     let weight = std::mem::take(&mut node.weight);
                     let name_weight = format!("{}{}", "weight_", weight_counter);
                     let fun_call: TokenStream = name_weight.parse().unwrap();
-
+                    right_part = quote!(
+                        wagon_gll::value::Value::from(
+        	                std::ops::Add::add(
+        		                #fun_call(state)?,
+        		                #right_part
+        	                )?
+                        )
+                    );
 
                     let weight_stream = if let Some(ref expr) = weight { // Construct code for the weight if needed.
                         let label_str= "test";
                         let label = Rc::new(Ident::new(&label_str, Span::call_site()));
 
-                        let stream1 = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
+                        let stream_weight_expr = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
                         let weight_attrs = gen_args.state.collect_attrs(&label, gen_args.state.get_req_weight_attrs(&label));
+
                         quote!(
                             fn #fun_call<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
                                 #(#weight_attrs)*
-                                Ok(wagon_gll::value::Value::from(#stream1))
+                                Ok(wagon_gll::value::Value::from(#stream_weight_expr))
                             };
                         )
                     } else {
-                        let val: f32 = 1.0 / amount_rhs;
+                        let val: f32 = 1.0;
                         quote!(
                             fn #fun_call<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
                                 Ok(wagon_gll::value::Value::from(wagon_value::Value::try_from(#val)?))
@@ -152,15 +162,19 @@ impl CodeGen for SpannableNode<Rule> {
                     stream.extend(weight_stream);
 
                     weight_decide_stream.extend(quote!(
-                        if random_no > lower_limit && random_no <= (f32::from((#fun_call(state))?) + lower_limit){
+                        upper_limit = f32::from(wagon_gll::value::Value::from(std::ops::Div::div(#fun_call(state)? ,total_weight.clone())?));
+                        if random_no > lower_limit && random_no <= upper_limit + lower_limit{
 	                        println!(#string_val);
                         }
-                        lower_limit = f32::from((#fun_call(state))?);
+                        lower_limit = upper_limit;
                     ));
                     weight_counter = weight_counter + 1;
-
                 }
+                stream.extend(quote!(let total_weight =));
+                stream.extend(right_part);
+                stream.extend(quote!(;));
                 stream.extend(weight_decide_stream);
+                println!("{}", stream);
 
                 gen_args.state.add_code(pointer.clone(), stream);
                 gen_args.state.add_code(pointer.clone(), quote!(
