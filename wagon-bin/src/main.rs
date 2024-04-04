@@ -79,7 +79,7 @@ fn create_structure(proj_name: &PathBuf, files: FileStructure, overwrite: bool) 
 fn create_cargo(proj_name: &PathBuf) {
     println!("Setting up Cargo");
     let path = std::path::Path::new(proj_name);
-    let libs = ["subprocess", "serde_json", "rand_dist", "itertools", "regex_automata"];
+    let libs = ["subprocess", "serde_json", "rand_dist", "itertools", "regex_automata", "rand"];
     let local_libs = ["wagon-gll", "wagon-ident", "wagon-value"];
     let mut toml = File::create(path.join("Cargo.toml")).expect("Failed to create Cargo.toml");
     toml.write_all(format!(

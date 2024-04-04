@@ -2,13 +2,18 @@ use wagon_utils::Spannable;
 use quote::quote;
 
 use indexmap::IndexSet;
-use proc_macro2::{Ident, Span};
+use proc_macro2::{Ident, Span, TokenStream};
 
 use wagon_parser::parser::rule::Rule;
 use wagon_parser::SpannableNode;
 
 use crate::{CodeGenArgs, CodeGen, CodeGenResult, CodeGenError, CodeGenErrorKind, CharBytes};
 use std::rc::Rc;
+use wagon_codegen::ToTokensState;
+use wagon_parser::parser::chunk::Chunk;
+use wagon_parser::parser::symbol::Symbol;
+use crate::state::CodeGenState;
+use wagon_parser::parser::terminal::Terminal::LitString;
 
 
 impl CodeGen for SpannableNode<Rule> {
@@ -82,12 +87,82 @@ impl CodeGen for SpannableNode<Rule> {
                 gen_args.ident = Some(pointer.clone());
                 gen_args.state.alt_map.insert(pointer.clone(), vec![]);
 
-                let mut gen_value: String = String::new();
+                // get the value to be returned from the generative rule
+                let mut stream = quote!(
+                    use rand::prelude::*;
+                    let mut rng = rand::thread_rng();
+                    let random_no: f32 = rng.gen(); // generates a float between 0 and 1
+                    let mut lower_limit = 0.0;
+                );
+
+                let mut weight_counter = 0;
+                let mut weight_decide_stream = quote!();
+                let amount_rhs = rhs.len() as f32;
+
                 for (_, alt) in rhs.into_iter().enumerate() {
-                    let str_value = alt.to_string();
-                    gen_value.push_str(&*str_value);
+                    let mut node = alt.into_inner();
+                    let mut string_val: String = String::from("");
+
+                    for chunk in node.chunks {
+                        let span = chunk.span();
+                        let symbols = match chunk.into_inner() {
+                            Chunk { ebnf: Some(_), .. } => return Err(CodeGenError::new_spanned(CodeGenErrorKind::Fatal("Encountered an EBNF-chunk when calculating GLL-blocks. Should have been factored out".to_string()), span)),
+                            c => c.extract_symbols(), // Deal with groups
+                        };
+                        for symbol in symbols {
+                            let is_terminal = symbol.to_inner().is_terminal();
+                            if is_terminal {
+                                string_val = match symbol.to_inner() {
+                                    Symbol::Terminal(term) => {
+                                        match term.clone().into_inner() {
+                                            LitString(val) => val,
+                                            _ => "".parse().unwrap()
+                                        }
+                                    },
+                                    _ => "".parse().unwrap()
+                                }
+                            }
+                        }
+                    }
+                    let weight = std::mem::take(&mut node.weight);
+                    let name_weight = format!("{}{}", "weight_", weight_counter);
+                    let fun_call: TokenStream = name_weight.parse().unwrap();
+
+
+                    let weight_stream = if let Some(ref expr) = weight { // Construct code for the weight if needed.
+                        let label_str= "test";
+                        let label = Rc::new(Ident::new(&label_str, Span::call_site()));
+
+                        let stream1 = expr.to_tokens(&mut gen_args.state, label.clone(), CodeGenState::add_req_weight_attr);
+                        let weight_attrs = gen_args.state.collect_attrs(&label, gen_args.state.get_req_weight_attrs(&label));
+                        quote!(
+                            fn #fun_call<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
+                                #(#weight_attrs)*
+                                Ok(wagon_gll::value::Value::from(#stream1))
+                            };
+                        )
+                    } else {
+                        let val: f32 = 1.0 / amount_rhs;
+                        quote!(
+                            fn #fun_call<'a>(state: &wagon_gll::GLLState<'a>) -> wagon_gll::ImplementationResult<'a, wagon_gll::value::Value<'a>> {
+                                Ok(wagon_gll::value::Value::from(wagon_value::Value::try_from(#val)?))
+                            };
+                        )
+                    };
+                    stream.extend(weight_stream);
+
+                    weight_decide_stream.extend(quote!(
+                        if random_no > lower_limit && random_no <= (f32::from((#fun_call(state))?) + lower_limit){
+	                        println!(#string_val);
+                        }
+                        lower_limit = f32::from((#fun_call(state))?);
+                    ));
+                    weight_counter = weight_counter + 1;
+
                 }
-                gen_args.state.add_code(pointer.clone(), quote!(println!(#gen_value);));
+                stream.extend(weight_decide_stream);
+
+                gen_args.state.add_code(pointer.clone(), stream);
                 gen_args.state.add_code(pointer.clone(), quote!(
                     let mut buffer = String::new();
                     io::stdin().read_line(&mut buffer).unwrap();

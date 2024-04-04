@@ -188,6 +188,7 @@ impl<'a> GLLState<'a> {
         Ok(v)
     }
 
+    // Add additional input from users to the vector of input
     pub fn add_input(&mut self, added_input: String) {
         self.input.extend(added_input.trim().as_bytes());
     }
@@ -480,7 +481,7 @@ impl<'a> GLLState<'a> {
     /// Returns an error if the regex completely fails to build.
     pub fn regex_bytes(&self, pattern: &'a str) -> GLLResult<'a, Option<Terminal>> {
         let regex = self.get_regex_automaton(pattern)?;
-        Ok(Self::_next_regex(&regex, self.input_pointer, self.input).map(|j| &self.input[self.input_pointer..self.input_pointer + j].to_vec()))
+        Ok(Self::_next_regex(&regex, self.input_pointer, &self.input).map(|j| self.input[self.input_pointer..self.input_pointer + j].to_vec()))
     }
 
     /// Get the current input byte for the state
