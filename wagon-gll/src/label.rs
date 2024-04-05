@@ -71,11 +71,25 @@ pub trait Label<'a>: Debug {
 	/// # Errors
 	/// Returns an error if any label in the first set can't be found.
 	fn first(&self, state: &mut GLLState<'a>) -> GLLResult<'a, bool> {
+		self._first(state, &mut HashSet::default())
+	}
+	/// Internal method for [`Label::first`] to do the recursive step.
+	///
+	/// Rust does not allow me to make this private, so it will be public.
+	///
+	/// # Errors
+	/// Returns an error if any label in the first set can't be found.
+	fn _first(&self, state: &mut GLLState<'a>, seen: &mut HashSet<Rc<str>>) -> GLLResult<'a, bool> {
 		let fst = self.first_set(state)?;
 		for (alt, fin) in fst {
 			let mut check_fin = true;
 			for sub in alt {
-				if sub.first(state)? {
+				let uuid = sub.uuid();
+				if seen.contains(uuid) {
+					continue
+				}
+				seen.insert(uuid.into());
+				if sub._first(state, seen)? {
 					return Ok(true);
 				} else if !sub.is_nullable(state)? {
 					check_fin = false;
