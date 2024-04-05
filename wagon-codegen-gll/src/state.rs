@@ -252,7 +252,7 @@ impl CodeGenState {
 				#(#weight)*
 			)
 		} else {
-			quote!(unreachable!("Weight should never be evaluated for non-zero GLL blocks"))
+			quote!(Some(Err(wagon_gll::GLLImplementationError::Fatal("Weight should never be evaluated for non-zero GLL blocks"))))
 		};
 		let filename = if root_uuid == uuid { // In this case, this is code for the start of a non-terminal, instead of a GLL block.
 			if let Some(alts) = self.alt_map.get(id) { // We take this opportunity to also create the module definitions.
