@@ -127,7 +127,7 @@ impl<'a> SPPFNode<'a> {
                         let _ = write!(output, "{key}: {value}, ");
                         output
                     });
-                attr_rep.pop();
+                attr_rep.pop(); // Remove leftover ", " from string rep
                 attr_rep.pop();
                 format!("({slot_str},{left},{right},<{attr_rep}>)")
             },
