@@ -177,7 +177,7 @@ impl<'a> Label<'a> for Terminal<'a> {
         Ok(vec![(Vec::new(), Some(*self))])
     }
 
-    fn first(&self, state: &mut GLLState<'a>) -> GLLResult<'a, bool> {
+    fn _first(&self, state: &mut GLLState<'a>, _: &mut HashSet<Rc<str>>) -> GLLResult<'a, bool> {
         Ok(self.is_eps() || state.has_next(self))
     }
 
@@ -274,7 +274,7 @@ impl<'a> Label<'a> for RegexTerminal<'a> {
 
     /// A regex is sort of between a non-terminal and a terminal. They way `first` is used, we want
     /// it to return `true` if some terminal is parsable from this point. In the case of a regex, this means the pattern is accepting.
-    fn first(&self, state: &mut GLLState<'a>) -> GLLResult<'a, bool> {
+    fn _first(&self, state: &mut GLLState<'a>, _: &mut HashSet<Rc<str>>) -> GLLResult<'a, bool> {
 	    state.has_regex(self.pattern)
     }
 
