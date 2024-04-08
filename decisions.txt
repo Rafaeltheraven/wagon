@@ -59,3 +59,7 @@ Attributes inside () or EBNF MUST by synthesized.
 
 Could be good idea to disallow multiple types of attributes for the same "name". If you want that, just use a different name or something.
 Reason is that this conflicts with rewrites of (), which require all passed arguments to be synthesized.
+
+We know if GSS cycles exist. A GSS cycle implies left-recursion and thus a SPPF cycle. As such, if now GSS cycle exist, we should also not allow SPPF cycles.
+In get_node_p, we pass whether this is a GSS cycle and if it isn't, we disallow packed nodes that would cause an SPPF cycle.
+The reason we need to do this is because of attributes. Attributes can cause a GSS cycle to not occur, but an SPPF cycle to occur. We need to catch this case.

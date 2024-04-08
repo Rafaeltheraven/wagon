@@ -51,8 +51,6 @@ pub enum SPPFNode<'a> {
         ret: ReturnMap<'a>,
         #[derivative(Hash(hash_with="crate::gss::GSSNode::hash_attributes"))]
         #[derivative(PartialEq(compare_with="crate::gss::GSSNode::cmp_attributes"))]
-        // #[derivative(Hash="ignore")]
-        // #[derivative(PartialEq="ignore")]
         /// Pointer to where the context of this slot can be found.
         ///
         /// During parsing, attributes are stored on an `GSSNode`. We'll call this specific node the "context".

@@ -75,7 +75,7 @@ impl CodeGen for SpannableNode<Symbol> {
 						0,
 						#rule_uuid
 					);
-					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer)?;
+					state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, cr, state.gss_pointer, false)?;
 				));
 				state.get_first(label)?[0].1 = Some(CharBytes::Epsilon);
 				gen_args.found_first = Some(true);
@@ -212,7 +212,7 @@ fn handle_terminal(t: SpannableNode<Terminal>, label: &Rc<Ident>, state: &mut Co
 			#pos,
 			#rule_uuid
 		);
-		state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer)?;
+		state.sppf_pointer = state.get_node_p(std::rc::Rc::new(slot), state.sppf_pointer, node, state.gss_pointer, false)?;
 	);
 	if !first_symbol {
 		stream.extend(quote!(

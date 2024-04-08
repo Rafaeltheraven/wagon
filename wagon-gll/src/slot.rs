@@ -34,7 +34,7 @@ impl<'a> PartialEq for GrammarSlot<'a> {
     	if self.is_complete() && other.is_complete() { // Any completed alt for a rule is the same.
     		self.label.to_string() == other.label.to_string()
     	} else {
-    		self.uuid == other.uuid && self.dot == other.dot && self.pos == other.pos
+    		Self::strict_comp(self, other)
     	}
     }
 }
@@ -44,9 +44,7 @@ impl<'a> Hash for GrammarSlot<'a> {
     	if self.is_complete() {
     		self.label.to_string().hash(state);
     	} else {
-    		self.uuid.hash(state);
-        	self.dot.hash(state);
-        	self.pos.hash(state);
+    		Self::strict_hash(self, state);
     	}
     }
 }
@@ -145,5 +143,15 @@ impl<'a> GrammarSlot<'a> {
 		let left_weight = self.weight(state)?;
 		let right_weight = other.weight(state)?;
 		left_weight.partial_cmp(&right_weight).map_or_else(|| Err(GLLImplementationError::ValueError(ValueError::ValueError(InnerValueError::ComparisonError(left_weight, right_weight)))), Ok)
+	}
+
+	pub(crate) fn strict_comp(orig: &Self, other: &Self) -> bool {
+		orig.uuid == other.uuid && orig.dot == other.dot && orig.pos == other.pos
+	}
+
+	pub(crate) fn strict_hash<H: Hasher>(cand: &Self, state: &mut H) {
+		cand.uuid.hash(state);
+    	cand.dot.hash(state);
+    	cand.pos.hash(state);
 	}
 }

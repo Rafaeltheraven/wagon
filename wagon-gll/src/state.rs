@@ -173,7 +173,7 @@ impl<'a> GLLState<'a> {
             let pop = std::mem::take(&mut self.pop); // scary again
             if let Some(nodes) = pop.get(&v) {
                 for sppf_node in nodes {
-                    let y = self.get_node_p(slot.clone(), self.sppf_pointer, *sppf_node, v)?;
+                    let y = self.get_node_p(slot.clone(), self.sppf_pointer, *sppf_node, v, v == self.gss_pointer)?;
                     self.add(
                         slot.clone(), 
                         self.gss_pointer, 
@@ -206,7 +206,7 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error either because something is inexplicably missing in one of the state datastructures, or because the weight evaluation failed.
-    pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex) -> ImplementationResult<'a, SPPFNodeIndex> {
+    pub fn get_node_p(&mut self, slot: Rc<GrammarSlot<'a>>, left: SPPFNodeIndex, right: SPPFNodeIndex, context_pointer: GSSNodeIndex, gss_cycle: bool) -> ImplementationResult<'a, SPPFNodeIndex> {
         if self.is_special_slot(&slot)? {
             Ok(right)
         } else {
@@ -223,8 +223,8 @@ impl<'a> GLLState<'a> {
             if matches!(left_node, SPPFNode::Dummy) {
                 let i = right_node.left_extend()?;
                 let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer)?;
-                if self.get_packed_node(node, &slot, i).is_none() {
-                    let packed = SPPFNode::Packed { slot, split: i, context: self.gss_pointer };
+                if (gss_cycle || right != node) && self.get_packed_node(node, &slot, i).is_none() {
+                    let packed = SPPFNode::Packed { slot, split: i, context: context_pointer };
                     let ix = self.sppf.add_node(packed);
                     self.sppf.add_edge(ix, right, None);
                     self.sppf.add_edge(node, ix, weight.transpose()?);
@@ -233,8 +233,8 @@ impl<'a> GLLState<'a> {
             } else {
                 let (i, k) = (left_node.left_extend()?, left_node.right_extend()?);
                 let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer)?;
-                if self.get_packed_node(node, &slot, k).is_none() {
-                    let packed = SPPFNode::Packed { slot, split: k, context: self.gss_pointer };
+                if (gss_cycle || (right != node && left != node)) && self.get_packed_node(node, &slot, k).is_none() {
+                    let packed = SPPFNode::Packed { slot, split: k, context: context_pointer };
                     let ix = self.sppf.add_node(packed);
                     self.sppf.add_edge(ix, left, None);
                     self.sppf.add_edge(ix, right, None);
@@ -294,12 +294,13 @@ impl<'a> GLLState<'a> {
     }
 
     fn find_or_create_sppf_intermediate(&mut self, slot: &Rc<GrammarSlot<'a>>, left: usize, right: usize, context_pointer: GSSNodeIndex) -> ImplementationResult<'a, SPPFNodeIndex> {
+        let context_node = self.get_gss_node(context_pointer)?.clone();
         let candidate = SPPFNode::Intermediate { 
             slot: slot.clone(), 
             left, 
             right, 
             ret: Vec::default(), 
-            context: self.get_gss_node(context_pointer)?.clone(),
+            context: context_node,
         };
         Ok(self.find_or_create_sppf(candidate))
     }
@@ -358,7 +359,7 @@ impl<'a> GLLState<'a> {
             let mut detached = self.gss.neighbors_directed(self.gss_pointer, Outgoing).detach();
             while let Some(edge) = detached.next_edge(&self.gss) {
                 let v = self.get_gss_edge_endpoints(edge)?.1;
-                let y = self.get_node_p(slot.clone(), *self.get_gss_edge_weight(edge)?, self.sppf_pointer, self.gss_pointer)?;
+                let y = self.get_node_p(slot.clone(), *self.get_gss_edge_weight(edge)?, self.sppf_pointer, self.gss_pointer, v == self.gss_pointer)?;
                 self.get_sppf_node_mut(y)?.add_ret_vals(&mut ret_vals.clone())?;
                 self.add(slot.clone(), v, self.input_pointer, y, self.gss_pointer);
             }
