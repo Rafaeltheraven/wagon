@@ -628,7 +628,7 @@ impl<'a> GLLState<'a> {
     /// Checks whether the current parser state has accepted the string
     #[must_use] 
     pub fn accepts(&self) -> bool {
-        self.find_roots_sppf().is_empty()
+        !self.find_roots_sppf().is_empty()
     }
 
     /// Checks whether the parser is accepting. If it isn't, and no errors were encountered, add an error.
