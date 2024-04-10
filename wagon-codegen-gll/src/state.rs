@@ -478,6 +478,9 @@ impl CodeGenState {
 			            wagon_utils::handle_error(real_errors, input_file_str, &content_string, offset).unwrap()
 			        }
 			    } else {
+			    	if state.errors.is_empty() {
+			            state.errors.push(wagon_gll::GLLError::ImplementationError(wagon_gll::GLLImplementationError::Fatal("The parser does not accept the input, but no errors were encountered.")))
+			        }
 			        wagon_utils::handle_error(state.errors, input_file_str, &content_string, offset).unwrap()
 			    }
     		}
