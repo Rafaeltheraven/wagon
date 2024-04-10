@@ -63,3 +63,6 @@ Reason is that this conflicts with rewrites of (), which require all passed argu
 We know if GSS cycles exist. A GSS cycle implies left-recursion and thus a SPPF cycle. As such, if now GSS cycle exist, we should also not allow SPPF cycles.
 In get_node_p, we pass whether this is a GSS cycle and if it isn't, we disallow packed nodes that would cause an SPPF cycle.
 The reason we need to do this is because of attributes. Attributes can cause a GSS cycle to not occur, but an SPPF cycle to occur. We need to catch this case.
+
+In original GLL, when getting a packed node, given a parent and a specific packed node for a specific alternative, it must always have specific children. As such, when checking for duplicates, we only have to check the parent, slot and split. With attributes however, the children may also be different, because of the attribute values stored there, so we much check the children as well to see if this would be a duplicate packed node.
+We do know however, that the children are unique given their attribute state. As such, we can define equality to be strict (literally the same thing, as opposed to just the same values).

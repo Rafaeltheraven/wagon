@@ -68,7 +68,8 @@ pub enum SPPFNode<'a> {
         /// At what point of the input string this split occurs.
     	split: usize,
         /// Pointer to the context at this split.
-        context: GSSNodeIndex
+        left: Option<SPPFNodeIndex>,
+        right: SPPFNodeIndex
     },
 }
 

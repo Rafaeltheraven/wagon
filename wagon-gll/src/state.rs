@@ -189,10 +189,10 @@ impl<'a> GLLState<'a> {
     }
 
     /// Try finding a packed node that is a child of `parent` and matches `ref_slot` and `i`.
-    fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: &Rc<GrammarSlot<'a>>, i: usize) -> Option<SPPFNodeIndex> {
+    fn get_packed_node(&self, parent: SPPFNodeIndex, ref_slot: &Rc<GrammarSlot<'a>>, i: usize, l: Option<SPPFNodeIndex>, r: SPPFNodeIndex) -> Option<SPPFNodeIndex> {
         for child in self.sppf.neighbors_directed(parent, Outgoing) {
             match self.sppf.node_weight(child) {
-                Some(SPPFNode::Packed { slot, split, .. }) if slot == ref_slot && *split == i => return Some(child),
+                Some(SPPFNode::Packed { slot, split, left, right }) if slot == ref_slot && *split == i && *left == l && *right == r => return Some(child),
                 _ => {} 
             }
         }
@@ -201,7 +201,7 @@ impl<'a> GLLState<'a> {
 
     /// Find or create an [`SPPFNode::Packed`].
     ///
-    /// This is `get_node_p` from the original paper. Differently from that paper, this also takes a `context_pointer`, which tells the packed node we are
+    /// This is `get_node_p` from the original paper. Differently from that paper, this also takes a `context_pointer`, which tells the intermediate node we are
     /// retrieving/creating where it can find it's context.
     ///
     /// # Errors
@@ -223,8 +223,8 @@ impl<'a> GLLState<'a> {
             if matches!(left_node, SPPFNode::Dummy) {
                 let i = right_node.left_extend()?;
                 let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer)?;
-                if (gss_cycle || right != node) && self.get_packed_node(node, &slot, i).is_none() {
-                    let packed = SPPFNode::Packed { slot, split: i, context: context_pointer };
+                if (gss_cycle || right != node) && self.get_packed_node(node, &slot, i, None, right).is_none() {
+                    let packed = SPPFNode::Packed { slot, split: i, left: None, right };
                     let ix = self.sppf.add_node(packed);
                     self.sppf.add_edge(ix, right, None);
                     self.sppf.add_edge(node, ix, weight.transpose()?);
@@ -233,8 +233,8 @@ impl<'a> GLLState<'a> {
             } else {
                 let (i, k) = (left_node.left_extend()?, left_node.right_extend()?);
                 let node = self.find_or_create_sppf_intermediate(&t, i, j, context_pointer)?;
-                if (gss_cycle || (right != node && left != node)) && self.get_packed_node(node, &slot, k).is_none() {
-                    let packed = SPPFNode::Packed { slot, split: k, context: context_pointer };
+                if (gss_cycle || (right != node && left != node)) && self.get_packed_node(node, &slot, k, Some(left), right).is_none() {
+                    let packed = SPPFNode::Packed { slot, split: k, left: Some(left), right };
                     let ix = self.sppf.add_node(packed);
                     self.sppf.add_edge(ix, left, None);
                     self.sppf.add_edge(ix, right, None);
