@@ -628,7 +628,19 @@ impl<'a> GLLState<'a> {
     /// Checks whether the current parser state has accepted the string
     #[must_use] 
     pub fn accepts(&self) -> bool {
-        !self.find_roots_sppf().is_empty()
+        self.find_roots_sppf().is_empty()
+    }
+
+    /// Checks whether the parser is accepting. If it isn't, and no errors were encountered, add an error.
+    ///
+    /// This is the method you should use at the end to fully confirm whether the state is accepting.
+    #[must_use] 
+    pub fn final_accepts(&mut self) -> bool {
+        let success = self.accepts();
+        if !success && self.errors.is_empty() {
+            self.errors.push(GLLError::ImplementationError(GLLImplementationError::Fatal("Parser is not accepting, but no errors were encountered.")));
+        }
+        success
     }
 
     fn find_roots_sppf(&self) -> Vec<SPPFNodeIndex> {

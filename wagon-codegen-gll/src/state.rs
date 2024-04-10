@@ -466,7 +466,7 @@ impl CodeGenState {
 			        Err(e) => println!("Error: {e}"),
 			    }
 			    let offset = content_string.len() - contents.len();
-			    if state.accepts() {
+			    if state.final_accepts() {
 			        let mut real_errors = Vec::new();
 			        for error in state.errors {
 			            match error {
@@ -478,9 +478,6 @@ impl CodeGenState {
 			            wagon_utils::handle_error(real_errors, input_file_str, &content_string, offset).unwrap()
 			        }
 			    } else {
-			    	if state.errors.is_empty() {
-			            state.errors.push(wagon_gll::GLLError::ImplementationError(wagon_gll::GLLImplementationError::Fatal("The parser does not accept the input, but no errors were encountered.")))
-			        }
 			        wagon_utils::handle_error(state.errors, input_file_str, &content_string, offset).unwrap()
 			    }
     		}
