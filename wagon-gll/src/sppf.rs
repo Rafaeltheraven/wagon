@@ -2,7 +2,7 @@ use std::{rc::Rc, str::from_utf8, collections::{HashMap, HashSet}, ops::{DerefMu
 use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}, Incoming, Outgoing, visit::EdgeRef};
 use derivative::Derivative;
 
-use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::{GSSNode, GSSNodeIndex}, ImplementationResult, GLLImplementationError, ProcessResult, GLLProcessError};
+use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::GSSNode, ImplementationResult, GLLImplementationError, ProcessResult, GLLProcessError};
 
 use wagon_value::Valueable;
 
@@ -67,8 +67,9 @@ pub enum SPPFNode<'a> {
     	slot: Rc<GrammarSlot<'a>>, 
         /// At what point of the input string this split occurs.
     	split: usize,
-        /// Pointer to the context at this split.
+        /// Pointer to the left child of this node. `None` if it only has 1 child.
         left: Option<SPPFNodeIndex>,
+        /// Pointer to the right child of this node.
         right: SPPFNodeIndex
     },
 }
