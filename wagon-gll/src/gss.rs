@@ -35,8 +35,8 @@ impl<'a> GSSNode<'a> {
 
 	/// Represent the GSS node in the format `[{self.slot}, {self.inp_pointer}]`.
 	#[must_use] 
-	pub fn to_string(&self, state: &GLLState<'a>) -> String {
-		format!("[{},{}]", self.slot.to_string(state), self.inp_pointer)
+	pub fn to_string(&self, state: &GLLState<'a>, math_mode: bool) -> String {
+		format!("[{},{}]", self.slot.to_string(state, math_mode), self.inp_pointer)
 	}
 
 	/// Get an attribute from the attributes list.

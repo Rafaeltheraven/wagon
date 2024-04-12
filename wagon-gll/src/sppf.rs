@@ -1,5 +1,5 @@
 use std::{rc::Rc, str::from_utf8, collections::{HashMap, HashSet}, ops::{DerefMut, Deref}};
-use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}, Incoming, Outgoing, visit::EdgeRef};
+use petgraph::{Graph, Directed, graph::{DefaultIx, NodeIndex}, Outgoing, visit::EdgeRef};
 use derivative::Derivative;
 
 use crate::{state::GLLState, value::Value, AttributeKey, ReturnMap, gss::GSSNode, ImplementationResult, GLLImplementationError, ProcessResult, GLLProcessError};
@@ -90,12 +90,16 @@ impl<'a> SPPFNode<'a> {
         }
     }
 
-    pub(crate) fn to_string(&self, state: &GLLState<'a>) -> ImplementationResult<'a, String> {
+    pub(crate) fn to_string(&self, state: &GLLState<'a>, math_mode: bool) -> ImplementationResult<'a, String> {
         Ok(match self {
             SPPFNode::Dummy => "D".to_string(),
             SPPFNode::Symbol { terminal, left, right } => {
                 let term = if terminal.is_empty() {
-                    "ε"
+                    if math_mode {
+                        "$\\epsilon$"
+                    } else {
+                        "ε"
+                    }
                 } else {
                     from_utf8(terminal)?.trim_start()
                 };
@@ -111,7 +115,7 @@ impl<'a> SPPFNode<'a> {
                 let label = state.get_label(&slot.rule[dot]);
                 let (from_ret, from_ctx) = label.attr_rep_map();
                 let ret_len = from_ret.len();
-                let slot_str = slot.to_string(state);
+                let slot_str = slot.to_string(state, math_mode);
                 for (i, attr) in from_ctx.iter().enumerate() {
                     attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLImplementationError::MissingContext(i + ret_len, context.clone()))?);
                 }
@@ -131,7 +135,7 @@ impl<'a> SPPFNode<'a> {
                 attr_rep.pop();
                 format!("({slot_str},{left},{right},<{attr_rep}>)")
             },
-            SPPFNode::Packed { slot, split, .. } => format!("({}, {})", slot.to_string(state), split),
+            SPPFNode::Packed { slot, split, .. } => format!("({}, {})", slot.to_string(state, math_mode), split),
         })
     }
 
@@ -185,14 +189,13 @@ impl<'a> SPPF<'a> {
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
     /// This should be fundamentally impossible.
     #[must_use] 
-    pub fn find_accepting_roots(&self, input_target: Option<usize>) -> Vec<SPPFNodeIndex> {
+    pub fn find_accepting_roots(&self, input_target: Option<usize>, uuid: &str) -> Vec<SPPFNodeIndex> {
         let mut roots = Vec::new();
         for ix in self.0.node_indices() {
             #[allow(clippy::expect_used)]
             let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
-            let has_parents = self.0.neighbors_directed(ix, Incoming).next().is_some();
             match node {
-                SPPFNode::Intermediate { slot, left, right, .. } if !has_parents && slot.dot == slot.rule.len()+1 && left == &0 && (input_target.is_none() || input_target.is_some_and(|x| &x <= right)) => roots.push(ix),
+                SPPFNode::Intermediate { slot, left, right, .. } if slot.label.uuid() == uuid && slot.is_complete() && left == &0 && (input_target.is_none() || input_target.is_some_and(|x| &x <= right)) => roots.push(ix),
                 _ => {}
             }
         }
@@ -220,13 +223,13 @@ impl<'a> SPPF<'a> {
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
     /// This should be fundamentally impossible.
-    pub fn to_dot(&self, state: &GLLState<'a>) -> ImplementationResult<'a, String>  {
+    pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool) -> ImplementationResult<'a, String>  {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {
             #[allow(clippy::expect_used)]
             let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
-            res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(state)?, node.dot_shape()));
+            res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(state, math_mode)?, node.dot_shape()));
             for edge in self.0.edges_directed(ix, Outgoing) {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));

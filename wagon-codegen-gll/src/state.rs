@@ -449,10 +449,15 @@ impl CodeGenState {
 			            clap::arg!(--"no-crop" "Don't crop resulting sppf")
 			                .num_args(0)
 			        )
+			        .arg(
+			        	clap::arg!(--"math-mode" "Print SPPF dot labels in Latex math-mode representation")
+			        	.num_args(0)
+			        )
 			        .get_matches();
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
 			    let input_file_str = Box::leak(input_file.to_str().unwrap().into());
 			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
+			    let math_mode = *args.get_one::<bool>("math-mode").unwrap_or(&false);
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
 			    let contents: &'static [u8] = Box::leak(content_string.trim().as_bytes().into()); // This is required to tell Rust the input data lasts forever.
     			let mut label_map: wagon_gll::LabelMap = std::collections::HashMap::with_capacity(#label_len);
@@ -461,7 +466,7 @@ impl CodeGenState {
     			#body
     			let mut state = wagon_gll::GLLState::init(contents, label_map, rule_map, regex_map).unwrap();
     			state.main();
-			    match state.print_sppf_dot(crop) {
+			    match state.print_sppf_dot(crop, math_mode) {
 			        Ok(t) => println!("{t}"),
 			        Err(e) => println!("Error: {e}"),
 			    }

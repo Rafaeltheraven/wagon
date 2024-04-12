@@ -85,20 +85,28 @@ impl<'a> GrammarSlot<'a> {
 	///
 	/// For example, `S -> A•B` if `self.label = S`, `self.rule = [A, B]` and `self.dot = 1`. 
 	#[must_use] 
-	pub fn to_string(&self, state: &GLLState<'a>) -> String {
+	pub fn to_string(&self, state: &GLLState<'a>, math_mode: bool) -> String {
 		let mut res = String::new();
 		res.push_str(self.label.to_string());
 		if self.dot == self.len() + 1 {
 			return res
 		}
-		res.push_str(" -> ");
+		if math_mode {
+			res.push_str(" $\\rightarrow$ ");
+		} else {
+			res.push_str(" -> ");
+		}
 		for (i, r) in self.rule.iter().enumerate() {
 			let label = state.get_label(r);
 			if i == self.dot {
 				let parts = label.str_parts();
 				for (j, s) in parts.iter().enumerate() {
 					if j == self.pos {
-						res.push('•');
+						if math_mode {
+							res.push_str("$\\cdot$");
+						} else {
+							res.push('•');
+						}
 						res.push(' ');
 					}
 					res.push_str(s);
@@ -110,7 +118,11 @@ impl<'a> GrammarSlot<'a> {
 			}
 		}
 		if self.is_last(state) {
-			res.push('•');
+			if math_mode {
+				res.push_str("$\\cdot$");
+			} else {
+				res.push('•');
+			}
 		};
 		res.trim_end().to_owned()
 	}

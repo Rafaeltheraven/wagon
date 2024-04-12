@@ -578,7 +578,7 @@ impl<'a> GLLState<'a> {
     }
 
     fn get_current_label_slot(&self, slot: &GrammarSlot<'a>) -> ImplementationResult<'a, GLLBlockLabel<'a>> {
-        Ok(self.get_label(slot.rule.get(slot.dot).ok_or_else(|| GLLImplementationError::CompletedSlot(slot.to_string(self)))?))
+        Ok(self.get_label(slot.rule.get(slot.dot).ok_or_else(|| GLLImplementationError::CompletedSlot(slot.to_string(self, false)))?))
     }
 
     /// The goto function of the OOGLL paper.
@@ -612,11 +612,11 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns a [`GLLImplementationError::Utf8Error`] if there is non-utf8 data anywhere in the SPPF.
-    pub fn print_sppf_dot(&mut self, crop: bool) -> ImplementationResult<'a, String> {
+    pub fn print_sppf_dot(&mut self, crop: bool, math_mode: bool) -> ImplementationResult<'a, String> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());
         }
-        self.sppf.to_dot(self)
+        self.sppf.to_dot(self, math_mode)
     }
 
     /// Print current GSS graph in graphviz format
@@ -643,7 +643,11 @@ impl<'a> GLLState<'a> {
         success
     }
 
+    #[allow(clippy::expect_used)]
     fn find_roots_sppf(&self) -> Vec<SPPFNodeIndex> {
-        self.sppf.find_accepting_roots(Some(self.input.len()))
+        let s_p = self.label_map.get(ROOT_UUID).expect("S' label not found in state. Should be impossible.");
+        let start_label = s_p.first_set(self).expect("Unable to get root uuid from S'. Should be impossible.");
+        let uuid = start_label[0].0[0].uuid();
+        self.sppf.find_accepting_roots(Some(self.input.len()), uuid)
     }
 }
