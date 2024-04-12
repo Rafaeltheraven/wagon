@@ -1,4 +1,4 @@
-use std::{collections::{HashSet, HashMap}, rc::Rc, format, usize};
+use std::{collections::{HashSet, HashMap}, rc::Rc, usize};
 
 use indexmap::IndexSet;
 use petgraph::{Direction::Outgoing, prelude::EdgeIndex};
@@ -113,7 +113,7 @@ impl<'a> GLLState<'a> {
     /// Returns [`GLLImplementationError::MissingRoot`] if no data was found in the `label_map` or `rule_map` for [`ROOT_UUID`]. 
     pub fn init(input: &'a [u8], label_map: LabelMap<'a>, rule_map: RuleMap<'a>, regex_map: RegexMap<'a>) -> ImplementationResult<'a, Self> {
         let mut sppf = SPPF::default();
-        let mut gss = GSS::new();
+        let mut gss = GSS::default();
         let mut sppf_map = HashMap::new();
         let mut gss_map = HashMap::new();
         let root_slot = Rc::new(GrammarSlot::new(label_map.get(ROOT_UUID).ok_or(GLLImplementationError::MissingRoot)?.clone(), rule_map.get(ROOT_UUID).ok_or(GLLImplementationError::MissingRoot)?.clone(), 0, 0, ROOT_UUID));
@@ -268,7 +268,7 @@ impl<'a> GLLState<'a> {
         self.get_sppf_node(self.sppf_pointer)
     }
 
-    fn get_sppf_node(&self, i: SPPFNodeIndex) -> ImplementationResult<'a, &SPPFNode<'a>> {
+    pub(crate) fn get_sppf_node(&self, i: SPPFNodeIndex) -> ImplementationResult<'a, &SPPFNode<'a>> {
         self.sppf.node_weight(i).ok_or_else(|| GLLImplementationError::MissingSPPFNode(i))
     }
 
@@ -620,9 +620,11 @@ impl<'a> GLLState<'a> {
     }
 
     /// Print current GSS graph in graphviz format
-    #[must_use] 
-    pub fn print_gss_dot(&self) -> String {
-        format!("{:?}", petgraph::dot::Dot::new(&self.gss))
+    ///
+    /// # Errors
+    /// Return a [`GLLImplementationError::Fatal`] if it is unable to find an SPPF node stored on an edge.
+    pub fn print_gss_dot(&self, math_mode: bool) -> ImplementationResult<'a, String> {
+        self.gss.to_dot(self, math_mode)
     }
     
     /// Checks whether the current parser state has accepted the string

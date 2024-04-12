@@ -1,3 +1,6 @@
+use petgraph::visit::EdgeRef;
+use petgraph::Outgoing;
+use crate::ImplementationResult;
 use std::{rc::Rc, hash::{Hash, Hasher}, format};
 
 use petgraph::{Graph, graph::{DefaultIx, NodeIndex}, Directed};
@@ -13,7 +16,10 @@ type GSSIx = DefaultIx;
 /// A [`petgraph::Graph`] representing the GSS.
 ///
 /// This is a directed graph with [`GSSNode`]s on the vertices, and [`SPPFNodeIndex`] on the edges.
-pub type GSS<'a> = Graph<Rc<GSSNode<'a>>, SPPFNodeIndex, Directed, GSSIx>;
+pub type GSSGraph<'a> = Graph<Rc<GSSNode<'a>>, SPPFNodeIndex, Directed, GSSIx>;
+#[derive(Debug, Clone)]
+/// A struct around the [`GSSGraph`] so that we can define functions for it.
+pub struct GSS<'a>(GSSGraph<'a>);
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 /// The data for the vertices on the [`GSS`].
@@ -59,5 +65,54 @@ impl<'a> GSSNode<'a> {
 	/// Call [`Hash::hash`] on the attributes only.
 	pub(crate) fn hash_attributes<H: Hasher>(cand: &Self, state: &mut H) {
 		cand.attributes.hash(state);
+	}
+}
+
+impl<'a> std::ops::Deref for GSS<'a> { // This is fine because every GSS is a graph, so methods can be safely passed along
+    type Target = GSSGraph<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> std::ops::DerefMut for GSS<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a> Default for GSS<'a> {
+    fn default() -> Self {
+        Self(GSSGraph::new())
+    }
+}
+
+impl<'a> GSS<'a> {
+	/// Convert the [`GSS`] to `.dot` representation.
+    ///
+    /// # Errors
+    /// This method will return a [`GLLImplementationError`] if it fails to represent a [`SPPFNode`] stored on an edge properly.
+    ///
+    /// # Panics
+    /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
+    /// This should be fundamentally impossible.
+	pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool) -> ImplementationResult<'a, String> {
+		let mut res = String::new();
+		res.push_str("digraph {\n");
+		for ix in self.0.node_indices() {
+			#[allow(clippy::expect_used)]
+            let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
+            res.push_str(&format!("{} [label=\"{}\"]\n", ix.index(), node.to_string(state, math_mode)));
+            for edge in self.0.edges_directed(ix, Outgoing) {
+                let child = edge.target();
+                res.push_str(&format!("{} -> {}", ix.index(), child.index()));
+                let sppf_node = edge.weight();
+                res.push_str(&format!(" [label=\"{}\"]", state.get_sppf_node(*sppf_node)?.to_string(state, math_mode)?));
+                res.push('\n');
+            }
+		}
+		res.push('}');
+		Ok(res)
 	}
 }
