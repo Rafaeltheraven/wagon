@@ -76,6 +76,11 @@ impl Ident {
         };
         proc_macro2::Ident::new(&text, proc_macro2::Span::call_site())
     }
+
+    /// Converts the Ident (whatever it is) into a synthesized ident with the same name.
+    pub fn to_synth(&self) -> Self {
+        Ident::Synth(self.extract_string().to_string())
+    }
 }
 
 impl From<&str> for Ident {
