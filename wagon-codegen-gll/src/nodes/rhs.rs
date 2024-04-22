@@ -52,7 +52,6 @@ impl CodeGen for SpannableNode<Rhs> {
                     gen_args.state.add_attribute_mapping(label.clone(), arg, quote!( 
                         let #proc_ident = state.get_attribute(#k)?.to_owned();
                     ));
-                    gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                 } else {
                     let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
                     if let Some(pos) = prev_args.iter().position(|x| x == arg) { // If this attribute was used in whatever NT came before this one.
@@ -65,15 +64,14 @@ impl CodeGen for SpannableNode<Rhs> {
                             }.to_owned();
                         ));
                         gen_args.state.add_ret_attr(label.clone(), arg.to_string());
-                        gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                     } else {
                         // The attribute can only come from the context.
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
                             let #proc_ident = state.restore_attribute(#skipped_k)?.clone();
                         ));
-                        gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                     }
                 }
+                gen_args.state.add_ctx_attr(label.clone(), arg.to_string()); // Regardless, we add it as a ctx attribute
             }
             gen_args.block = Some(j);
             gen_args.label = Some(label.clone());
