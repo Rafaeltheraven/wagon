@@ -78,8 +78,9 @@ impl Ident {
     }
 
     /// Converts the Ident (whatever it is) into a synthesized ident with the same name.
+    #[must_use] 
     pub fn to_synth(&self) -> Self {
-        Ident::Synth(self.extract_string().to_string())
+        Self::Synth(self.extract_string().to_string())
     }
 }
 
