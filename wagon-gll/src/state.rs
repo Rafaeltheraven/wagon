@@ -160,14 +160,7 @@ impl<'a> GLLState<'a> {
     /// Returns a [`GLLParseError`] if something unexpected happens.
     pub fn create(&mut self, slot: &Rc<GrammarSlot<'a>>, args: AttributeMap<'a>) -> ImplementationResult<'a, GSSNodeIndex> {
         let candidate = GSSNode::new(slot.clone(), self.input_pointer, args);
-        let v = if let Some(i) = self.gss_map.get(&candidate) {
-            i.to_owned()
-        } else {
-            let rc = Rc::new(candidate);
-            let i = self.gss.add_node(rc.clone());
-            self.gss_map.insert(rc, i);
-            i
-        };
+        let v = self.find_or_create_gss_node(candidate);
         if self.gss.find_edge(v, self.gss_pointer).is_none() {
             self.gss.add_edge(v, self.gss_pointer, self.sppf_pointer);
             let pop = std::mem::take(&mut self.pop); // scary again
@@ -305,6 +298,17 @@ impl<'a> GLLState<'a> {
         Ok(self.find_or_create_sppf(candidate))
     }
 
+    fn find_or_create_gss_node(&mut self, node: GSSNode<'a>) -> GSSNodeIndex {
+        if let Some(i) = self.gss_map.get(&node) {
+            i.to_owned()
+        } else {
+            let rc = Rc::new(node);
+            let i = self.gss.add_node(rc.clone());
+            self.gss_map.insert(rc, i);
+            i
+        }
+    }
+
     /// Creates/Returns the index of an [`SPPFNode`].
     ///
     /// If a vertex with the exact same data as `candidate` already exists in the SPPF, we return that vertex. 
@@ -347,7 +351,15 @@ impl<'a> GLLState<'a> {
     ///
     /// # Errors
     /// Returns an error for the same reasons as [`GLLState::get_node_p`].
-    pub fn pop(&mut self, ret_vals: &ReturnMap<'a>) -> ImplementationResult<'a, ()> {
+    pub fn pop(&mut self, ret_vals: &ReturnMap<'a>, attrs: AttributeMap<'a>) -> ImplementationResult<'a, ()> {
+        let slot = self.get_current_gss_node()?.slot.clone();
+        let ctx_node = self.find_or_create_gss_node(GSSNode::new(slot.clone(), self.input_pointer, attrs.clone()));
+        let ctx = self.get_gss_node(ctx_node)?.clone();
+        let curr_sppf = self.get_sppf_node_mut(self.sppf_pointer)?;
+        match curr_sppf {
+            SPPFNode::Intermediate { context, .. } => *context = ctx, // Values may still have changed
+            _ => {},
+        }
         if self.gss_pointer != self.gss_root {
             if let Some(map) = self.pop.get_mut(&self.gss_pointer) {
                 map.push(self.sppf_pointer); 
@@ -355,12 +367,11 @@ impl<'a> GLLState<'a> {
                 let map = vec![self.sppf_pointer];
                 self.pop.insert(self.gss_pointer, map);
             }
-            let slot = self.get_current_gss_node()?.slot.clone();
             let mut detached = self.gss.neighbors_directed(self.gss_pointer, Outgoing).detach();
             while let Some(edge) = detached.next_edge(&self.gss) {
                 let v = self.get_gss_edge_endpoints(edge)?.1;
                 let y = self.get_node_p(slot.clone(), *self.get_gss_edge_weight(edge)?, self.sppf_pointer, self.gss_pointer, v == self.gss_pointer)?;
-                self.get_sppf_node_mut(y)?.add_ret_vals(&mut ret_vals.clone())?;
+                self.get_sppf_node_mut(y)?.insert_ret_vals(ret_vals.clone())?;
                 self.add(slot.clone(), v, self.input_pointer, y, self.gss_pointer);
             }
         }
@@ -616,7 +627,7 @@ impl<'a> GLLState<'a> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());
         }
-        self.sppf.to_dot(self, math_mode)
+        self.sppf.to_dot(self, math_mode, self.find_roots_sppf()) // Need to recalculate due to crop
     }
 
     /// Print current GSS graph in graphviz format

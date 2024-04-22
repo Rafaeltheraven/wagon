@@ -107,21 +107,23 @@ impl<'a> SPPFNode<'a> {
             },
             SPPFNode::Intermediate { slot, left, right, ret, context } => {
                 let mut attr_map: HashMap<&str, &Value> = HashMap::new();
-                let dot = if slot.is_complete() {
+                let is_complete = slot.is_complete();
+                let dot = if is_complete {
                     slot.dot - 2
                 } else {
                     slot.dot
                 };
                 let label = state.get_label(&slot.rule[dot]);
                 let (from_ret, from_ctx) = label.attr_rep_map();
-                let ret_len = from_ret.len();
                 let slot_str = slot.to_string(state, math_mode);
                 for (i, attr) in from_ctx.iter().enumerate() {
-                    attr_map.insert(attr, context.get_attribute(i + ret_len).ok_or_else(|| GLLImplementationError::MissingContext(i + ret_len, context.clone()))?);
+                    attr_map.insert(attr, context.get_attribute(i).ok_or_else(|| GLLImplementationError::MissingContext(i, context.clone()))?);
                 }
-                for (i, attr) in from_ret.iter().enumerate() {
-                    if let Some(Some(v)) = ret.get(i) {
-                        attr_map.insert(attr, v);
+                if !is_complete {
+                    for (i, attr) in from_ret.iter().enumerate() {
+                        if let Some(Some(v)) = ret.get(i) {
+                            attr_map.insert(attr, v);
+                        }
                     }
                 }
                 let mut attr_rep: String = attr_map
@@ -156,9 +158,9 @@ impl<'a> SPPFNode<'a> {
         }
     }
 
-    pub(crate) fn add_ret_vals(&mut self, atts: &mut ReturnMap<'a>) -> ImplementationResult<'a, ()> {
+    pub(crate) fn insert_ret_vals(&mut self, atts: ReturnMap<'a>) -> ImplementationResult<'a, ()> {
         match self {
-            SPPFNode::Intermediate { ret, .. } => {ret.append(atts); Ok(())},
+            SPPFNode::Intermediate { ret, .. } => {*ret = atts; Ok(())},
             other => Err(GLLImplementationError::IncorrectSPPFType(vec!["Intermediate"], std::mem::discriminant(other)))
         }
     }
@@ -223,13 +225,20 @@ impl<'a> SPPF<'a> {
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
     /// This should be fundamentally impossible.
-    pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool) -> ImplementationResult<'a, String>  {
+    pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool, roots: Vec<SPPFNodeIndex>) -> ImplementationResult<'a, String>  {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {
             #[allow(clippy::expect_used)]
             let node = self.0.node_weight(ix).expect("Getting node from graph by index returned by graph itself. Should be impossible to fail");
-            res.push_str(&format!("{} [label=\"{}\" shape={}]\n", ix.index(), node.to_string(state, math_mode)?, node.dot_shape()));
+            let rank = if roots.contains(&ix) {
+                "max"
+            } else if matches!(node, SPPFNode::Symbol { .. }) {
+                "min"
+            } else {
+                "same"
+            };
+            res.push_str(&format!("{} [label=\"{}\" shape={} rank=\"{rank}\"]\n", ix.index(), node.to_string(state, math_mode)?, node.dot_shape()));
             for edge in self.0.edges_directed(ix, Outgoing) {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));

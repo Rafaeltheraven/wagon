@@ -108,7 +108,12 @@ impl<'a> GSS<'a> {
                 let child = edge.target();
                 res.push_str(&format!("{} -> {}", ix.index(), child.index()));
                 let sppf_node = edge.weight();
-                res.push_str(&format!(" [label=\"{}\"]", state.get_sppf_node(*sppf_node)?.to_string(state, math_mode)?));
+                let label = if let Ok(n) = state.get_sppf_node(*sppf_node) {
+                	n.to_string(state, math_mode)? 
+                } else {
+                	"PRUNED".to_string()
+                };
+                res.push_str(&format!(" [label=\"{}\"]", label));
                 res.push('\n');
             }
 		}
