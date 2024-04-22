@@ -30,7 +30,6 @@ pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut wag = parser.parse()?;
     let mut state = FirstPassState::default();
     wag.rewrite(0, &mut state)?;
-    println!("{wag}");
     Ok(wag)
 }
 

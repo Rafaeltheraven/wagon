@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use crate::{firstpass::{GetReqAttributes, ReqAttributes, Rewrite, RewriteToSynth}, WrapSpannable};
+use crate::{firstpass::{GetReqAttributes, ReqAttributes, RewriteToSynth}, WrapSpannable};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, ResultNext};
 use wagon_lexer::math::Math;

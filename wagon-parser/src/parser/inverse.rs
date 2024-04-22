@@ -47,8 +47,8 @@ impl GetReqAttributes for Inverse {
 impl RewriteToSynth for Inverse {
     fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
         match self {
-            Inverse::Not(i) => i.rewrite_to_synth(),
-            Inverse::Comparison(c) => c.rewrite_to_synth(),
+            Self::Not(i) => i.rewrite_to_synth(),
+            Self::Comparison(c) => c.rewrite_to_synth(),
         }
     }
 }

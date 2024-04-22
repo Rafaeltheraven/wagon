@@ -65,8 +65,8 @@ impl Expression {
 impl RewriteToSynth for Expression {
     fn rewrite_to_synth(&mut self) -> ReqAttributes {
         match self {
-		    Expression::Subproc(_) => ReqAttributes::new(),
-		    Expression::If { this, then, r#else } => {
+		    Self::Subproc(_) => ReqAttributes::new(),
+		    Self::If { this, then, r#else } => {
 		    	let mut req = this.rewrite_to_synth();
 		    	req.extend(then.rewrite_to_synth());
 		    	if let Some(cont) = r#else {
@@ -74,7 +74,7 @@ impl RewriteToSynth for Expression {
 		    	}
 		    	req
 		    },
-		    Expression::Disjunct(d) => d.rewrite_to_synth(),
+		    Self::Disjunct(d) => d.rewrite_to_synth(),
 		}
     }
 }

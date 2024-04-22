@@ -2,7 +2,7 @@
 use crate::firstpass::GetReqAttributes;
 use crate::firstpass::ReqAttributes;
 use crate::firstpass::RewriteToSynth;
-use crate::parser::{Span, Spannable};
+use crate::parser::Span;
 use std::fmt::Display;
 use std::write;
 
