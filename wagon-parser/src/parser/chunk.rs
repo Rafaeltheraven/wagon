@@ -237,7 +237,7 @@ impl Chunk {
         }
         match new_rule.to_inner_mut() {
             Rule::Analytic(_, v, _) | Rule::Generate(_, v, _) => {
-                let _ = std::mem::replace(v, as_synth.clone()); // Inject the new calling args.
+                *v = as_synth.clone();
             },
             _ => {}
         }

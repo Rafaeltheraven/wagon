@@ -1,7 +1,7 @@
 use wagon_macros::TokenMapper;
 use std::{fmt::Display, write};
 
-use crate::firstpass::GetReqAttributes;
+use crate::firstpass::{GetReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
@@ -90,6 +90,26 @@ impl GetReqAttributes for TermP {
         let mut req = self.right.get_req_attributes();
         if let Some(cont) = &self.cont {
             req.extend(cont.get_req_attributes());
+        }
+        req
+    }
+}
+
+impl RewriteToSynth for Term {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.left.rewrite_to_synth();
+        if let Some(cont) = &mut self.cont {
+            req.extend(cont.rewrite_to_synth());
+        }
+        req
+    }
+}
+
+impl RewriteToSynth for TermP {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.right.rewrite_to_synth();
+        if let Some(cont) = &mut self.cont {
+            req.extend(cont.rewrite_to_synth());
         }
         req
     }

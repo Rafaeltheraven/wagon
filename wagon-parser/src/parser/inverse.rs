@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use crate::firstpass::GetReqAttributes;
+use crate::firstpass::{GetReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, Peek};
 
@@ -44,10 +44,19 @@ impl GetReqAttributes for Inverse {
     }
 }
 
+impl RewriteToSynth for Inverse {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        match self {
+            Inverse::Not(i) => i.rewrite_to_synth(),
+            Inverse::Comparison(c) => c.rewrite_to_synth(),
+        }
+    }
+}
+
 impl Display for Inverse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Not(i) => write!(f, "not {i}"),
+            Self::Not(i) => write!(f, "!{i}"),
             Self::Comparison(c) => write!(f, "{c}"),
         }
     }

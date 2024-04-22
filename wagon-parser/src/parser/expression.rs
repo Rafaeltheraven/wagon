@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use crate::firstpass::{GetReqAttributes, ReqAttributes};
+use crate::firstpass::{GetReqAttributes, ReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, SpannableNode, ResultPeek, ResultNext};
 use wagon_lexer::math::Math;
@@ -60,6 +60,23 @@ impl Expression {
 		};
 		Ok(Self::If { this, then, r#else })
 	}
+}
+
+impl RewriteToSynth for Expression {
+    fn rewrite_to_synth(&mut self) -> ReqAttributes {
+        match self {
+		    Expression::Subproc(_) => ReqAttributes::new(),
+		    Expression::If { this, then, r#else } => {
+		    	let mut req = this.rewrite_to_synth();
+		    	req.extend(then.rewrite_to_synth());
+		    	if let Some(cont) = r#else {
+		    		req.extend(cont.node.rewrite_to_synth());
+		    	}
+		    	req
+		    },
+		    Expression::Disjunct(d) => d.rewrite_to_synth(),
+		}
+    }
 }
 
 impl GetReqAttributes for Expression {

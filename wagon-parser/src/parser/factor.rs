@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::write;
-use crate::firstpass::GetReqAttributes;
+use crate::firstpass::{GetReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode, ResultPeek};
 use super::atom::Atom;
@@ -51,6 +51,19 @@ impl GetReqAttributes for Factor {
             Self::Power { left, right } => {
             	let mut req = left.get_req_attributes();
             	req.extend(right.get_req_attributes());
+            	req
+            },
+        }
+    }
+}
+
+impl RewriteToSynth for Factor {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        match self {
+            Self::Primary(p) => p.rewrite_to_synth(),
+            Self::Power { left, right } => {
+            	let mut req = left.rewrite_to_synth();
+            	req.extend(right.rewrite_to_synth());
             	req
             },
         }

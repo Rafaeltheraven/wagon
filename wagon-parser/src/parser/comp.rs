@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::write;
 
-use crate::firstpass::GetReqAttributes;
+use crate::firstpass::{GetReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, ParseOption, Tokens, SpannableNode, ResultPeek};
 
@@ -88,6 +88,16 @@ impl GetReqAttributes for Comparison {
         let mut req = self.sum.get_req_attributes();
         if let Some(cont) = &self.comp {
             req.extend(cont.right.get_req_attributes());
+        }
+        req
+    }
+}
+
+impl RewriteToSynth for Comparison {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        let mut req = self.sum.rewrite_to_synth();
+        if let Some(cont) = &mut self.comp {
+            req.extend(cont.right.rewrite_to_synth());
         }
         req
     }

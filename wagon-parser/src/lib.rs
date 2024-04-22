@@ -13,7 +13,7 @@ pub mod firstpass;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
-use firstpass::GetReqAttributes;
+use firstpass::{GetReqAttributes, RewriteToSynth};
 use wagon_lexer::LexerBridge;
 use wagon_utils::{Span, Spannable};
 use crate::parser::{Parser, Parse, ParseResult, wag::Wag};
@@ -30,6 +30,7 @@ pub fn parse_and_check(date: &str) -> ParseResult<Wag> {
     let mut wag = parser.parse()?;
     let mut state = FirstPassState::default();
     wag.rewrite(0, &mut state)?;
+    println!("{wag}");
     Ok(wag)
 }
 
@@ -187,5 +188,11 @@ impl<T: Parse + quote::ToTokens> quote::ToTokens for SpannableNode<T> {
 impl<T: Parse + GetReqAttributes> GetReqAttributes for SpannableNode<T> {
     fn get_req_attributes(&self) -> firstpass::ReqAttributes {
         self.to_inner().get_req_attributes()
+    }
+}
+
+impl<T: Parse + RewriteToSynth> RewriteToSynth for SpannableNode<T> {
+    fn rewrite_to_synth(&mut self) -> firstpass::ReqAttributes {
+        self.to_inner_mut().rewrite_to_synth()
     }
 }

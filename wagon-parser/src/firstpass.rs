@@ -92,6 +92,11 @@ pub(crate) trait GetReqAttributes {
 	fn get_req_attributes(&self) -> ReqAttributes;
 }
 
+/// Trait to convert all attributes to synth and return a list of all of them.
+pub(crate) trait RewriteToSynth {
+	fn rewrite_to_synth(&mut self) -> ReqAttributes;
+}
+
 #[cfg(test)]
 mod test {
 

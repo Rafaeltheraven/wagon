@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use crate::firstpass::{GetReqAttributes, ReqAttributes};
+use crate::{firstpass::{GetReqAttributes, ReqAttributes, Rewrite, RewriteToSynth}, WrapSpannable};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, ResultNext};
 use wagon_lexer::math::Math;
@@ -22,12 +22,20 @@ pub struct Assignment {
 	pub expr: SpannableNode<Expression>
 }
 
+impl RewriteToSynth for Assignment {
+	fn rewrite_to_synth(&mut self) -> ReqAttributes {
+		let span = self.ident.span();
+		self.ident = self.ident.to_inner().to_synth().into_spanned(span);
+		let mut req = self.expr.rewrite_to_synth();
+		req.insert(self.ident.clone());
+		req
+	}
+}
+
 impl GetReqAttributes for Assignment {
 	fn get_req_attributes(&self) -> ReqAttributes {
 		let mut req = self.expr.get_req_attributes();
-		if !matches!(self.ident.node, Ident::Local(_)) {
-			req.insert(self.ident.clone());
-		}
+		req.insert(self.ident.clone());
 		req
 	}
 }

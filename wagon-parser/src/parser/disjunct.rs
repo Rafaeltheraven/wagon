@@ -1,6 +1,6 @@
 use std::{fmt::Display, write};
 
-use crate::firstpass::{GetReqAttributes, ReqAttributes};
+use crate::firstpass::{GetReqAttributes, ReqAttributes, RewriteToSynth};
 
 use super::{Parse, LexerBridge, ParseResult, Tokens, SpannableNode};
 use wagon_lexer::math::Math;
@@ -26,6 +26,16 @@ impl GetReqAttributes for Disjunct {
     }
 }
 
+impl RewriteToSynth for Disjunct {
+    fn rewrite_to_synth(&mut self) -> ReqAttributes {
+        let mut req = ReqAttributes::new();
+        for c in &mut self.0 {
+            req.extend(c.rewrite_to_synth());
+        }
+        req
+    }
+}
+
 impl Parse for Disjunct {
     
     fn parse(lexer: &mut LexerBridge) -> ParseResult<Self> where Self: Sized {
@@ -36,6 +46,6 @@ impl Parse for Disjunct {
 
 impl Display for Disjunct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(" and "))
+        write!(f, "{}", self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(" && "))
     }
 }

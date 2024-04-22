@@ -5,7 +5,7 @@ use std::write;
 use super::{Parse, LexerBridge, ParseResult, Tokens, WagParseError, Ident, SpannableNode, Spannable, expression::Expression, ResultNext};
 use super::helpers::{between, between_right};
 use crate::either_token;
-use crate::firstpass::GetReqAttributes;
+use crate::firstpass::{GetReqAttributes, RewriteToSynth};
 
 use wagon_lexer::math::Math;
 use wagon_macros::match_error;
@@ -106,6 +106,22 @@ impl GetReqAttributes for Atom {
         		req
         	},
         	Self::Group(e) => e.get_req_attributes(),
+        	_ => crate::firstpass::ReqAttributes::new()
+        }
+    }
+}
+
+impl RewriteToSynth for Atom {
+    fn rewrite_to_synth(&mut self) -> crate::firstpass::ReqAttributes {
+        match self {
+        	Self::Ident(i) => { 
+        		let mut req = crate::firstpass::ReqAttributes::new();
+        		let as_synth = i.to_synth();
+        		req.insert(i.clone().into());
+        		*i = as_synth;
+        		req
+        	},
+        	Self::Group(e) => e.rewrite_to_synth(),
         	_ => crate::firstpass::ReqAttributes::new()
         }
     }

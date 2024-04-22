@@ -1,6 +1,7 @@
 
 use crate::firstpass::GetReqAttributes;
 use crate::firstpass::ReqAttributes;
+use crate::firstpass::RewriteToSynth;
 use crate::parser::{Span, Spannable};
 use std::fmt::Display;
 use std::write;
@@ -123,11 +124,7 @@ impl Symbol {
             Self::Assignment(v) => {
                 let mut req = ReqAttributes::new();
                 for a in v {
-                    for i in a.get_req_attributes() {
-                        let string = i.node.extract_string();
-                        let to_insert = SpannableNode::new(Ident::Synth(string.to_owned()), i.span());
-                        req.insert(to_insert);
-                    }
+                    req.extend(a.rewrite_to_synth());
                 }
                 req
             }
