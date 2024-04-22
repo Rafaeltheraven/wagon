@@ -107,27 +107,23 @@ impl<'a> GrammarSlot<'a> {
 		for (i, r) in self.rule.iter().enumerate() {
 			let label = state.get_label(r);
 			if i == self.dot {
-				if math_mode && label.is_eps() {
-					res.push_str("$\\epsilon$ ");
-				} else {
-					let parts = label.str_parts();
-					for (j, s) in parts.iter().enumerate() {
-						if j == self.pos {
-							if math_mode {
-								res.push_str("$\\bigcdot$");
-							} else {
-								res.push('•');
-							}
-							res.push(' ');
-						}
+				let parts = label.str_parts();
+				for (j, s) in parts.iter().enumerate() {
+					if j == self.pos {
 						if math_mode {
-							res.push_str(&v_latexescape::escape(s).to_string().replace('·', "$\\cdot$"));
+							res.push_str("$\\bigcdot$");
 						} else {
-							res.push_str(s);
+							res.push('•');
 						}
 						res.push(' ');
 					}
-				};
+					if math_mode {
+						res.push_str(&v_latexescape::escape(s).to_string().replace('·', "$\\cdot$"));
+					} else {
+						res.push_str(s);
+					}
+					res.push(' ');
+				}
 			} else {
 				if math_mode {
 					if label.is_eps() {
