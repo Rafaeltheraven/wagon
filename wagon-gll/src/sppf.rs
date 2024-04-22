@@ -115,9 +115,14 @@ impl<'a> SPPFNode<'a> {
                 };
                 let label = state.get_label(&slot.rule[dot]);
                 let (from_ret, from_ctx) = label.attr_rep_map();
+                let skip = if is_complete {
+                    0 // If this is a complete slot, pop removes all the parameters.
+                } else {
+                    from_ret.len() // Otherwise, we need to skip the attributes passed to the previous block.
+                };
                 let slot_str = slot.to_string(state, math_mode);
                 for (i, attr) in from_ctx.iter().enumerate() {
-                    attr_map.insert(attr, context.get_attribute(i).ok_or_else(|| GLLImplementationError::MissingContext(i, context.clone()))?);
+                    attr_map.insert(attr, context.get_attribute(i + skip).ok_or_else(|| GLLImplementationError::MissingContext(i + skip, context.clone()))?);
                 }
                 if !is_complete {
                     for (i, attr) in from_ret.iter().enumerate() {
