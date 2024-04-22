@@ -110,6 +110,12 @@ impl<T: Valueable> From<String> for Value<T> {
     }
 }
 
+impl<T: Valueable> From<&str> for Value<T> {
+    fn from(value: &str) -> Self {
+        Self::String(String::from(value))
+    }
+}
+
 impl<T: Valueable> From<i32> for Value<T> {
     fn from(value: i32) -> Self {
         Self::Natural(value)
