@@ -87,7 +87,15 @@ impl<'a> GrammarSlot<'a> {
 	#[must_use] 
 	pub fn to_string(&self, state: &GLLState<'a>, math_mode: bool) -> String {
 		let mut res = String::new();
-		res.push_str(self.label.to_string());
+		if math_mode {
+			if self.label.is_eps() {
+				res.push_str("$\\epsilon$ ");
+			} else {
+				res.push_str(&v_latexescape::escape(self.label.to_string()).to_string().replace('·', "$\\cdot$"));
+			}
+		} else {
+			res.push_str(self.label.to_string());
+		}
 		if self.dot == self.len() + 1 {
 			return res
 		}
@@ -99,27 +107,43 @@ impl<'a> GrammarSlot<'a> {
 		for (i, r) in self.rule.iter().enumerate() {
 			let label = state.get_label(r);
 			if i == self.dot {
-				let parts = label.str_parts();
-				for (j, s) in parts.iter().enumerate() {
-					if j == self.pos {
+				if math_mode && label.is_eps() {
+					res.push_str("$\\epsilon$ ");
+				} else {
+					let parts = label.str_parts();
+					for (j, s) in parts.iter().enumerate() {
+						if j == self.pos {
+							if math_mode {
+								res.push_str("$\\bigcdot$");
+							} else {
+								res.push('•');
+							}
+							res.push(' ');
+						}
 						if math_mode {
-							res.push_str("$\\cdot$");
+							res.push_str(&v_latexescape::escape(s).to_string().replace('·', "$\\cdot$"));
 						} else {
-							res.push('•');
+							res.push_str(s);
 						}
 						res.push(' ');
 					}
-					res.push_str(s);
-					res.push(' ');
-				}
+				};
 			} else {
-				res.push_str(label.to_string());
+				if math_mode {
+					if label.is_eps() {
+						res.push_str("$\\epsilon$ ");
+					} else {
+						res.push_str(&v_latexescape::escape(label.to_string()).to_string().replace('·', "$\\cdot$"));
+					}
+				} else {
+					res.push_str(label.to_string());
+				}
 				res.push(' ');
 			}
 		}
 		if self.is_last(state) {
 			if math_mode {
-				res.push_str("$\\cdot$");
+				res.push_str("$\\bigcdot$");
 			} else {
 				res.push('•');
 			}

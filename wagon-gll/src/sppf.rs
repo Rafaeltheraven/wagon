@@ -140,6 +140,9 @@ impl<'a> SPPFNode<'a> {
                     });
                 attr_rep.pop(); // Remove leftover ", " from string rep
                 attr_rep.pop();
+                if math_mode {
+                    attr_rep = v_latexescape::escape(&attr_rep).to_string();
+                }
                 format!("({slot_str},{left},{right},<{attr_rep}>)")
             },
             SPPFNode::Packed { slot, split, .. } => format!("({}, {})", slot.to_string(state, math_mode), split),
