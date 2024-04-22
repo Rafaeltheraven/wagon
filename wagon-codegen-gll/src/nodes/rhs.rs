@@ -45,8 +45,7 @@ impl CodeGen for SpannableNode<Rhs> {
             let mut str_repr = Vec::with_capacity(block_size);
             if block_size == 0 { // If we have 0 blocks, this is an empty alternative.
                 gen_args.state.get_first(&label)?[0].1 = Some(CharBytes::Epsilon);
-            } 
-            let mut counter: usize = 0;
+            }
             for (k, arg) in args.iter().enumerate() {
                 let proc_ident = arg.to_inner().to_ident();
                 if j == 0 { // We have no context, only parameters
@@ -56,10 +55,10 @@ impl CodeGen for SpannableNode<Rhs> {
                     gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
                 } else {
                     let skipped_k = k + prev_args.len(); // The first n arguments on the stack were call parameters. The next m are our context
-                    if prev_args.contains(arg) { // If this attribute was used in whatever NT came before this one.
+                    if let Some(pos) = prev_args.iter().position(|x| x == arg) { // If this attribute was used in whatever NT came before this one.
                         // The attribute could either come from the context, or be returned from whatever NT we just finished parsing.
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
-                            let #proc_ident = if let Some(v) = state.get_ret_val(#counter)? {
+                            let #proc_ident = if let Some(v) = state.get_ret_val(#pos)? {
                                 v
                             } else {
                                 state.restore_attribute(#skipped_k)?
@@ -67,7 +66,6 @@ impl CodeGen for SpannableNode<Rhs> {
                         ));
                         gen_args.state.add_ret_attr(label.clone(), arg.to_string());
                         gen_args.state.add_ctx_attr(label.clone(), arg.to_string());
-                        counter += 1;
                     } else {
                         // The attribute can only come from the context.
                         gen_args.state.add_attribute_mapping(label.clone(), arg, quote!(
@@ -95,19 +93,25 @@ impl CodeGen for SpannableNode<Rhs> {
             gen_args.state.str_repr.insert(label.clone(), str_repr);
             if j == blocks_count - 1 { // If this is the last block.
                 let mut ret_vals = Vec::new();
+                let mut all_attrs_idents = Vec::new();
                 for arg in args {
                     match arg.to_inner() {
-                        wagon_ident::Ident::Synth(_) => {
-                            let arg_ident = arg.to_inner().to_ident();
-                            ret_vals.push(quote!(Some(#arg_ident)));
+                        inner @ wagon_ident::Ident::Synth(_) => {
+                            let arg_ident = inner.to_ident();
+                            ret_vals.push(quote!(Some(#arg_ident.clone())));
+                            all_attrs_idents.push(arg_ident);
                             gen_args.state.add_req_code_attr(label.clone(), arg.clone());
                         },
-                        _ => ret_vals.push(quote!(None))
+                        other => {
+                            all_attrs_idents.push(other.to_ident());
+                            ret_vals.push(quote!(None));
+                            gen_args.state.add_req_code_attr(label.clone(), arg.clone());
+                        }
                     }
                 }
                 // Pop all the synthesized attributes back.
                 gen_args.state.add_code(label.clone(), quote!(
-                    Ok(state.pop(&vec![#(#ret_vals,)*])?)
+                    Ok(state.pop(&vec![#(#ret_vals,)*], vec![#(#all_attrs_idents,)*])?)
                 ));
             }
             if j == 0 { // If this is the first block

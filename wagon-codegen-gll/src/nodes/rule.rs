@@ -34,10 +34,10 @@ impl CodeGen for SpannableNode<Rule> {
                     let mut zero_weights = 0;
                 ));
                 let as_set = IndexSet::from_iter(args);
-                gen_args.full_args = Some(as_set);
                 gen_args.ident = Some(pointer.clone());
             	for (i, alt) in rhs.into_iter().enumerate() {
                     gen_args.alt = Some(i);
+                    gen_args.full_args = Some(as_set.clone());
             		alt.gen(gen_args)?;
             	}
                 let stream = if gen_args.weight_config.no_prune { // If we don't want to prune any options, just add all slots as a valid candidate.

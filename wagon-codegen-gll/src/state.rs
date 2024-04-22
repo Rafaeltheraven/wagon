@@ -438,7 +438,7 @@ impl CodeGenState {
     /// Generate code for the final parser's `main` function.
     fn gen_main_stream(body: &TokenStream, label_len: usize, root_len: usize, regex_len: usize) -> TokenStream {
     	quote!(
-    		#[allow(non_snake_case)]
+    		#[allow(non_snake_case, unused_mut)]
     		fn main() {
     			let args = clap::command!()
 			        .arg(
@@ -453,11 +453,16 @@ impl CodeGenState {
 			        	clap::arg!(--"math-mode" "Print SPPF dot labels in Latex math-mode representation")
 			        	.num_args(0)
 			        )
+			        .arg(
+			        	clap::arg!(--"print-gss" "Also print the final GSS (works with math-mode)")
+			        	.num_args(0)
+			        )
 			        .get_matches();
 			    let input_file = args.get_one::<std::path::PathBuf>("filename").expect("Input file required");
 			    let input_file_str = Box::leak(input_file.to_str().unwrap().into());
 			    let crop = args.get_one::<bool>("no-crop").unwrap_or(&false) == &false;
 			    let math_mode = *args.get_one::<bool>("math-mode").unwrap_or(&false);
+			    let print_gss = *args.get_one::<bool>("print-gss").unwrap_or(&false);
 			    let content_string = std::fs::read_to_string(input_file).expect("Couldn't read file");
 			    let contents: &'static [u8] = Box::leak(content_string.trim().as_bytes().into()); // This is required to tell Rust the input data lasts forever.
     			let mut label_map: wagon_gll::LabelMap = std::collections::HashMap::with_capacity(#label_len);
@@ -469,6 +474,12 @@ impl CodeGenState {
 			    match state.print_sppf_dot(crop, math_mode) {
 			        Ok(t) => println!("{t}"),
 			        Err(e) => println!("Error: {e}"),
+			    }
+			    if print_gss {
+			        match state.print_gss_dot(math_mode) {
+			            Ok(t) => println!("{t}"),
+			            Err(e) => println!("Error: {e}"),
+			        }
 			    }
 			    let offset = content_string.len() - contents.len();
 			    if state.final_accepts() {
