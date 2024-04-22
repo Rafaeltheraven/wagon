@@ -11,7 +11,7 @@ impl<U> ToTokensState<U> for Conjunct {
         if i.len() > 1 {
             let stream: Vec<TokenStream> = i.iter().map(|x| x.to_tokens(state, label.clone(), attr_fun)).collect();
             quote!(
-                #(#stream ||)*
+                #(wagon_value::Valueable::is_truthy(&#stream)?) ||*
             )
         } else {
             i[0].to_tokens(state, label, attr_fun)
