@@ -225,7 +225,7 @@ impl<'a> SPPF<'a> {
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
     /// This should be fundamentally impossible.
-    pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool, roots: Vec<SPPFNodeIndex>) -> ImplementationResult<'a, String>  {
+    pub fn to_dot(&self, state: &GLLState<'a>, math_mode: bool, roots: &[SPPFNodeIndex]) -> ImplementationResult<'a, String>  {
         let mut res = String::new();
         res.push_str("digraph {\n");
         for ix in self.0.node_indices() {

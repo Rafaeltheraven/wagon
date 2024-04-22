@@ -353,12 +353,11 @@ impl<'a> GLLState<'a> {
     /// Returns an error for the same reasons as [`GLLState::get_node_p`].
     pub fn pop(&mut self, ret_vals: &ReturnMap<'a>, attrs: AttributeMap<'a>) -> ImplementationResult<'a, ()> {
         let slot = self.get_current_gss_node()?.slot.clone();
-        let ctx_node = self.find_or_create_gss_node(GSSNode::new(slot.clone(), self.input_pointer, attrs.clone()));
+        let ctx_node = self.find_or_create_gss_node(GSSNode::new(slot.clone(), self.input_pointer, attrs));
         let ctx = self.get_gss_node(ctx_node)?.clone();
         let curr_sppf = self.get_sppf_node_mut(self.sppf_pointer)?;
-        match curr_sppf {
-            SPPFNode::Intermediate { context, .. } => *context = ctx, // Values may still have changed
-            _ => {},
+        if let SPPFNode::Intermediate { context, .. } = curr_sppf {
+            *context = ctx; // Values may still have changed
         }
         if self.gss_pointer != self.gss_root {
             if let Some(map) = self.pop.get_mut(&self.gss_pointer) {
@@ -627,7 +626,7 @@ impl<'a> GLLState<'a> {
         if crop {
             self.sppf.crop(self.find_roots_sppf());
         }
-        self.sppf.to_dot(self, math_mode, self.find_roots_sppf()) // Need to recalculate due to crop
+        self.sppf.to_dot(self, math_mode, &self.find_roots_sppf()) // Need to recalculate due to crop
     }
 
     /// Print current GSS graph in graphviz format

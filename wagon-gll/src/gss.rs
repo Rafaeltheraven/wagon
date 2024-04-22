@@ -113,7 +113,7 @@ impl<'a> GSS<'a> {
                 } else {
                 	"PRUNED".to_string()
                 };
-                res.push_str(&format!(" [label=\"{}\"]", label));
+                res.push_str(&format!(" [label=\"{label}\"]"));
                 res.push('\n');
             }
 		}
