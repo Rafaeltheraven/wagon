@@ -25,8 +25,8 @@ fn atom_to_bool(node: SpannableNode<Atom>) -> CodeGenResult<bool> {
 
 impl CodeGen for Metadata {
     fn gen(mut self, gen_args: &mut CodeGenArgs) -> CodeGenResult<()> {
-        if let Some(node) = self.mappings.remove("prune") {
-            gen_args.weight_config.no_prune = !atom_to_bool(node)?;
+        if let Some(node) = self.mappings.remove("no_prune") {
+            gen_args.weight_config.no_prune = atom_to_bool(node)?;
         }
         if let Some(node) = self.mappings.remove("min_weight") {
             gen_args.weight_config.min_weight = atom_to_bool(node)?;
