@@ -92,7 +92,7 @@ impl<'a> GSS<'a> {
 	/// Convert the [`GSS`] to `.dot` representation.
     ///
     /// # Errors
-    /// This method will return a [`GLLImplementationError`] if it fails to represent a [`SPPFNode`] stored on an edge properly.
+    /// This method will return a [`GLLImplementationError`](`crate::GLLImplementationError`) if it fails to represent a [`SPPFNode`](`crate::sppf::SPPFNode`) stored on an edge properly.
     ///
     /// # Panics
     /// This function will panic if, while iterating through all the node indices in the graph, it fails to get any node from the graph by index.
