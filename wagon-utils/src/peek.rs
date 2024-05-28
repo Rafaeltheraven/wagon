@@ -11,7 +11,7 @@ use std::iter::Peekable;
 /// your implementation of these methods may work differently. This is fine and expected, as long as you
 /// know and document what you're doing and why.
 pub trait Peek: Iterator {
-    /// Returns a reference to the next() value without advancing the iterator.
+    /// Returns a reference to the `next()` value without advancing the iterator.
     ///
     /// Like [`next`], if there is a value, it is wrapped in a `Some(T)`.
     /// But if the iteration is over, `None` is returned.
@@ -49,7 +49,7 @@ pub trait Peek: Iterator {
     /// assert_eq!(iter.next(), None);
     /// ```
     fn peek(&mut self) -> Option<&Self::Item>;
-    /// Returns a mutable reference to the next() value without advancing the iterator.
+    /// Returns a mutable reference to the `next()` value without advancing the iterator.
     ///
     /// Like [`next`], if there is a value, it is wrapped in a `Some(T)`.
     /// But if the iteration is over, `None` is returned.
