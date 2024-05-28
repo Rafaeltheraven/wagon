@@ -1,8 +1,6 @@
 [workspace]
 members = [
-	"wagon-bin",
 	"wagon-codegen",
-	"wagon-gll",
 	"wagon-ident",
 	"wagon-lexer",
 	"wagon-macros",
@@ -13,15 +11,15 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Rafael Dulfer"]
-repository = "https://gitlab.utwente.nl/s1945785/wagon"
+repository = "https://github.com/Rafaeltheraven/wagon"
 license = "Apache-2.0"
 edition = "2021"
 keywords = ["parsing", "gll", "weighted attribute grammar"]
 categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
 license-file = "./LICENSE"
-documentation = "wagon.thebias.nl"
+documentation = "dulfer.be/wagon"
 
 [workspace.dependencies]
 # common dependencies
@@ -39,7 +37,6 @@ thiserror = "1.0.57"
 
 # local crates
 wagon-codegen = {path = "./wagon-codegen"}
-wagon-codegen-gll = {path = "./wagon-codegen-gll"}
 wagon-ident = {path = "./wagon-ident"}
 wagon-lexer = {path = "./wagon-lexer"}
 wagon-macros = {path = "./wagon-macros"}
