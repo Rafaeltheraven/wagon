@@ -8,6 +8,7 @@ edition.workspace = true
 keywords.workspace = true
 categories.workspace = true
 documentation.workspace = true
+readme.workspace = true
 description = "Meta package for the WAGon documentation."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
