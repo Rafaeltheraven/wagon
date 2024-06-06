@@ -1,6 +1,6 @@
 # WAGon
 
-A Library/Ecosystem/Proof-of-Concept for working with [Weighted Attribute Grammars](https://essay.utwente.nl/87002/1/Beekman_BA_EEMCS.pdf).
+A Library/Ecosystem/Proof-of-Concept for working with Weighted Attribute Grammars.
 WAGon is designed for researchers and language designers experimenting with WAGs such that they do not have to waste time creating a DSL and parser
 and can start immediately experimenting with the format itself.
 

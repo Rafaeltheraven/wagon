@@ -392,6 +392,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e51733f11c9c4f72aa0c160008246859e340b00807569a0da0e7a1079b27ba85"
 
 [[package]]
+name = "wagon"
+version = "1.0.0"
+dependencies = [
+ "wagon-codegen",
+ "wagon-ident",
+ "wagon-lexer",
+ "wagon-macros",
+ "wagon-parser",
+ "wagon-utils",
+ "wagon-value",
+]
+
+[[package]]
 name = "wagon-codegen"
 version = "1.0.0"
 dependencies = [

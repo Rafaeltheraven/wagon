@@ -2,11 +2,13 @@
 name = "wagon-utils"
 version = "1.0.0"
 authors.workspace = true
-license.workspace = true
-categories.workspace = true
-keywords.workspace = true
 repository.workspace = true
+license.workspace = true
 edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license-file.workspace = true
+documentation.workspace = true
 description = "Various utilities for WAGon."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
