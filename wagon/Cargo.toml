@@ -1,0 +1,25 @@
+[package]
+name = "wagon"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+documentation.workspace = true
+description = "Meta package for the WAGon documentation."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wagon-codegen = {workspace = true}
+wagon-ident = {workspace = true}
+wagon-lexer = {workspace = true}
+wagon-macros = {workspace = true}
+wagon-parser = {workspace = true}
+wagon-utils = {workspace = true}
+wagon-value = {workspace = true}
+
+[lints]
+workspace = true
