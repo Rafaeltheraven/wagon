@@ -16,7 +16,7 @@ authors = ["Rafael Dulfer"]
 repository = "https://github.com/Rafaeltheraven/wagon"
 license = "Apache-2.0"
 edition = "2021"
-keywords = ["parsing", "gll", "weighted attribute grammar"]
+keywords = ["parsing", "gll", "wag", "grammars"]
 categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
 documentation = "https://dulfer.be/wagon/"
 
