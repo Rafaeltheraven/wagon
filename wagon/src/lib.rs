@@ -2,7 +2,7 @@
 //! WAGon is designed for researchers and language designers experimenting with WAGs such that they do not have to waste time creating a DSL and parser
 //! and can start immediately experimenting with the format itself.
 //!
-//! You can read the [paper](./paper.pdf) which explains more in detail what WAGs are, what WAGon is and why you should care.
+//! You can read the [paper](../paper.pdf) which explains more in detail what WAGs are, what WAGon is and why you should care.
 //!
 //! WAGon consists out of the following crates:
 //!
