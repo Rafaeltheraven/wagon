@@ -19,7 +19,7 @@ edition = "2021"
 keywords = ["parsing", "gll", "weighted attribute grammar"]
 categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
 license-file = "./LICENSE"
-documentation = "dulfer.be/wagon"
+documentation = "https://dulfer.be/wagon/"
 
 [workspace.dependencies]
 # common dependencies
@@ -36,13 +36,13 @@ itertools = "0.12.1"
 thiserror = "1.0.57"
 
 # local crates
-wagon-codegen = {path = "./wagon-codegen"}
-wagon-ident = {path = "./wagon-ident"}
-wagon-lexer = {path = "./wagon-lexer"}
-wagon-macros = {path = "./wagon-macros"}
-wagon-parser = {path = "./wagon-parser"}
-wagon-utils = {path = "./wagon-utils"}
-wagon-value = {path = "./wagon-value"}
+wagon-codegen = {path = "./wagon-codegen", version="=1.0.0"}
+wagon-ident = {path = "./wagon-ident", version="=1.0.0"}
+wagon-lexer = {path = "./wagon-lexer", version="=1.0.0"}
+wagon-macros = {path = "./wagon-macros", version="=1.0.0"}
+wagon-parser = {path = "./wagon-parser", version="=1.0.0"}
+wagon-utils = {path = "./wagon-utils", version="=1.0.0"}
+wagon-value = {path = "./wagon-value", version="=1.0.0"}
 
 # For tests
 pretty_assertions = "1.4.0"
