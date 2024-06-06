@@ -7,7 +7,6 @@ license.workspace = true
 edition.workspace = true
 keywords.workspace = true
 categories.workspace = true
-license-file.workspace = true
 documentation.workspace = true
 description = "Dynamic type value object for WAGon."
 

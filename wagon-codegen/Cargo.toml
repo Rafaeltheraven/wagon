@@ -7,7 +7,6 @@ license.workspace = true
 edition.workspace = true
 keywords.workspace = true
 categories.workspace = true
-license-file.workspace = true
 documentation.workspace = true
 description = "Generic code generation methods for the WAGon DSL that can be used for various purposes."
 

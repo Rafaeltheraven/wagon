@@ -7,7 +7,6 @@ license.workspace = true
 edition.workspace = true
 keywords.workspace = true
 categories.workspace = true
-license-file.workspace = true
 documentation.workspace = true
 description = "Ident struct for WAGon. Used in various crates for various reasons"
 

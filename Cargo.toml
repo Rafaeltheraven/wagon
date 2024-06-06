@@ -18,7 +18,6 @@ license = "Apache-2.0"
 edition = "2021"
 keywords = ["parsing", "gll", "weighted attribute grammar"]
 categories = ["data-structures", "parser-implementations", "parsing", "compilers"]
-license-file = "./LICENSE"
 documentation = "https://dulfer.be/wagon/"
 
 [workspace.dependencies]

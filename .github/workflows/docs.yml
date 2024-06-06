@@ -26,7 +26,7 @@ jobs:
       - name: Clean docs folder
         run: cargo clean --doc
       - name: Build docs
-        run: RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo +nightly doc --all --no-deps
+        run: cargo doc --all --no-deps
       - name: Remove lock file
         run: rm target/doc/.lock
       - name: Upload artifact
